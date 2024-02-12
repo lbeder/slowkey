@@ -1,0 +1,7 @@
+comment_width = 120
+error_on_line_overflow = true
+fn_params_layout = "Compressed"
+imports_granularity = "Crate"
+match_block_trailing_comma = true
+max_width = 120
+wrap_comments = true
