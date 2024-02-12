@@ -152,11 +152,10 @@ impl SlowKey {
     pub fn derive_key_with_callback<F: FnMut(u32, &Vec<u8>)>(
         &self, salt: &[u8], secret: &[u8], offset_data: &[u8], offset: u32, mut callback: F,
     ) -> Vec<u8> {
-        let mut res: Vec<u8> = secret.to_vec();
-
-        if offset != 0 {
-            res = offset_data.to_vec();
-        }
+        let mut res = match offset {
+            0 => Vec::new(),
+            _ => offset_data.to_vec(),
+        };
 
         for i in 0..(self.iterations - offset) {
             // Calculate the SHA3 and SHA2 hashes of the result and the inputs

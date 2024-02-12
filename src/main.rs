@@ -48,28 +48,28 @@ struct Cli {
 enum Commands {
     #[command(about = "Derive a key using using Scrypt, Argon2, SHA2, and SHA3")]
     Derive {
-        #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and less than or equal to {})",  SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
+        #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})",  SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
         iterations: u32,
 
-        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and less than or equal to {})", SlowKeyOptions::MIN_KDF_LENGTH, SlowKeyOptions::MAX_KDF_LENGTH))]
+        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KDF_LENGTH, SlowKeyOptions::MAX_KDF_LENGTH))]
         length: usize,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.log_n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be less than {})", ScryptOptions::MAX_LOG_N))]
+        #[arg(long, default_value = SlowKeyOptions::default().scrypt.log_n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_LOG_N))]
         scrypt_log_n: u8,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.r.to_string(), help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and less than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R))]
+        #[arg(long, default_value = SlowKeyOptions::default().scrypt.r.to_string(), help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R))]
         scrypt_r: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.p.to_string(), help = format!("Scrypt parallelization parameter (must be greater than {} and less than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P))]
+        #[arg(long, default_value = SlowKeyOptions::default().scrypt.p.to_string(), help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P))]
         scrypt_p: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.m_cost.to_string(), help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and less than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
+        #[arg(long, default_value = SlowKeyOptions::default().argon2id.m_cost.to_string(), help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(), help = format!("Argon2 number of iterations (must be greater than {} and less than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
+        #[arg(long, default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(), help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.p_cost.to_string(), help = format!("Argon2 number of threads (must be greater than {} and less than {})", Argon2idOptions::MIN_P_COST, Argon2idOptions::MAX_P_COST))]
+        #[arg(long, default_value = SlowKeyOptions::default().argon2id.p_cost.to_string(), help = format!("Argon2 number of threads (must be greater than {} and lesser than {})", Argon2idOptions::MIN_P_COST, Argon2idOptions::MAX_P_COST))]
         argon2_p_cost: u32,
 
         #[arg(

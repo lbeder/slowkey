@@ -73,12 +73,11 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&Vec::new(), &Vec::new(), 64, &ScryptOptions { log_n: 14, r: 8, p: 1 }, "d72c87d0f077c7766f2985dfab30e8955c373a13a1e93d315203939f542ff86e73ee37c31f4c4b571f4719fa8e3589f12db8dcb57ea9f56764bb7d58f64cf705")]
-    #[case(&Vec::new(), &Vec::new(), 64, &ScryptOptions { log_n: 16, r: 8, p: 1 }, "5537f231b6f9f0fcf5a03c5043ced5f2d8b8f69de6ae46f7de5f269b38f5161aadb4f41447e60966f12a993801e1f73250b269de77799f4e069b2407db07520d")]
+    #[case(&Vec::new(), &Vec::new(), 64, &ScryptOptions::default(), "d436cba148427322d47a09a84b9bbb64d5ff086545170518711f3ec6936124e0383b3f47409e0329776231b295df5038ab07b096b8717718fd6f092195bfb03a")]
     #[case(&"salt".as_bytes(), &"".as_bytes(), 64, &ScryptOptions { log_n: 15, r: 8, p: 1 }, "6e6d0720a5766a2f99679af8dbf78794d8cfe4c2b658ec82a1d005c0d54582846583ccf105fa66271ad7907868b4e3f5bb61f12b427fe0dd2c75df55afce74c1")]
-    #[case(&"salt".as_bytes(), &"test".as_bytes(), 64, &ScryptOptions { log_n: 14, r: 8, p: 1 }, "72f47a5f6bcb1b96a9d77b2c2f1463395d4a3a325fada6290fc0fef7bcddb58eb46e36a0d944613790c2e7bc9ea0e8447b9c4b493734c43526a14963e4a56bdc")]
-    #[case(&"salt".as_bytes(), &"test".as_bytes(), 32, &ScryptOptions { log_n: 14, r: 8, p: 1 }, "72f47a5f6bcb1b96a9d77b2c2f1463395d4a3a325fada6290fc0fef7bcddb58e")]
-    #[case(&"salt".as_bytes(), &"test".as_bytes(), 16, &ScryptOptions { log_n: 14, r: 8, p: 1 }, "72f47a5f6bcb1b96a9d77b2c2f146339")]
+    #[case(&"salt".as_bytes(), &"test".as_bytes(), 64, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775b64ff03b82391a33b655047a632391b6216b98b2595cd82e89eaa1d9c8c2ccf5")]
+    #[case(&"salt".as_bytes(), &"test".as_bytes(), 32, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775")]
+    #[case(&"salt".as_bytes(), &"test".as_bytes(), 16, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7f")]
     #[case(&"salt".as_bytes(), &"test".as_bytes(), 64, &ScryptOptions { log_n: 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425693b2d5cbd463c3521c8132056fb801997b915a9f8d051948a430142c7aa5855")]
     #[case(&"salt".as_bytes(), &"test".as_bytes(), 32, &ScryptOptions { log_n: 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425")]
     #[case(&"salt".as_bytes(), &"test".as_bytes(), 16, &ScryptOptions { log_n: 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e")]
