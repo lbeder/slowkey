@@ -124,7 +124,7 @@ fn get_salt() -> Vec<u8> {
 
     if salt_len < SlowKey::MIN_SALT_LENGTH {
         panic!(
-            "salt {} is shorther than the min length of {}",
+            "salt {} is shorter than the min length of {}",
             salt_len,
             SlowKey::MIN_SALT_LENGTH
         );
