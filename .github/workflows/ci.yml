@@ -18,9 +18,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Packages
-      - run: |
-          sudo apt update
-          sudo apt install scrypt
+      - run: sudo apt update && sudo apt install scrypt
 
       - name: Install Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
