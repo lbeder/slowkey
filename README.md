@@ -40,7 +40,7 @@ Usage: slowkey derive [OPTIONS]
 Options:
   -i, --iterations <ITERATIONS>        Number of iterations (must be greater than 0 and lesser than or equal to 4294967295) [default: 100]
   -l, --length <LENGTH>                Length of the derived result (must be greater than 10 and lesser than or equal to 64) [default: 16]
-      --scrypt-log-n <SCRYPT_LOG_N>    Scrypt CPU/memory cost parameter (must be lesser than 64) [default: 20]
+      --scrypt-n <SCRYPT_N>            Scrypt CPU/memory cost parameter (must be lesser than 18446744073709551615) [default: 1048576]
       --scrypt-r <SCRYPT_R>            Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>            Scrypt parallelization parameter (must be greater than 0 and lesser than 4294967295) [default: 1]
       --argon2-m-cost <ARGON2_M_COST>  Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than 4294967295) [default: 2097152]
@@ -155,7 +155,7 @@ Enter your salt: saltsalt
 Enter your secret: 🔑
 Enter your secret again: 🔑
 
-Processing: 12 / 100 [==============>--------------------------------------------------------------------------------------------------------------] 12.00 % 1m
+Processing: 12 / 100 [==============>--------------------------------------------------------------------------------------------------------------] 12.00 % 3m
 ```
 
 Final result:
@@ -167,9 +167,9 @@ Enter your secret again: 🔑
 
 Processing: 100 / 100 [=======================================================================================================================================] 100.00 %
 
-Key (hex) is (please highlight to see): e75ac38878e896a856adcb4b941c07e9
+Key (hex) is (please highlight to see): 176de269e7ff4c4624c4108e896930cb
 
-Finished in 11m 33s
+Finished in 4m 42s
 ```
 
 ### Resuming Previous Derivation
@@ -185,27 +185,27 @@ Enter your salt: saltsalt
 Enter your secret: 🔑
 Enter your secret again: 🔑
 
-Processing: 10 / 100 [==========================================================================>-------------------------------------------------] 10.00 % 10m
+Processing: 10 / 100 [==========================================================================>-------------------------------------------------] 10.00 % 4m
 
-Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) 58daca589f51b10534cc8ab17618a381
+Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) f4565d04caa3e3bfc8d6ddb06b4f0d99
 ```
 
 You can then use this output to resume the previous derivation by specifying a starting offset and data like so:
 
-> slowkey derive --offset 10 --offset-data 58daca589f51b10534cc8ab17618a381
+> slowkey derive --offset 10 --offset-data f4565d04caa3e3bfc8d6ddb06b4f0d99
 
 ```sh
 SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4)
 
 Enter your salt: saltsalt
 
-Resuming from iteration 10 with intermediary offset data 58daca589f51b10534cc8ab17618a381
+Resuming from iteration 10 with intermediary offset data f4565d04caa3e3bfc8d6ddb06b4f0d99
 
-Processing: 90 / 90 [===============================================================================================================================] 100.00 % 10m
+Processing: 90 / 90 [===============================================================================================================================] 100.00 % 4m
 
-Key (hex) is (please highlight to see): e75ac38878e896a856adcb4b941c07e9
+Key (hex) is (please highlight to see): 176de269e7ff4c4624c4108e896930cb
 
-Finished in 6m 8s
+Finished in 4m 15s
 ```
 
 ## Test Vectors
@@ -221,7 +221,7 @@ Test vectors:
 * Iterations: 1
 * Length: 64
 * Scrypt Parameters:
-  * log_n: 20
+  * n: 1048576
   * r: 8
   * p: 1
 * Argon2id Parameters:
@@ -236,7 +236,7 @@ Test vectors:
 * Iterations: 3
 * Length: 64
 * Scrypt Parameters:
-  * log_n: 20
+  * n: 1048576
   * r: 8
   * p: 1
 * Argon2id Parameters:
@@ -247,10 +247,10 @@ Test vectors:
 Results should be:
 
 ```sh
-SlowKey: iterations: 1, length: 64, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: ""
+SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: ""
 Derived key: 91e119bd892f0a6b4bc5adf23693db6409a8d053a5b6a451d0ab340a5e01cb6b6a04d31eb6d78e7dc89809869d59a24ea88aae9f9fa7aa0630040a2c02f0b1d1
 
-SlowKey: iterations: 3, length: 64, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: "Hello World"
+SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: "Hello World"
 Derived key: 78acc4cf9c4597b4312454fa6e78134f9e0308f79a07e97e457207d0919374c6d3d31b78c523fba364156da4df930b87596a42a1b1991cec5af708762b9e2e95
 ```
 
