@@ -40,8 +40,8 @@ impl Default for ScryptOptions {
     }
 }
 pub struct Scrypt {
-    pub length: usize,
-    pub opts: ScryptOptions,
+    length: usize,
+    opts: ScryptOptions,
 }
 
 impl Scrypt {
