@@ -1,5 +1,6 @@
 extern crate hex;
 extern crate pbr;
+extern crate rust_scrypt;
 
 mod utils;
 
@@ -54,8 +55,8 @@ enum Commands {
         #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KDF_LENGTH, SlowKeyOptions::MAX_KDF_LENGTH))]
         length: usize,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.log_n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_LOG_N))]
-        scrypt_log_n: u8,
+        #[arg(long, default_value = SlowKeyOptions::default().scrypt.n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N))]
+        scrypt_n: u64,
 
         #[arg(long, default_value = SlowKeyOptions::default().scrypt.r.to_string(), help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R))]
         scrypt_r: u32,
@@ -168,7 +169,7 @@ fn main() {
         Some(Commands::Derive {
             iterations,
             length,
-            scrypt_log_n,
+            scrypt_n,
             scrypt_r,
             scrypt_p,
             argon2_m_cost,
@@ -180,12 +181,12 @@ fn main() {
             base58,
         }) => {
             println!(
-                "{}: iterations: {}, length: {}, {}: (log_n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})",
+                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})",
                 "SlowKey".yellow(),
                 iterations.to_string().cyan(),
                 length.to_string().cyan(),
                 "Scrypt".green(),
-                scrypt_log_n.to_string().cyan(),
+                scrypt_n.to_string().cyan(),
                 scrypt_r.to_string().cyan(),
                 scrypt_p.to_string().cyan(),
                 "Argon2id".green(),
@@ -254,7 +255,7 @@ fn main() {
             let opts = SlowKeyOptions::new(
                 *iterations,
                 *length,
-                &ScryptOptions::new(*scrypt_log_n, *scrypt_r, *scrypt_p),
+                &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
                 &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost, *argon2_p_cost),
             );
             let kdf = SlowKey::new(&opts);
@@ -303,12 +304,12 @@ fn main() {
                 let argon2id = &test_vector.opts.argon2id;
 
                 println!(
-                    "{}: iterations: {}, length: {}, {}: (log_n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {}), salt: \"{}\", secret: \"{}\"",
+                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {}), salt: \"{}\", secret: \"{}\"",
                     "SlowKey".yellow(),
                     test_vector.opts.iterations.to_string().cyan(),
                     test_vector.opts.length.to_string().cyan(),
                     "Scrypt".green(),
-                    scrypt.log_n.to_string().cyan(),
+                    scrypt.n.to_string().cyan(),
                     scrypt.r.to_string().cyan(),
                     scrypt.p.to_string().cyan(),
                     "Argon2id".green(),

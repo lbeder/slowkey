@@ -38,7 +38,15 @@ Derive a key using using Scrypt, Argon2, SHA2, and SHA3
 Usage: slowkey derive [OPTIONS]
 
 Options:
-  -i, --idsa <OFFSET>                Start the derivation from this offset. In order to use it, you also have to specify the intermediary offset data in hex format [default: 0]
+  -i, --iterations <ITERATIONS>        Number of iterations (must be greater than 0 and lesser than or equal to 4294967295) [default: 100]
+  -l, --length <LENGTH>                Length of the derived result (must be greater than 10 and lesser than or equal to 64) [default: 16]
+      --scrypt-log-n <SCRYPT_LOG_N>    Scrypt CPU/memory cost parameter (must be lesser than 64) [default: 20]
+      --scrypt-r <SCRYPT_R>            Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
+      --scrypt-p <SCRYPT_P>            Scrypt parallelization parameter (must be greater than 0 and lesser than 4294967295) [default: 1]
+      --argon2-m-cost <ARGON2_M_COST>  Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than 4294967295) [default: 2097152]
+      --argon2-t-cost <ARGON2_T_COST>  Argon2 number of iterations (must be greater than 2 and lesser than 4294967295) [default: 2]
+      --argon2-p-cost <ARGON2_P_COST>  Argon2 number of threads (must be greater than 1 and lesser than 16777215) [default: 4]
+      --offset <OFFSET>                Start the derivation from this offset. In order to use it, you also have to specify the intermediary offset data in hex format [default: 0]
       --offset-data <OFFSET_DATA>      Start the derivation with this intermediary data in hex format
       --base64                         Output the result in Base64 (in addition to hex)
       --base58                         Output the result in Base58 (in addition to hex)
@@ -138,6 +146,8 @@ Let's try to derive the key for the secret `secret`, using the salt `saltsalt`:
 
 > slowkey derive
 
+XXX
+
 ```sh
 SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4)
 
@@ -211,13 +221,13 @@ Test vectors:
 * Iterations: 1
 * Length: 64
 * Scrypt Parameters:
-  * log_n: 14
+  * log_n: 20
   * r: 8
   * p: 1
 * Argon2id Parameters:
-  * m_cost: 19456
+  * m_cost: 2097152
   * t_cost: 2
-  * p_cost: 1
+  * p_cost: 4
 
 ### #2
 
@@ -226,22 +236,22 @@ Test vectors:
 * Iterations: 3
 * Length: 64
 * Scrypt Parameters:
-  * log_n: 14
+  * log_n: 20
   * r: 8
   * p: 1
 * Argon2id Parameters:
-  * m_cost: 19456
+  * m_cost: 2097152
   * t_cost: 2
-  * p_cost: 1
-  
+  * p_cost: 4
+
 Results should be:
 
 ```sh
 SlowKey: iterations: 1, length: 64, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: ""
-Derived key: 8af03d251559a114e95d0793ab676e73d8c5e7c6b233273a0c226b2ba8ff1e59214f1d49a7b6194ec39b3752a01a47c8ff21bf08063cb1c166c182d6ad3ece83
+Derived key: 91e119bd892f0a6b4bc5adf23693db6409a8d053a5b6a451d0ab340a5e01cb6b6a04d31eb6d78e7dc89809869d59a24ea88aae9f9fa7aa0630040a2c02f0b1d1
 
 SlowKey: iterations: 3, length: 64, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: "Hello World"
-Derived key: 387f55b5aa7632bfea18cfe67b38cd18da524adbb07b9a6ed2fbe5481a3c2018e4f5577d53dc980991ac27296eaa540e9ae58306fbb5acb40896b1c0bd154d11
+Derived key: 78acc4cf9c4597b4312454fa6e78134f9e0308f79a07e97e457207d0919374c6d3d31b78c523fba364156da4df930b87596a42a1b1991cec5af708762b9e2e95
 ```
 
 ## License
