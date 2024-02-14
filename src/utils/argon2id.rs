@@ -1,4 +1,4 @@
-use argon2::{Algorithm, Argon2, Params, Version};
+use argon2_kdf::{Algorithm, Hasher};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Argon2idOptions {
@@ -8,14 +8,14 @@ pub struct Argon2idOptions {
 }
 
 impl Argon2idOptions {
-    pub const MIN_M_COST: u32 = Params::MIN_M_COST;
-    pub const MAX_M_COST: u32 = Params::MAX_M_COST;
+    pub const MIN_M_COST: u32 = 8;
+    pub const MAX_M_COST: u32 = u32::MAX;
 
-    pub const MIN_T_COST: u32 = Params::MIN_T_COST;
-    pub const MAX_T_COST: u32 = Params::MAX_T_COST;
+    pub const MIN_T_COST: u32 = 2;
+    pub const MAX_T_COST: u32 = u32::MAX;
 
-    pub const MIN_P_COST: u32 = Params::MIN_P_COST;
-    pub const MAX_P_COST: u32 = Params::MAX_P_COST;
+    pub const MIN_P_COST: u32 = 1;
+    pub const MAX_P_COST: u32 = 0xFFFFFF;
 
     // The "FIRST RECOMMENDED option" by RFC 9106 (https://datatracker.ietf.org/doc/html/rfc9106), but with t_cost of 2
     // instead of 1:
@@ -77,12 +77,12 @@ impl Default for Argon2idOptions {
 }
 
 pub struct Argon2id {
-    pub length: usize,
-    pub opts: Argon2idOptions,
+    length: usize,
+    opts: Argon2idOptions,
 }
 
 impl Argon2id {
-    pub const VERSION: Version = Version::V0x13;
+    pub const VERSION: u8 = 0x13;
 
     pub fn new(length: usize, opts: &Argon2idOptions) -> Self {
         Argon2id {
@@ -92,17 +92,16 @@ impl Argon2id {
     }
 
     pub fn hash(&self, salt: &[u8], secret: &[u8]) -> Vec<u8> {
-        let mut dk = vec![0; self.length];
+        let argon2 = Hasher::new()
+            .algorithm(Algorithm::Argon2id)
+            .salt_length(salt.len() as u32)
+            .hash_length(self.length as u32)
+            .memory_cost_kib(self.opts.m_cost)
+            .iterations(self.opts.t_cost)
+            .threads(self.opts.p_cost)
+            .custom_salt(salt);
 
-        let argon2 = Argon2::new(
-            Algorithm::Argon2id,
-            Self::VERSION,
-            Params::new(self.opts.m_cost, self.opts.t_cost, self.opts.p_cost, Some(self.length)).unwrap(),
-        );
-
-        argon2.hash_password_into(secret, salt, &mut dk).unwrap();
-
-        dk.to_vec()
+        argon2.hash(secret).unwrap().as_bytes().to_vec()
     }
 }
 
@@ -116,12 +115,12 @@ mod tests {
     #[case(b"saltsalt", b"test", 64, &Argon2idOptions::default(), "9e8dc8d00570edb4e7474a3e7c59cffa828f4145081e24c87612fcd2dad526e2d942a55225c94af995fc87d554e2845f7b3449f5d86db069a94c3670a3288675")]
     #[case(b"saltsalt", b"test", 32, &Argon2idOptions::default(), "e209f7dcd8b44a509c680fa61f9204b286f221b932afc0fbf54f7d53f0f34da8")]
     #[case(b"saltsalt", b"test", 16, &Argon2idOptions::default(), "c8506852d2d0ea5d9bd43a3997304a91")]
-    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "2ea32d06a83bbcf48e62e64570e852fe06689bffd9826f7f17ef2e6bdd30fcde4c2895d3ed56936e93fafbf980deeaa825524a6277cc597f4b13b246d907823b")]
-    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "b5ff8b38f1871d121b97f90e1c56fbb982dd960fe6e09456720dba3e3f5302bd")]
-    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "8ce847ad689abdbcfebf3b7a38f75fcf")]
-    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "8d8a16f98d2083e949adcfa2b66b78ad86a284a6f3bbf85a428f2f41f102a2761bb5ba3232085ae337b347174ca2057580730646b97109ebcfae18bafb9f9dce")]
-    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "0090960e76b193fb67e96ddeb68e3d9771b66e4ed16bb4d843edd2788a039d8c")]
-    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "5c4a7816c50c8480ae45e2a4df9c3251")]
+    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST, p_cost: Argon2idOptions::DEFAULT_P_COST * 2 }, "f87fd3a6cf5b64651805dc9a1f480f83797be5b5c8da98ab596973d91d6b42af268e1f1a70a424b0201307ae62f8a191ce25e2eafc2ef9555a4ff4de5241dd46")]
+    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST, p_cost: Argon2idOptions::DEFAULT_P_COST * 2 }, "cace633b8a7e5ee4c4884792a75ed565a017fc92600098914db8ebbcf2f61390")]
+    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST, p_cost: Argon2idOptions::DEFAULT_P_COST * 2 }, "6802f05eb7ec1d3ea0b41b082b5090ad")]
+    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2, p_cost: Argon2idOptions::DEFAULT_P_COST}, "2592ec8929f796cd8f37b2b5474c6bf281cf399e37665fe336cf239cbd7872faa5a441385086d14c1e94eabf52a2349d9a770613a0302fe67416642c8882bb48")]
+    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2, p_cost: Argon2idOptions::DEFAULT_P_COST}, "cfb1300fc376ce9fffc09e6796080b2d9d8b50bf05a46c4ba42e2b180b28a2be")]
+    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2, p_cost: Argon2idOptions::DEFAULT_P_COST}, "500ae20a3e4356b34b2a89f72d1ddc50")]
 
     fn argon2_test(
         #[case] salt: &[u8], #[case] secret: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,

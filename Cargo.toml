@@ -22,8 +22,8 @@ lazy_static = "1.4.0"
 base64 = "0.21.7"
 bs58 = "0.5.0"
 strum_macros = "0.26.1"
-argon2 = "0.6.0-pre.0"
 pbr = "1.1.1"
+argon2-kdf = "1.5.2"
 
 [dev-dependencies]
 rstest = "0.18.2"
