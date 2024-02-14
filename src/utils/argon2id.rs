@@ -112,16 +112,16 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&"saltsalt".as_bytes(), &"".as_bytes(), 64, &Argon2idOptions::default(), "110a3202612f4af228ff817a5d0545c4bccfc68ec876a6330602ed8fdd3eb04367e748a38eba826dfb6bd41f54c06bfbcf3404014b6194767ca7cf4e6828fc87")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 64, &Argon2idOptions::default(), "9e8dc8d00570edb4e7474a3e7c59cffa828f4145081e24c87612fcd2dad526e2d942a55225c94af995fc87d554e2845f7b3449f5d86db069a94c3670a3288675")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 32, &Argon2idOptions::default(), "e209f7dcd8b44a509c680fa61f9204b286f221b932afc0fbf54f7d53f0f34da8")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 16, &Argon2idOptions::default(), "c8506852d2d0ea5d9bd43a3997304a91")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "2ea32d06a83bbcf48e62e64570e852fe06689bffd9826f7f17ef2e6bdd30fcde4c2895d3ed56936e93fafbf980deeaa825524a6277cc597f4b13b246d907823b")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "b5ff8b38f1871d121b97f90e1c56fbb982dd960fe6e09456720dba3e3f5302bd")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "8ce847ad689abdbcfebf3b7a38f75fcf")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "8d8a16f98d2083e949adcfa2b66b78ad86a284a6f3bbf85a428f2f41f102a2761bb5ba3232085ae337b347174ca2057580730646b97109ebcfae18bafb9f9dce")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "0090960e76b193fb67e96ddeb68e3d9771b66e4ed16bb4d843edd2788a039d8c")]
-    #[case(&"saltsalt".as_bytes(), &"test".as_bytes(), 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "5c4a7816c50c8480ae45e2a4df9c3251")]
+    #[case(b"saltsalt", b"", 64, &Argon2idOptions::default(), "110a3202612f4af228ff817a5d0545c4bccfc68ec876a6330602ed8fdd3eb04367e748a38eba826dfb6bd41f54c06bfbcf3404014b6194767ca7cf4e6828fc87")]
+    #[case(b"saltsalt", b"test", 64, &Argon2idOptions::default(), "9e8dc8d00570edb4e7474a3e7c59cffa828f4145081e24c87612fcd2dad526e2d942a55225c94af995fc87d554e2845f7b3449f5d86db069a94c3670a3288675")]
+    #[case(b"saltsalt", b"test", 32, &Argon2idOptions::default(), "e209f7dcd8b44a509c680fa61f9204b286f221b932afc0fbf54f7d53f0f34da8")]
+    #[case(b"saltsalt", b"test", 16, &Argon2idOptions::default(), "c8506852d2d0ea5d9bd43a3997304a91")]
+    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "2ea32d06a83bbcf48e62e64570e852fe06689bffd9826f7f17ef2e6bdd30fcde4c2895d3ed56936e93fafbf980deeaa825524a6277cc597f4b13b246d907823b")]
+    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "b5ff8b38f1871d121b97f90e1c56fbb982dd960fe6e09456720dba3e3f5302bd")]
+    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST, p_cost: Params::DEFAULT_P_COST * 2 }, "8ce847ad689abdbcfebf3b7a38f75fcf")]
+    #[case(b"saltsalt", b"test", 64, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "8d8a16f98d2083e949adcfa2b66b78ad86a284a6f3bbf85a428f2f41f102a2761bb5ba3232085ae337b347174ca2057580730646b97109ebcfae18bafb9f9dce")]
+    #[case(b"saltsalt", b"test", 32, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "0090960e76b193fb67e96ddeb68e3d9771b66e4ed16bb4d843edd2788a039d8c")]
+    #[case(b"saltsalt", b"test", 16, &Argon2idOptions { m_cost: Params::DEFAULT_M_COST / 2, t_cost: Params::DEFAULT_T_COST * 2, p_cost: Params::DEFAULT_P_COST}, "5c4a7816c50c8480ae45e2a4df9c3251")]
 
     fn argon2_test(
         #[case] salt: &[u8], #[case] secret: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,
