@@ -45,7 +45,6 @@ Options:
       --scrypt-p <SCRYPT_P>            Scrypt parallelization parameter (must be greater than 0 and lesser than 4294967295) [default: 1]
       --argon2-m-cost <ARGON2_M_COST>  Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than 4294967295) [default: 2097152]
       --argon2-t-cost <ARGON2_T_COST>  Argon2 number of iterations (must be greater than 2 and lesser than 4294967295) [default: 2]
-      --argon2-p-cost <ARGON2_P_COST>  Argon2 number of threads (must be greater than 1 and lesser than 16777215) [default: 4]
       --offset <OFFSET>                Start the derivation from this offset. In order to use it, you also have to specify the intermediary offset data in hex format [default: 0]
       --offset-data <OFFSET_DATA>      Start the derivation with this intermediary data in hex format
       --base64                         Output the result in Base64 (in addition to hex)
@@ -149,7 +148,7 @@ Let's try to derive the key for the secret `secret`, using the salt `saltsalt`:
 XXX
 
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4)
+SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 Enter your salt: saltsalt
 Enter your secret: 🔑
@@ -179,7 +178,7 @@ To help with resuming previously stopped derivations, we're registering a `CTRL_
 For example, if we will abort the previous derivation after the `10th` iteration, the tool will output:
 
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4)
+SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 Enter your salt: saltsalt
 Enter your secret: 🔑
@@ -195,7 +194,7 @@ You can then use this output to resume the previous derivation by specifying a s
 > slowkey derive --offset 10 --offset-data f4565d04caa3e3bfc8d6ddb06b4f0d99
 
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4)
+SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 Enter your salt: saltsalt
 
@@ -227,7 +226,6 @@ Test vectors:
 * Argon2id Parameters:
   * m_cost: 2097152
   * t_cost: 2
-  * p_cost: 4
 
 ### #2
 
@@ -242,15 +240,14 @@ Test vectors:
 * Argon2id Parameters:
   * m_cost: 2097152
   * t_cost: 2
-  * p_cost: 4
 
 Results should be:
 
 ```sh
-SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: ""
+SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySalt", secret: ""
 Derived key: 91e119bd892f0a6b4bc5adf23693db6409a8d053a5b6a451d0ab340a5e01cb6b6a04d31eb6d78e7dc89809869d59a24ea88aae9f9fa7aa0630040a2c02f0b1d1
 
-SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 4), salt: "SlowKeySalt", secret: "Hello World"
+SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySalt", secret: "Hello World"
 Derived key: 78acc4cf9c4597b4312454fa6e78134f9e0308f79a07e97e457207d0919374c6d3d31b78c523fba364156da4df930b87596a42a1b1991cec5af708762b9e2e95
 ```
 

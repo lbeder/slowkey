@@ -18,23 +18,23 @@ impl SlowKeyOptions {
     pub const MAX_ITERATIONS: u32 = u32::MAX;
     pub const DEFAULT_ITERATIONS: u32 = 100;
 
-    pub const MIN_KDF_LENGTH: usize = 10;
-    pub const MAX_KDF_LENGTH: usize = 64;
-    pub const DEFAULT_KDF_LENGTH: usize = 16;
+    pub const MIN_KEY_LENGTH: usize = 10;
+    pub const MAX_KEY_LENGTH: usize = 128;
+    pub const DEFAULT_KEY_LENGTH: usize = 16;
 
     pub fn new(iterations: u32, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
-        if length < Self::MIN_KDF_LENGTH {
+        if length < Self::MIN_KEY_LENGTH {
             panic!(
-                "kdf {} is shorter than the min length of {}",
-                Self::MIN_KDF_LENGTH,
+                "length {} is shorter than the min length of {}",
+                Self::MIN_KEY_LENGTH,
                 length
             );
         }
 
-        if length > Self::MAX_KDF_LENGTH {
+        if length > Self::MAX_KEY_LENGTH {
             panic!(
-                "kdf {} is longer than the max length of {}",
-                Self::MAX_KDF_LENGTH,
+                "length {} is longer than the max length of {}",
+                Self::MAX_KEY_LENGTH,
                 length
             );
         }
@@ -52,7 +52,7 @@ impl Default for SlowKeyOptions {
     fn default() -> Self {
         Self {
             iterations: Self::DEFAULT_ITERATIONS,
-            length: Self::DEFAULT_KDF_LENGTH,
+            length: Self::DEFAULT_KEY_LENGTH,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
         }
@@ -105,8 +105,7 @@ pub struct SlowKey {
 }
 
 impl SlowKey {
-    pub const MIN_SALT_LENGTH: usize = 8;
-    pub const MAX_SALT_LENGTH: usize = 0xFFFFFFFF;
+    pub const SALT_LENGTH: usize = 16;
 
     pub fn new(opts: &SlowKeyOptions) -> Self {
         SlowKey {
@@ -211,7 +210,7 @@ mod tests {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions::default(),
-        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2, p_cost: 2 }
+        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2 }
     }, b"saltsalt", b"test", &Vec::new(), 0,
     "bb599595d1f5cf42fc39b414fa81798085c00fce25dfece2b84bbc038c3737a9")]
     #[case(&SlowKeyOptions {

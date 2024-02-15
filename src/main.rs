@@ -1,12 +1,13 @@
 extern crate hex;
+extern crate libsodium_sys;
 extern crate pbr;
-extern crate rust_scrypt;
 
 mod utils;
 
 #[macro_use]
 extern crate lazy_static;
 
+use libsodium_sys::sodium_init;
 use mimalloc::MiMalloc;
 use utils::argon2id::Argon2idOptions;
 
@@ -52,7 +53,7 @@ enum Commands {
         #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})",  SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
         iterations: u32,
 
-        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KDF_LENGTH, SlowKeyOptions::MAX_KDF_LENGTH))]
+        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_LENGTH, SlowKeyOptions::MAX_KEY_LENGTH))]
         length: usize,
 
         #[arg(long, default_value = SlowKeyOptions::default().scrypt.n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N))]
@@ -69,9 +70,6 @@ enum Commands {
 
         #[arg(long, default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(), help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
-
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.p_cost.to_string(), help = format!("Argon2 number of threads (must be greater than {} and lesser than {})", Argon2idOptions::MIN_P_COST, Argon2idOptions::MAX_P_COST))]
-        argon2_p_cost: u32,
 
         #[arg(
             long,
@@ -112,31 +110,13 @@ fn read_line() -> Result<String> {
 }
 
 fn get_salt() -> Vec<u8> {
-    print!(
-        "Enter your salt (must be longer than {} and shorter than {}): ",
-        SlowKey::MIN_SALT_LENGTH,
-        SlowKey::MAX_SALT_LENGTH
-    );
+    print!("Enter your salt (must be {} long): ", SlowKey::SALT_LENGTH);
 
     io::stdout().flush().unwrap();
 
     let salt = read_line().unwrap().as_bytes().to_vec();
-    let salt_len = salt.len();
-
-    if salt_len < SlowKey::MIN_SALT_LENGTH {
-        panic!(
-            "salt {} is shorter than the min length of {}",
-            salt_len,
-            SlowKey::MIN_SALT_LENGTH
-        );
-    }
-
-    if salt_len > SlowKey::MAX_SALT_LENGTH {
-        panic!(
-            "salt {} is longer than the max length of {}",
-            salt_len,
-            SlowKey::MAX_SALT_LENGTH
-        );
+    if salt.len() != SlowKey::SALT_LENGTH {
+        panic!("salt must be {} long", SlowKey::SALT_LENGTH);
     }
 
     salt
@@ -160,6 +140,14 @@ fn main() {
     better_panic::install();
     color_backtrace::install();
 
+    // Initialize libsodium
+    unsafe {
+        let res = sodium_init();
+        if res != 0 {
+            panic!("sodium_init failed with: {res}");
+        }
+    }
+
     println!("SlowKey v{VERSION}");
     println!();
 
@@ -174,14 +162,13 @@ fn main() {
             scrypt_p,
             argon2_m_cost,
             argon2_t_cost,
-            argon2_p_cost,
             offset,
             offset_data,
             base64,
             base58,
         }) => {
             println!(
-                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})",
+                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
                 "SlowKey".yellow(),
                 iterations.to_string().cyan(),
                 length.to_string().cyan(),
@@ -193,7 +180,6 @@ fn main() {
                 Argon2id::VERSION.to_string().cyan(),
                 argon2_m_cost.to_string().cyan(),
                 argon2_t_cost.to_string().cyan(),
-                argon2_p_cost.to_string().cyan(),
             );
             println!();
 
@@ -256,7 +242,7 @@ fn main() {
                 *iterations,
                 *length,
                 &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
-                &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost, *argon2_p_cost),
+                &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
             );
             let kdf = SlowKey::new(&opts);
 
@@ -304,7 +290,7 @@ fn main() {
                 let argon2id = &test_vector.opts.argon2id;
 
                 println!(
-                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {}), salt: \"{}\", secret: \"{}\"",
+                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}), salt: \"{}\", secret: \"{}\"",
                     "SlowKey".yellow(),
                     test_vector.opts.iterations.to_string().cyan(),
                     test_vector.opts.length.to_string().cyan(),
@@ -316,7 +302,6 @@ fn main() {
                     Argon2id::VERSION.to_string().cyan(),
                     argon2id.m_cost.to_string().cyan(),
                     argon2id.t_cost.to_string().cyan(),
-                    argon2id.p_cost.to_string().cyan(),
                     from_utf8(&test_vector.salt).unwrap().cyan(),
                     from_utf8(&test_vector.secret).unwrap().cyan(),
                 );

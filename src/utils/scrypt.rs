@@ -1,4 +1,4 @@
-use rust_scrypt::{scrypt, ScryptParams};
+use libsodium_sys::crypto_pwhash_scryptsalsa208sha256_ll;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct ScryptOptions {
@@ -9,13 +9,14 @@ pub struct ScryptOptions {
 
 impl ScryptOptions {
     pub const MAX_N: u64 = u64::MAX;
+    pub const DEFAULT_N: u64 = 1 << 20;
+
     pub const MIN_R: u32 = 0;
     pub const MAX_R: u32 = u32::MAX;
+    pub const DEFAULT_R: u32 = 8;
+
     pub const MIN_P: u32 = 0;
     pub const MAX_P: u32 = u32::MAX;
-
-    pub const DEFAULT_N: u64 = 1 << 20;
-    pub const DEFAULT_R: u32 = 8;
     pub const DEFAULT_P: u32 = 1;
 
     pub fn new(n: u64, r: u32, p: u32) -> Self {
@@ -51,16 +52,23 @@ impl Scrypt {
     pub fn hash(&self, salt: &[u8], secret: &[u8]) -> Vec<u8> {
         let mut dk = vec![0; self.length];
 
-        scrypt(
-            secret,
-            salt,
-            &ScryptParams {
-                n: self.opts.n,
-                r: self.opts.r,
-                p: self.opts.p,
-            },
-            &mut dk,
-        );
+        unsafe {
+            let ret = crypto_pwhash_scryptsalsa208sha256_ll(
+                secret.as_ptr(),
+                secret.len(),
+                salt.as_ptr(),
+                salt.len(),
+                self.opts.n,
+                self.opts.r,
+                self.opts.p,
+                dk.as_mut_ptr(),
+                dk.len(),
+            );
+
+            if ret != 0 {
+                println!("crypto_pwhash_scryptsalsa208sha256_ll failed with: {ret}");
+            }
+        }
 
         dk.to_vec()
     }
