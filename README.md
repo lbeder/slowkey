@@ -39,7 +39,7 @@ Usage: slowkey derive [OPTIONS]
 
 Options:
   -i, --iterations <ITERATIONS>        Number of iterations (must be greater than 0 and lesser than or equal to 4294967295) [default: 100]
-  -l, --length <LENGTH>                Length of the derived result (must be greater than 10 and lesser than or equal to 64) [default: 16]
+  -l, --length <LENGTH>                Length of the derived result (must be greater than 10 and lesser than or equal to 128) [default: 16]
       --scrypt-n <SCRYPT_N>            Scrypt CPU/memory cost parameter (must be lesser than 18446744073709551615) [default: 1048576]
       --scrypt-r <SCRYPT_R>            Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>            Scrypt parallelization parameter (must be greater than 0 and lesser than 4294967295) [default: 1]
@@ -216,7 +216,7 @@ Test vectors:
 ### #1
 
 * Secret: "" (the empty string)
-* Salt: "SlowKeySalt"
+* Salt: "SlowKeySlowKey16"
 * Iterations: 1
 * Length: 64
 * Scrypt Parameters:
@@ -230,7 +230,7 @@ Test vectors:
 ### #2
 
 * Secret: "Hello World"
-* Salt: "SlowKeySalt"
+* Salt: "SlowKeySlowKey16"
 * Iterations: 3
 * Length: 64
 * Scrypt Parameters:

@@ -109,14 +109,25 @@ fn read_line() -> Result<String> {
     Ok(line)
 }
 
+const HEX_PREFIX: &str = "0x";
+
 fn get_salt() -> Vec<u8> {
-    print!("Enter your salt (must be {} long): ", SlowKey::SALT_LENGTH);
+    print!(
+        "Enter your salt (must be {} characters long) in either raw or hex format starting with 0x: ",
+        SlowKey::SALT_LENGTH
+    );
 
     io::stdout().flush().unwrap();
 
-    let salt = read_line().unwrap().as_bytes().to_vec();
+    let input = read_line().unwrap();
+    let salt = if input.starts_with(HEX_PREFIX) {
+        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        input.as_bytes().to_vec()
+    };
+
     if salt.len() != SlowKey::SALT_LENGTH {
-        panic!("salt must be {} long", SlowKey::SALT_LENGTH);
+        panic!("salt must be {} characters/bytes long", SlowKey::SALT_LENGTH);
     }
 
     salt
@@ -133,7 +144,11 @@ fn get_secret() -> Vec<u8> {
         exit(-1);
     }
 
-    pass.as_bytes().to_vec()
+    if pass.starts_with(HEX_PREFIX) {
+        hex::decode(pass.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        pass.as_bytes().to_vec()
+    }
 }
 
 fn main() {
@@ -167,6 +182,13 @@ fn main() {
             base64,
             base58,
         }) => {
+            let opts = SlowKeyOptions::new(
+                *iterations,
+                *length,
+                &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
+                &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
+            );
+
             println!(
                 "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
                 "SlowKey".yellow(),
@@ -238,17 +260,11 @@ fn main() {
 
             let start_time = Instant::now();
 
-            let opts = SlowKeyOptions::new(
-                *iterations,
-                *length,
-                &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
-                &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
-            );
-            let kdf = SlowKey::new(&opts);
+            let slowkey = SlowKey::new(&opts);
 
             let last_iteration2 = last_iteration_ref;
             let last_result2 = last_result_ref;
-            let key = kdf.derive_key_with_callback(&salt, &secret, &offset_raw_data, *offset, |i, res| {
+            let key = slowkey.derive_key_with_callback(&salt, &secret, &offset_raw_data, *offset, |i, res| {
                 *last_iteration2.lock().unwrap() = i;
                 *last_result2.lock().unwrap() = hex::encode(res);
 
@@ -306,8 +322,8 @@ fn main() {
                     from_utf8(&test_vector.secret).unwrap().cyan(),
                 );
 
-                let kdf = SlowKey::new(&test_vector.opts);
-                let key = kdf.derive_key(
+                let slowkey = SlowKey::new(&test_vector.opts);
+                let key = slowkey.derive_key(
                     &test_vector.salt,
                     &test_vector.secret,
                     &test_vector.offset_data,
