@@ -49,13 +49,13 @@ impl Scrypt {
         }
     }
 
-    pub fn hash(&self, salt: &[u8], secret: &[u8]) -> Vec<u8> {
+    pub fn hash(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {
         let mut dk = vec![0; self.length];
 
         unsafe {
             let ret = crypto_pwhash_scryptsalsa208sha256_ll(
-                secret.as_ptr(),
-                secret.len(),
+                password.as_ptr(),
+                password.len(),
                 salt.as_ptr(),
                 salt.len(),
                 self.opts.n,
@@ -93,11 +93,11 @@ mod tests {
     #[case(b"salt", b"test", 16, &ScryptOptions { n: 1 << 12, r: 16, p: 1 }, "107a4e74f205207f82c8fd0f8a4a5fbe")]
 
     fn scrypt_test(
-        #[case] salt: &[u8], #[case] secret: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,
+        #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,
         #[case] expected: &str,
     ) {
         let scrypt = Scrypt::new(length, opts);
-        let key = scrypt.hash(salt, secret);
+        let key = scrypt.hash(salt, password);
 
         assert_eq!(hex::encode(key), expected);
     }

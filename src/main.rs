@@ -113,7 +113,7 @@ const HEX_PREFIX: &str = "0x";
 
 fn get_salt() -> Vec<u8> {
     print!(
-        "Enter your salt (must be {} characters long) in either raw or hex format starting with 0x: ",
+        "Enter your salt (must be {} characters/bytes long in either raw or hex format starting with 0x): ",
         SlowKey::SALT_LENGTH
     );
 
@@ -133,13 +133,14 @@ fn get_salt() -> Vec<u8> {
     salt
 }
 
-fn get_secret() -> Vec<u8> {
-    let pass = rpassword::prompt_password("Enter your secret: ").unwrap();
-    let pass2 = rpassword::prompt_password("Enter your secret again: ").unwrap();
+fn get_password() -> Vec<u8> {
+    let pass =
+        rpassword::prompt_password("Enter your password (in either raw or hex format starting with 0x): ").unwrap();
+    let pass2 = rpassword::prompt_password("Enter your password again: ").unwrap();
 
     if pass != pass2 {
         println!();
-        println!("Secrets don't match!");
+        println!("Passwords don't match!");
 
         exit(-1);
     }
@@ -249,7 +250,7 @@ fn main() {
             }
 
             let salt = get_salt();
-            let secret = get_secret();
+            let password = get_password();
 
             println!();
 
@@ -264,7 +265,7 @@ fn main() {
 
             let last_iteration2 = last_iteration_ref;
             let last_result2 = last_result_ref;
-            let key = slowkey.derive_key_with_callback(&salt, &secret, &offset_raw_data, *offset, |i, res| {
+            let key = slowkey.derive_key_with_callback(&salt, &password, &offset_raw_data, *offset, |i, res| {
                 *last_iteration2.lock().unwrap() = i;
                 *last_result2.lock().unwrap() = hex::encode(res);
 
@@ -306,7 +307,7 @@ fn main() {
                 let argon2id = &test_vector.opts.argon2id;
 
                 println!(
-                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}), salt: \"{}\", secret: \"{}\"",
+                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}), salt: \"{}\", password: \"{}\"",
                     "SlowKey".yellow(),
                     test_vector.opts.iterations.to_string().cyan(),
                     test_vector.opts.length.to_string().cyan(),
@@ -319,13 +320,13 @@ fn main() {
                     argon2id.m_cost.to_string().cyan(),
                     argon2id.t_cost.to_string().cyan(),
                     from_utf8(&test_vector.salt).unwrap().cyan(),
-                    from_utf8(&test_vector.secret).unwrap().cyan(),
+                    from_utf8(&test_vector.password).unwrap().cyan(),
                 );
 
                 let slowkey = SlowKey::new(&test_vector.opts);
                 let key = slowkey.derive_key(
                     &test_vector.salt,
-                    &test_vector.secret,
+                    &test_vector.password,
                     &test_vector.offset_data,
                     test_vector.offset,
                 );

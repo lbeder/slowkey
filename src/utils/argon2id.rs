@@ -67,15 +67,15 @@ impl Argon2id {
         }
     }
 
-    pub fn hash(&self, salt: &[u8], secret: &[u8]) -> Vec<u8> {
+    pub fn hash(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {
         let mut dk = vec![0; self.length];
 
         unsafe {
             let ret = crypto_pwhash_argon2id(
                 dk.as_mut_ptr(),
                 dk.len() as u64,
-                secret.as_ptr() as *const _,
-                secret.len() as u64,
+                password.as_ptr() as *const _,
+                password.len() as u64,
                 salt.as_ptr(),
                 self.opts.t_cost as u64,
                 (self.opts.m_cost as usize) * Self::BYTES_IN_KIB,
@@ -109,11 +109,11 @@ mod tests {
     #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2}, "c2f48dba626afcbfe5283c3a3cba9c60")]
 
     fn argon2_test(
-        #[case] salt: &[u8], #[case] secret: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,
+        #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,
         #[case] expected: &str,
     ) {
         let argon2 = Argon2id::new(length, opts);
-        let key = argon2.hash(salt, secret);
+        let key = argon2.hash(salt, password);
 
         assert_eq!(hex::encode(key), expected);
     }

@@ -63,7 +63,7 @@ impl Default for SlowKeyOptions {
 pub struct TestSlowKeyOptions {
     pub opts: SlowKeyOptions,
     pub salt: Vec<u8>,
-    pub secret: Vec<u8>,
+    pub password: Vec<u8>,
     pub offset_data: Vec<u8>,
     pub offset: u32,
 }
@@ -78,7 +78,7 @@ lazy_static! {
                 argon2id: Argon2idOptions::default()
             },
             salt: b"SlowKeySlowKey16".to_vec(),
-            secret: Vec::new(),
+            password: Vec::new(),
             offset_data: Vec::new(),
             offset: 0,
         },
@@ -90,7 +90,7 @@ lazy_static! {
                 argon2id: Argon2idOptions::default()
             },
             salt: b"SlowKeySlowKey16".to_vec(),
-            secret: b"Hello World".to_vec(),
+            password: b"Hello World".to_vec(),
             offset_data: Vec::new(),
             offset: 0,
         },
@@ -116,10 +116,10 @@ impl SlowKey {
         }
     }
 
-    fn double_hash(&self, salt: &[u8], secret: &[u8], res: &mut Vec<u8>) {
+    fn double_hash(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
         // Calculate the SHA2 hash of the result and the inputs
         res.extend_from_slice(salt);
-        res.extend_from_slice(secret);
+        res.extend_from_slice(password);
 
         let mut sha512 = Sha512::new();
         sha512.update(&res);
@@ -127,29 +127,29 @@ impl SlowKey {
 
         // Calculate the SHA3 hash of the result and the inputs
         res.extend_from_slice(salt);
-        res.extend_from_slice(secret);
+        res.extend_from_slice(password);
 
         let mut keccack512 = Keccak512::new();
         keccack512.update(&res);
         *res = keccack512.finalize().to_vec();
     }
 
-    fn scrypt(&self, salt: &[u8], secret: &[u8], res: &mut Vec<u8>) {
+    fn scrypt(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
         res.extend_from_slice(salt);
-        res.extend_from_slice(secret);
+        res.extend_from_slice(password);
 
         *res = self.scrypt.hash(salt, res);
     }
 
-    fn argon2id(&self, salt: &[u8], secret: &[u8], res: &mut Vec<u8>) {
+    fn argon2id(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
         res.extend_from_slice(salt);
-        res.extend_from_slice(secret);
+        res.extend_from_slice(password);
 
         *res = self.argon2id.hash(salt, res);
     }
 
     pub fn derive_key_with_callback<F: FnMut(u32, &Vec<u8>)>(
-        &self, salt: &[u8], secret: &[u8], offset_data: &[u8], offset: u32, mut callback: F,
+        &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: u32, mut callback: F,
     ) -> Vec<u8> {
         if salt.len() != SlowKey::SALT_LENGTH {
             panic!("salt must be {} long", SlowKey::SALT_LENGTH);
@@ -162,29 +162,29 @@ impl SlowKey {
 
         for i in 0..(self.iterations - offset) {
             // Calculate the SHA3 and SHA2 hashes of the result and the inputs
-            self.double_hash(salt, secret, &mut res);
+            self.double_hash(salt, password, &mut res);
 
             // Calculate the Scrypt hash of the result and the inputs
-            self.scrypt(salt, secret, &mut res);
+            self.scrypt(salt, password, &mut res);
 
             // Calculate the SHA3 and SHA2 hashes of the result and the inputs again
-            self.double_hash(salt, secret, &mut res);
+            self.double_hash(salt, password, &mut res);
 
             // Calculate the Argon2 hash of the result and the inputs
-            self.argon2id(salt, secret, &mut res);
+            self.argon2id(salt, password, &mut res);
 
             callback(i, &res);
         }
 
         // Calculate the final SHA3 and SHA2 hashes (and trim the result, if required)
-        self.double_hash(salt, secret, &mut res);
+        self.double_hash(salt, password, &mut res);
         res.truncate(self.length);
 
         res
     }
 
-    pub fn derive_key(&self, salt: &[u8], secret: &[u8], offset_data: &[u8], offset: u32) -> Vec<u8> {
-        self.derive_key_with_callback(salt, secret, offset_data, offset, |_, _| {})
+    pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: u32) -> Vec<u8> {
+        self.derive_key_with_callback(salt, password, offset_data, offset, |_, _| {})
     }
 }
 
@@ -194,8 +194,8 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].secret, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "93e1459001ad83e3b39133cfba4ced8ce69f68e58553b093114abeee4174118b87d87d1b3d2c67d2d3ea5ca050b83ab49346eb9583e5fb31cc8f51f8d3343bf1")]
-    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].secret, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "746f3a93557814a0e496a13af627a25954f3f15e129471b8eec713958ed12a273b932d02ba4f218edacb7d8a4b9bd4e6368004531f77e1981393f127c7f3ab64")]
+    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "93e1459001ad83e3b39133cfba4ced8ce69f68e58553b093114abeee4174118b87d87d1b3d2c67d2d3ea5ca050b83ab49346eb9583e5fb31cc8f51f8d3343bf1")]
+    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "746f3a93557814a0e496a13af627a25954f3f15e129471b8eec713958ed12a273b932d02ba4f218edacb7d8a4b9bd4e6368004531f77e1981393f127c7f3ab64")]
     #[case(&SlowKeyOptions {
         iterations: 1,
         length: 64,
@@ -282,11 +282,11 @@ mod tests {
     "960aef828739c9e1a3c932d51b1d05fbc9fd57956b1e67bc78cabdf3aa4d8e67eb1472ef6668160040423487fe2907340b7474932f1319c7b796542f17437cd8")]
 
     fn derive_test(
-        #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] secret: &[u8], #[case] offset_data: &[u8],
+        #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
         #[case] offset: u32, #[case] expected: &str,
     ) {
         let kdf = SlowKey::new(options);
-        let key = kdf.derive_key(salt, secret, offset_data, offset);
+        let key = kdf.derive_key(salt, password, offset_data, offset);
         assert_eq!(hex::encode(key), expected);
     }
 }

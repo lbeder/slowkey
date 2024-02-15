@@ -141,34 +141,32 @@ cargo build --release --target=x86_64-pc-windows-gnu
 
 ## Examples
 
-Let's try to derive the key for the secret `secret`, using the salt `saltsalt`:
+Let's try to derive the key for the password `secret`, using the salt `saltsaltsaltsalt`:
 
 > slowkey derive
 
-XXX
-
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt: saltsalt
-Enter your secret: 🔑
-Enter your secret again: 🔑
+Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
+Enter your password (in either raw or hex format starting with 0x): 🔑
+Enter your password again: 🔑
 
-Processing: 12 / 100 [==============>--------------------------------------------------------------------------------------------------------------] 12.00 % 3m
+Processing: 12 / 100 [==============>--------------------------------------------------------------------------------------------------------------] 12.00 % 9m
 ```
 
 Final result:
 
 ```sh
-Enter your salt: saltsalt
-Enter your secret: 🔑
-Enter your secret again: 🔑
+Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
+Enter your password (in either raw or hex format starting with 0x): 🔑
+Enter your password again: 🔑
 
 Processing: 100 / 100 [=======================================================================================================================================] 100.00 %
 
-Key (hex) is (please highlight to see): 176de269e7ff4c4624c4108e896930cb
+Key (hex) is (please highlight to see): dc4228e2b23375b3560166d8c822400b
 
-Finished in 4m 42s
+Finished in 8m 9s
 ```
 
 ### Resuming Previous Derivation
@@ -178,31 +176,31 @@ To help with resuming previously stopped derivations, we're registering a `CTRL_
 For example, if we will abort the previous derivation after the `10th` iteration, the tool will output:
 
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt: saltsalt
-Enter your secret: 🔑
-Enter your secret again: 🔑
+Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
+Enter your password (in either raw or hex format starting with 0x): 🔑
+Enter your password again: 🔑
 
-Processing: 10 / 100 [==========================================================================>-------------------------------------------------] 10.00 % 4m
+Processing: 10 / 100 [==========================================================================>-------------------------------------------------] 10.00 % 7m
 
-Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) f4565d04caa3e3bfc8d6ddb06b4f0d99
+Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) 9d3088829bb0d2049488215d2c96f62c
 ```
 
 You can then use this output to resume the previous derivation by specifying a starting offset and data like so:
 
-> slowkey derive --offset 10 --offset-data f4565d04caa3e3bfc8d6ddb06b4f0d99
+> slowkey derive --offset 10 --offset-data 9d3088829bb0d2049488215d2c96f62c
 
 ```sh
-SlowKey: iterations: 100, length: 16, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt: saltsalt
+Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
 
-Resuming from iteration 10 with intermediary offset data f4565d04caa3e3bfc8d6ddb06b4f0d99
+Resuming from iteration 10 with intermediary offset data 9d3088829bb0d2049488215d2c96f62c
 
-Processing: 90 / 90 [===============================================================================================================================] 100.00 % 4m
+Processing: 90 / 90 [===============================================================================================================================] 100.00 % 8m
 
-Key (hex) is (please highlight to see): 176de269e7ff4c4624c4108e896930cb
+Key (hex) is (please highlight to see): dc4228e2b23375b3560166d8c822400b
 
 Finished in 4m 15s
 ```
@@ -215,7 +213,7 @@ Test vectors:
 
 ### #1
 
-* Secret: "" (the empty string)
+* Password: "" (the empty string)
 * Salt: "SlowKeySlowKey16"
 * Iterations: 1
 * Length: 64
@@ -229,7 +227,7 @@ Test vectors:
 
 ### #2
 
-* Secret: "Hello World"
+* Password: "Hello World"
 * Salt: "SlowKeySlowKey16"
 * Iterations: 3
 * Length: 64
@@ -244,11 +242,11 @@ Test vectors:
 Results should be:
 
 ```sh
-SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySalt", secret: ""
-Derived key: 91e119bd892f0a6b4bc5adf23693db6409a8d053a5b6a451d0ab340a5e01cb6b6a04d31eb6d78e7dc89809869d59a24ea88aae9f9fa7aa0630040a2c02f0b1d1
+SSlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: ""
+Derived key: 93e1459001ad83e3b39133cfba4ced8ce69f68e58553b093114abeee4174118b87d87d1b3d2c67d2d3ea5ca050b83ab49346eb9583e5fb31cc8f51f8d3343bf1
 
-SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySalt", secret: "Hello World"
-Derived key: 78acc4cf9c4597b4312454fa6e78134f9e0308f79a07e97e457207d0919374c6d3d31b78c523fba364156da4df930b87596a42a1b1991cec5af708762b9e2e95
+SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: "Hello World"
+Derived key: 746f3a93557814a0e496a13af627a25954f3f15e129471b8eec713958ed12a273b932d02ba4f218edacb7d8a4b9bd4e6368004531f77e1981393f127c7f3ab64
 ```
 
 ## License
