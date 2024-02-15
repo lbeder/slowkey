@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Packages
         run: |
           sudo apt update
-          sudo apt install libsodium
+          sudo apt install libsodium-dev
 
       - name: Install Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
