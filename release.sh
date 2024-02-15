@@ -1,4 +1,5 @@
-#!/usr/bin/env sh -e
+#!/usr/bin/env sh
+set -e
 
 VERSION=$(cargo pkgid | cut -d# -f2 | cut -d: -f2)
 
@@ -32,15 +33,6 @@ LINUX_AMD64_RELEASE_SIG=${LINUX_AMD64_RELEASE}.sig
 tar zcvf ${LINUX_AMD64_RELEASE} target/x86_64-unknown-linux-musl/release/slowkey
 LINUX_AMD64_RELEASE_SHA512=$(shasum -a512 ${LINUX_AMD64_RELEASE})
 gpg --output ${LINUX_AMD64_RELEASE_SIG} --detach-sig ${LINUX_AMD64_RELEASE}
-
-echo "Creating v${VERSION} bundle for Windows x64..."
-WINDOWS_X64_TARGET="slowkey-${VERSION}-windows-amd64.tgz"
-WINDOWS_X64_TARGET_SIG=${WINDOWS_X64_TARGET}.sig
-WINDOWS_X64_RELEASE="target/${WINDOWS_X64_TARGET}"
-WINDOWS_X64_RELEASE_SIG=${WINDOWS_X64_RELEASE}.sig
-tar zcvf ${WINDOWS_X64_RELEASE} target/x86_64-pc-windows-gnu/release/slowkey.exe
-WINDOWS_X64_RELEASE_SHA512=$(shasum -a512 ${WINDOWS_X64_RELEASE})
-gpg --output ${WINDOWS_X64_RELEASE_SIG} --detach-sig ${WINDOWS_X64_RELEASE}
 
 RELEASE_NOTES="target/release.md"
 echo "Preparing release notes..."
@@ -88,20 +80,6 @@ Verify the digital signature:
 
 \`\`\`sh
 gpg --verify ${LINUX_AMD64_TARGET_SIG} ${LINUX_AMD64_TARGET}
-\`\`\`
-
-## Windows x64
-
-Calculate the SHA512:
-
-\`\`\`sh
-shasum -a512 ${WINDOWS_X64_RELEASE} ${WINDOWS_X64_RELEASE_SHA512}
-\`\`\`
-
-Verify the digital signature:
-
-\`\`\`sh
-gpg --verify ${WINDOWS_X64_TARGET_SIG} ${WINDOWS_X64_TARGET}
 \`\`\`
 
 EOF
