@@ -169,13 +169,13 @@ impl SlowKey {
         };
 
         for i in 0..(self.iterations - offset) {
-            // Calculate the SHA3 and SHA2 hashes of the result and the inputs
+            // Calculate the SHA2 and SHA3 hashes of the result and the inputs
             self.double_hash(salt, password, &mut res);
 
             // Calculate the Scrypt hash of the result and the inputs
             self.scrypt(salt, password, &mut res);
 
-            // Calculate the SHA3 and SHA2 hashes of the result and the inputs again
+            // Calculate the SHA2 and SHA3 hashes of the result and the inputs again
             self.double_hash(salt, password, &mut res);
 
             // Calculate the Argon2 hash of the result and the inputs
@@ -184,7 +184,7 @@ impl SlowKey {
             callback(i, &res);
         }
 
-        // Calculate the final SHA3 and SHA2 hashes (and trim the result, if required)
+        // Calculate the final SHA2 and SHA3 hashes (and trim the result, if required)
         self.double_hash(salt, password, &mut res);
         res.truncate(self.length);
 
