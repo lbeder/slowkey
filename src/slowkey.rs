@@ -14,7 +14,7 @@ pub struct SlowKeyOptions {
 }
 
 impl SlowKeyOptions {
-    pub const MIN_ITERATIONS: u32 = 0;
+    pub const MIN_ITERATIONS: u32 = 1;
     pub const MAX_ITERATIONS: u32 = u32::MAX;
     pub const DEFAULT_ITERATIONS: u32 = 100;
 
@@ -23,6 +23,14 @@ impl SlowKeyOptions {
     pub const DEFAULT_KEY_LENGTH: usize = 16;
 
     pub fn new(iterations: u32, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
+        if iterations < Self::MIN_ITERATIONS {
+            panic!(
+                "iterations {} is lesser than the min value of {}",
+                Self::MIN_ITERATIONS,
+                length
+            );
+        }
+
         if length < Self::MIN_KEY_LENGTH {
             panic!(
                 "length {} is shorter than the min length of {}",

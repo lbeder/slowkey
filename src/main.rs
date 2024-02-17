@@ -50,7 +50,7 @@ struct Cli {
 enum Commands {
     #[command(about = "Derive a key using using Scrypt, Argon2, SHA2, and SHA3")]
     Derive {
-        #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})",  SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
+        #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
         iterations: u32,
 
         #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_LENGTH, SlowKeyOptions::MAX_KEY_LENGTH))]
