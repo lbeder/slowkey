@@ -7,6 +7,7 @@ mod utils;
 #[macro_use]
 extern crate lazy_static;
 
+use dialoguer::{theme::ColorfulTheme, Password};
 use libsodium_sys::sodium_init;
 use mimalloc::MiMalloc;
 use utils::argon2id::Argon2idOptions;
@@ -134,21 +135,18 @@ fn get_salt() -> Vec<u8> {
 }
 
 fn get_password() -> Vec<u8> {
-    let pass =
-        rpassword::prompt_password("Enter your password (in either raw or hex format starting with 0x): ").unwrap();
-    let pass2 = rpassword::prompt_password("Enter your password again: ").unwrap();
+    let password = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter your password (in either raw or hex format starting with 0x)")
+        .with_confirmation("Enter your password again", "Error: the passwords don't match.")
+        .interact()
+        .unwrap();
 
-    if pass != pass2 {
-        println!();
-        println!("Passwords don't match!");
+    println!("Your password is {}", password);
 
-        exit(-1);
-    }
-
-    if pass.starts_with(HEX_PREFIX) {
-        hex::decode(pass.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    if password.starts_with(HEX_PREFIX) {
+        hex::decode(password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
-        pass.as_bytes().to_vec()
+        password.as_bytes().to_vec()
     }
 }
 
