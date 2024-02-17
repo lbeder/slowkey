@@ -141,8 +141,6 @@ fn get_password() -> Vec<u8> {
         .interact()
         .unwrap();
 
-    println!("Your password is {}", password);
-
     if password.starts_with(HEX_PREFIX) {
         hex::decode(password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
