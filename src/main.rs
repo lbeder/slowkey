@@ -7,9 +7,10 @@ mod utils;
 #[macro_use]
 extern crate lazy_static;
 
-use dialoguer::{theme::ColorfulTheme, Password};
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use libsodium_sys::sodium_init;
 use mimalloc::MiMalloc;
+use sha2::{Digest, Sha512};
 use utils::argon2id::Argon2idOptions;
 
 #[global_allocator]
@@ -23,15 +24,12 @@ use crate::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use clap::{Parser, Subcommand};
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent},
-    style::Stylize,
-};
+use crossterm::style::Stylize;
 use humantime::format_duration;
 use pbr::ProgressBar;
 use std::{
+    cmp::Ordering,
     env,
-    io::{self, Result, Write},
     process::exit,
     str::from_utf8,
     sync::{Arc, Mutex},
@@ -93,42 +91,67 @@ enum Commands {
     Test {},
 }
 
-fn read_line() -> Result<String> {
-    let mut line = String::new();
-    while let Event::Key(KeyEvent { code, .. }) = event::read()? {
-        match code {
-            KeyCode::Enter => {
-                break;
-            },
-            KeyCode::Char(c) => {
-                line.push(c);
-            },
-            _ => {},
-        }
-    }
-
-    Ok(line)
-}
-
 const HEX_PREFIX: &str = "0x";
 
 fn get_salt() -> Vec<u8> {
-    print!(
-        "Enter your salt (must be {} characters/bytes long in either raw or hex format starting with 0x): ",
-        SlowKey::SALT_LENGTH
-    );
+    let input: String = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter your salt")
+        .interact()
+        .unwrap();
 
-    io::stdout().flush().unwrap();
-
-    let input = read_line().unwrap();
-    let salt = if input.starts_with(HEX_PREFIX) {
+    let mut salt = if input.starts_with(HEX_PREFIX) {
         hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
         input.as_bytes().to_vec()
     };
 
-    if salt.len() != SlowKey::SALT_LENGTH {
-        panic!("salt must be {} characters/bytes long", SlowKey::SALT_LENGTH);
+    let salt_len = salt.len();
+    match salt_len.cmp(&SlowKey::SALT_LENGTH) {
+        Ordering::Less => {
+            println!();
+
+            let confirmation = Confirm::new()
+                .with_prompt(format!(
+                    "Salt is shorter than {} and will padded with 0s. Do you want to continue?",
+                    SlowKey::SALT_LENGTH
+                ))
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
+
+            if confirmation {
+                salt.resize(SlowKey::SALT_LENGTH, 0)
+            } else {
+                panic!("Aborting");
+            }
+
+            println!();
+        },
+        Ordering::Greater => {
+            println!();
+
+            let confirmation = Confirm::new()
+                .with_prompt(format!(
+                    "Salt is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    SlowKey::SALT_LENGTH, SlowKey::SALT_LENGTH
+                ))
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
+
+            if confirmation {
+                let mut sha512 = Sha512::new();
+                sha512.update(&salt);
+                salt = sha512.finalize().to_vec();
+
+                salt.truncate(SlowKey::SALT_LENGTH);
+            } else {
+                panic!("Aborting");
+            }
+
+            println!();
+        },
+        Ordering::Equal => {},
     }
 
     salt
@@ -136,7 +159,7 @@ fn get_salt() -> Vec<u8> {
 
 fn get_password() -> Vec<u8> {
     let password = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your password (in either raw or hex format starting with 0x)")
+        .with_prompt("Enter your password")
         .with_confirmation("Enter your password again", "Error: the passwords don't match.")
         .interact()
         .unwrap();
@@ -244,6 +267,12 @@ fn main() {
                     },
                 }
             }
+
+            println!(
+                "Please input your salt and password (either in raw or hex format starting with the {} prefix):",
+                HEX_PREFIX
+            );
+            println!();
 
             let salt = get_salt();
             let password = get_password();

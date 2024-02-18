@@ -29,7 +29,7 @@ The SlowKey Key Derivation Scheme is defined as follows:
 ### Inputs
 
 - `password`: User's password.
-- `salt`: Unique salt for hashing.
+- `salt`: Unique salt for hashing. Please note that the salt must be 16 bytes long, therefore shorter salts will be padded with 0s, while longer salts will be first SHA512 hashed and then truncated to 16 bytes.
 - `iterations`: Number of iterations the process should be repeated.
 
 ### Output
@@ -159,16 +159,18 @@ cargo build --target=x86_64-unknown-linux-musl
 
 ## Examples
 
-Let's try to derive the key for the password `secret`, using the salt `saltsaltsaltsalt`:
+Let's try to derive the key for the password `password`, using the salt `saltsaltsaltsalt`:
 
 > slowkey derive
 
 ```sh
 SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
-Enter your password (in either raw or hex format starting with 0x): 🔑
-Enter your password again: 🔑
+Please input your salt and password (either in raw or hex format starting with the 0x prefix):
+
+Enter your salt › saltsaltsaltsalt
+Enter your password › 🔑
+Enter your password again › 🔑
 
 Processing: 12 / 100 [==============>--------------------------------------------------------------------------------------------------------------] 12.00 % 9m
 ```
@@ -176,13 +178,13 @@ Processing: 12 / 100 [==============>-------------------------------------------
 Final result:
 
 ```sh
-Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
-Enter your password (in either raw or hex format starting with 0x): 🔑
-Enter your password again: 🔑
+Enter your salt › saltsaltsaltsalt
+Enter your password › 🔑
+Enter your password again › 🔑
 
 Processing: 100 / 100 [=======================================================================================================================================] 100.00 %
 
-Key (hex) is (please highlight to see): dc4228e2b23375b3560166d8c822400b
+Key (hex) is (please highlight to see): fd194763d687d50dafa952eec758df13
 
 Finished in 8m 9s
 ```
@@ -196,29 +198,33 @@ For example, if we will abort the previous derivation after the `10th` iteration
 ```sh
 SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
-Enter your password (in either raw or hex format starting with 0x): 🔑
-Enter your password again: 🔑
+Please input your salt and password (either in raw or hex format starting with the 0x prefix):
+
+Enter your salt › saltsaltsaltsalt
+Enter your password › 🔑
+Enter your password again › 🔑
 
 Processing: 10 / 100 [==========================================================================>-------------------------------------------------] 10.00 % 7m
 
-Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) 9d3088829bb0d2049488215d2c96f62c
+Terminated. To resume, please specify --offset 10 and --offset-data (please highlight to see) 8ef994a0383b2a445d3f55a1251eb002
 ```
 
 You can then use this output to resume the previous derivation by specifying a starting offset and data like so:
 
-> slowkey derive --offset 10 --offset-data 9d3088829bb0d2049488215d2c96f62c
+> slowkey derive --offset 10 --offset-data 8ef994a0383b2a445d3f55a1251eb002
 
 ```sh
 SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
-Enter your salt (must be 16 characters/bytes long in either raw or hex format starting with 0x): saltsaltsaltsalt
+Please input your salt and password (either in raw or hex format starting with the 0x prefix):
 
-Resuming from iteration 10 with intermediary offset data 9d3088829bb0d2049488215d2c96f62c
+Enter your salt › saltsaltsaltsalt
+
+Resuming from iteration 10 with intermediary offset data 8ef994a0383b2a445d3f55a1251eb002
 
 Processing: 90 / 90 [===============================================================================================================================] 100.00 % 8m
 
-Key (hex) is (please highlight to see): dc4228e2b23375b3560166d8c822400b
+Key (hex) is (please highlight to see): fd194763d687d50dafa952eec758df13
 
 Finished in 4m 15s
 ```
