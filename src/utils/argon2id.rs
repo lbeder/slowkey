@@ -94,7 +94,7 @@ impl Argon2id {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libsodium_sys::sodium_init;
+    use crate::utils::sodium_init::initialize;
     use rstest::rstest;
 
     #[rstest]
@@ -113,13 +113,7 @@ mod tests {
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,
         #[case] expected: &str,
     ) {
-        // Initialize libsodium
-        unsafe {
-            let res = sodium_init();
-            if res != 0 {
-                panic!("sodium_init failed with: {res}");
-            }
-        }
+        initialize();
 
         let argon2 = Argon2id::new(length, opts);
         let key = argon2.hash(salt, password);

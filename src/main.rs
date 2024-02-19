@@ -12,7 +12,6 @@ mod utils;
 extern crate lazy_static;
 
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
-use libsodium_sys::sodium_init;
 use mimalloc::MiMalloc;
 use sha2::{Digest, Sha512};
 use utils::argon2id::Argon2idOptions;
@@ -28,6 +27,7 @@ use crate::{
         argon2id::Argon2id,
         checkpoint::{Checkpoint, CheckpointOptions},
         scrypt::ScryptOptions,
+        sodium_init::initialize,
     },
 };
 use base64::{engine::general_purpose, Engine as _};
@@ -262,12 +262,7 @@ fn main() {
     color_backtrace::install();
 
     // Initialize libsodium
-    unsafe {
-        let res = sodium_init();
-        if res != 0 {
-            panic!("sodium_init failed with: {res}");
-        }
-    }
+    initialize();
 
     println!("SlowKey v{VERSION}");
     println!();
