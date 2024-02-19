@@ -199,6 +199,7 @@ impl SlowKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use libsodium_sys::sodium_init;
     use rstest::rstest;
 
     #[rstest]
@@ -293,6 +294,14 @@ mod tests {
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
         #[case] offset: u32, #[case] expected: &str,
     ) {
+        // Initialize libsodium
+        unsafe {
+            let res = sodium_init();
+            if res != 0 {
+                panic!("sodium_init failed with: {res}");
+            }
+        }
+
         let kdf = SlowKey::new(options);
         let key = kdf.derive_key(salt, password, offset_data, offset);
         assert_eq!(hex::encode(key), expected);

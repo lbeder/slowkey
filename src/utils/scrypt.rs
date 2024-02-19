@@ -77,6 +77,7 @@ impl Scrypt {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use libsodium_sys::sodium_init;
     use rstest::rstest;
 
     #[rstest]
@@ -96,6 +97,14 @@ mod tests {
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,
         #[case] expected: &str,
     ) {
+        // Initialize libsodium
+        unsafe {
+            let res = sodium_init();
+            if res != 0 {
+                panic!("sodium_init failed with: {res}");
+            }
+        }
+
         let scrypt = Scrypt::new(length, opts);
         let key = scrypt.hash(salt, password);
 
