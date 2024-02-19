@@ -212,7 +212,7 @@ fn get_checkpoint_key() -> Vec<u8> {
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Key is shorter than {} and will padded with 0s. Do you want to continue?",
+                    "Checkpoint encryption key is shorter than {} and will padded with 0s. Do you want to continue?",
                     Checkpoint::KEY_SIZE
                 ))
                 .wait_for_newline(true)
@@ -232,7 +232,7 @@ fn get_checkpoint_key() -> Vec<u8> {
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    "Checkpoint encryption key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
                     SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
                 ))
                 .wait_for_newline(true)
@@ -331,7 +331,7 @@ fn main() {
                 }));
 
                 println!(
-                    "Checkpoint will be created every {checkpoint_interval} iterations and saved to \"{}\"",
+                    "Checkpoint will be created every {checkpoint_interval} iterations and saved to the \"{}\" checkpoint file",
                     &path.to_str().unwrap()
                 );
                 println!();
@@ -341,12 +341,6 @@ fn main() {
                         let data = checkpoint.checkpoint();
                         offset = data.iteration + 1;
                         offset_data = data.data.clone();
-
-                        println!(
-                            "Resuming from iteration {offset} with intermediary offset data 0x{}",
-                            hex::encode(&offset_data)
-                        );
-                        println!();
                     }
                 }
             }
@@ -355,6 +349,14 @@ fn main() {
             let password = get_password();
 
             println!();
+
+            if offset != 0 {
+                println!(
+                    "Resuming from iteration {offset} with intermediary offset data 0x{}",
+                    hex::encode(&offset_data)
+                );
+                println!();
+            }
 
             let mut pb = ProgressBar::new(u64::from(*iterations));
             pb.show_speed = false;
