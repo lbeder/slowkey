@@ -1,6 +1,10 @@
+extern crate chacha20poly1305;
 extern crate hex;
 extern crate libsodium_sys;
 extern crate pbr;
+extern crate serde;
+extern crate serde_json;
+extern crate tempfile;
 
 mod utils;
 
@@ -20,7 +24,11 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::{argon2id::Argon2id, scrypt::ScryptOptions},
+    utils::{
+        argon2id::Argon2id,
+        checkpoint::{Checkpoint, CheckpointOptions},
+        scrypt::ScryptOptions,
+    },
 };
 use base64::{engine::general_purpose, Engine as _};
 use clap::{Parser, Subcommand};
@@ -30,9 +38,8 @@ use pbr::ProgressBar;
 use std::{
     cmp::Ordering,
     env,
-    process::exit,
+    path::PathBuf,
     str::from_utf8,
-    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
@@ -52,8 +59,14 @@ enum Commands {
         #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
         iterations: u32,
 
-        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_LENGTH, SlowKeyOptions::MAX_KEY_LENGTH))]
+        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE))]
         length: usize,
+
+        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base64 (in addition to hex)")]
+        base64: bool,
+
+        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base58 (in addition to hex)")]
+        base58: bool,
 
         #[arg(long, default_value = SlowKeyOptions::default().scrypt.n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N))]
         scrypt_n: u64,
@@ -72,19 +85,27 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = "0",
-            help = "Start the derivation from this offset. In order to use it, you also have to specify the intermediary offset data in hex format"
+            required = false,
+            requires = "checkpoint_interval",
+            help = "Optional checkpoint file path"
         )]
-        offset: u32,
+        checkpoint_path: Option<PathBuf>,
 
-        #[arg(long, help = "Start the derivation with this intermediary data in hex format")]
-        offset_data: Option<String>,
+        #[arg(
+            long,
+            requires = "checkpoint_path",
+            default_value = "0",
+            help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided"
+        )]
+        checkpoint_interval: u32,
 
-        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base64 (in addition to hex)")]
-        base64: bool,
-
-        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base58 (in addition to hex)")]
-        base58: bool,
+        #[arg(
+            long,
+            requires = "checkpoint_path",
+            action = clap::ArgAction::SetTrue,
+            help = "Start the derivation from a previous checkpoint"
+        )]
+        restore_from_checkpoint: bool,
     },
 
     #[command(about = "Print test vectors")]
@@ -106,21 +127,21 @@ fn get_salt() -> Vec<u8> {
     };
 
     let salt_len = salt.len();
-    match salt_len.cmp(&SlowKey::SALT_LENGTH) {
+    match salt_len.cmp(&SlowKey::SALT_SIZE) {
         Ordering::Less => {
             println!();
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
                     "Salt is shorter than {} and will padded with 0s. Do you want to continue?",
-                    SlowKey::SALT_LENGTH
+                    SlowKey::SALT_SIZE
                 ))
                 .wait_for_newline(true)
                 .interact()
                 .unwrap();
 
             if confirmation {
-                salt.resize(SlowKey::SALT_LENGTH, 0)
+                salt.resize(SlowKey::SALT_SIZE, 0)
             } else {
                 panic!("Aborting");
             }
@@ -133,7 +154,7 @@ fn get_salt() -> Vec<u8> {
             let confirmation = Confirm::new()
                 .with_prompt(format!(
                     "Salt is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                    SlowKey::SALT_LENGTH, SlowKey::SALT_LENGTH
+                    SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
                 ))
                 .wait_for_newline(true)
                 .interact()
@@ -144,7 +165,7 @@ fn get_salt() -> Vec<u8> {
                 sha512.update(&salt);
                 salt = sha512.finalize().to_vec();
 
-                salt.truncate(SlowKey::SALT_LENGTH);
+                salt.truncate(SlowKey::SALT_SIZE);
             } else {
                 panic!("Aborting");
             }
@@ -160,7 +181,7 @@ fn get_salt() -> Vec<u8> {
 fn get_password() -> Vec<u8> {
     let password = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your password")
-        .with_confirmation("Enter your password again", "Error: the passwords don't match.")
+        .with_confirmation("Enter your password again", "Error: passwords don't match")
         .interact()
         .unwrap();
 
@@ -169,6 +190,71 @@ fn get_password() -> Vec<u8> {
     } else {
         password.as_bytes().to_vec()
     }
+}
+
+fn get_checkpoint_key() -> Vec<u8> {
+    let key = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter your checkpoint encryption key")
+        .with_confirmation("Enter your checkpoint encryption key again", "Error: keys don't match")
+        .interact()
+        .unwrap();
+
+    let mut key = if key.starts_with(HEX_PREFIX) {
+        hex::decode(key.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        key.as_bytes().to_vec()
+    };
+
+    let key_len = key.len();
+    match key_len.cmp(&Checkpoint::KEY_SIZE) {
+        Ordering::Less => {
+            println!();
+
+            let confirmation = Confirm::new()
+                .with_prompt(format!(
+                    "Key is shorter than {} and will padded with 0s. Do you want to continue?",
+                    Checkpoint::KEY_SIZE
+                ))
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
+
+            if confirmation {
+                key.resize(Checkpoint::KEY_SIZE, 0)
+            } else {
+                panic!("Aborting");
+            }
+
+            println!();
+        },
+        Ordering::Greater => {
+            println!();
+
+            let confirmation = Confirm::new()
+                .with_prompt(format!(
+                    "Key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
+                ))
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
+
+            if confirmation {
+                let mut sha512 = Sha512::new();
+                sha512.update(&key);
+                key = sha512.finalize().to_vec();
+
+                key.truncate(Checkpoint::KEY_SIZE);
+            } else {
+                panic!("Aborting");
+            }
+
+            println!();
+        },
+        Ordering::Equal => {},
+    }
+
+    key
 }
 
 fn main() {
@@ -192,15 +278,16 @@ fn main() {
         Some(Commands::Derive {
             iterations,
             length,
+            base64,
+            base58,
             scrypt_n,
             scrypt_r,
             scrypt_p,
             argon2_m_cost,
             argon2_t_cost,
-            offset,
-            offset_data,
-            base64,
-            base58,
+            checkpoint_interval,
+            checkpoint_path,
+            restore_from_checkpoint,
         }) => {
             let opts = SlowKeyOptions::new(
                 *iterations,
@@ -225,77 +312,81 @@ fn main() {
             );
             println!();
 
-            // Register a termination handler to output intermediary results
-            let last_iteration_ref = Arc::new(Mutex::new(0));
-            let last_result_ref = Arc::new(Mutex::new(String::new()));
-
-            let last_iteration = last_iteration_ref.clone();
-            let last_result = last_result_ref.clone();
-
-            ctrlc::set_handler(move || {
-                let offset = *last_iteration.lock().unwrap();
-                let offset_data = last_result.lock().unwrap();
-                if offset_data.is_empty() {
-                    exit(-1);
-                }
-
-                println!();
-                println!();
-                println!(
-                    "Terminated. To resume, please specify --offset {} and --offset-data (please highlight to see) {}",
-                    offset + 1,
-                    offset_data.clone().black().on_black()
-                );
-
-                exit(-1);
-            })
-            .expect("Error setting termination handler");
-
-            let mut offset_raw_data = Vec::new();
-
-            if *offset != 0 {
-                offset_raw_data = match offset_data {
-                    Some(data) => {
-                        println!("Resuming from iteration {offset} with intermediary offset data {data}");
-                        println!();
-
-                        hex::decode(data).unwrap()
-                    },
-
-                    None => {
-                        panic!("Missing intermediary offset data");
-                    },
-                }
-            }
-
             println!(
-                "Please input your salt and password (either in raw or hex format starting with the {} prefix):",
+                "Please input all data either in raw or hex format starting with the {} prefix)",
                 HEX_PREFIX
             );
             println!();
+
+            let mut checkpoint: Option<Checkpoint> = None;
+            let mut offset: u32 = 0;
+            let mut offset_data = Vec::new();
+
+            if let Some(path) = checkpoint_path {
+                if *checkpoint_interval == 0 {
+                    panic!("Invalid checkpoint interval")
+                }
+
+                let key = get_checkpoint_key();
+
+                checkpoint = Some(Checkpoint::new(&CheckpointOptions {
+                    restore: *restore_from_checkpoint,
+                    path: path.to_owned(),
+                    key,
+                }));
+
+                println!(
+                    "Checkpoint will be created every {checkpoint_interval} iterations and saved to \"{}\"",
+                    &path.to_str().unwrap()
+                );
+                println!();
+
+                if *restore_from_checkpoint {
+                    if let Some(checkpoint) = &checkpoint {
+                        let data = checkpoint.checkpoint();
+                        offset = data.iteration + 1;
+                        offset_data = data.data.clone();
+
+                        println!(
+                            "Resuming from iteration {offset} with intermediary offset data 0x{}",
+                            hex::encode(&offset_data)
+                        );
+                        println!();
+                    }
+                }
+            }
 
             let salt = get_salt();
             let password = get_password();
 
             println!();
 
-            let mut pb = ProgressBar::new(u64::from(*iterations - *offset));
+            let mut pb = ProgressBar::new(u64::from(*iterations));
             pb.show_speed = false;
             pb.message("Processing: ");
             pb.tick();
+            pb.set(offset as u64);
 
             let start_time = Instant::now();
 
             let slowkey = SlowKey::new(&opts);
 
-            let last_iteration2 = last_iteration_ref;
-            let last_result2 = last_result_ref;
-            let key = slowkey.derive_key_with_callback(&salt, &password, &offset_raw_data, *offset, |i, res| {
-                *last_iteration2.lock().unwrap() = i;
-                *last_result2.lock().unwrap() = hex::encode(res);
+            let key = slowkey.derive_key_with_callback(
+                &salt,
+                &password,
+                &offset_data,
+                offset,
+                |current_iteration, current_data| {
+                    // Create a checkpoint if we've reached the checkpoint interval
+                    if *checkpoint_interval != 0 && (current_iteration + 1) % *checkpoint_interval == 0 {
+                        if let Some(checkpoint) = &mut checkpoint {
+                            checkpoint.create_checkpoint(current_iteration, current_data);
+                        }
+                    }
 
-                pb.inc();
-            });
+                    pb.inc();
+                },
+            );
 
             println!();
             println!();

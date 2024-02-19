@@ -38,7 +38,7 @@ impl Argon2idOptions {
         // Note that there is no need to check if t_cost > Self::MAX_T_COST because Self::MAX_T_COST is the maximum
         // value for this type
 
-        Argon2idOptions { m_cost, t_cost }
+        Self { m_cost, t_cost }
     }
 }
 
@@ -61,7 +61,7 @@ impl Argon2id {
     const BYTES_IN_KIB: usize = 1024;
 
     pub fn new(length: usize, opts: &Argon2idOptions) -> Self {
-        Argon2id {
+        Self {
             length,
             opts: opts.clone(),
         }

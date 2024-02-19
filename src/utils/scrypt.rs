@@ -23,7 +23,7 @@ impl ScryptOptions {
         // Note that there is no need to check if either n, r or p are in bounds, since both are bound by the maximum
         // and the minimum values for this type
 
-        ScryptOptions { n, r, p }
+        Self { n, r, p }
     }
 }
 
@@ -43,7 +43,7 @@ pub struct Scrypt {
 
 impl Scrypt {
     pub fn new(length: usize, opts: &ScryptOptions) -> Self {
-        Scrypt {
+        Self {
             length,
             opts: opts.clone(),
         }

@@ -18,9 +18,9 @@ impl SlowKeyOptions {
     pub const MAX_ITERATIONS: u32 = u32::MAX;
     pub const DEFAULT_ITERATIONS: u32 = 100;
 
-    pub const MIN_KEY_LENGTH: usize = 10;
-    pub const MAX_KEY_LENGTH: usize = 128;
-    pub const DEFAULT_KEY_LENGTH: usize = 16;
+    pub const MIN_KEY_SIZE: usize = 10;
+    pub const MAX_KEY_SIZE: usize = 128;
+    pub const DEFAULT_KEY_SIZE: usize = 16;
 
     pub fn new(iterations: u32, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
         if iterations < Self::MIN_ITERATIONS {
@@ -31,23 +31,23 @@ impl SlowKeyOptions {
             );
         }
 
-        if length < Self::MIN_KEY_LENGTH {
+        if length < Self::MIN_KEY_SIZE {
             panic!(
                 "length {} is shorter than the min length of {}",
-                Self::MIN_KEY_LENGTH,
+                Self::MIN_KEY_SIZE,
                 length
             );
         }
 
-        if length > Self::MAX_KEY_LENGTH {
+        if length > Self::MAX_KEY_SIZE {
             panic!(
                 "length {} is longer than the max length of {}",
-                Self::MAX_KEY_LENGTH,
+                Self::MAX_KEY_SIZE,
                 length
             );
         }
 
-        SlowKeyOptions {
+        Self {
             iterations,
             length,
             scrypt: scrypt.clone(),
@@ -60,7 +60,7 @@ impl Default for SlowKeyOptions {
     fn default() -> Self {
         Self {
             iterations: Self::DEFAULT_ITERATIONS,
-            length: Self::DEFAULT_KEY_LENGTH,
+            length: Self::DEFAULT_KEY_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
         }
@@ -113,10 +113,10 @@ pub struct SlowKey {
 }
 
 impl SlowKey {
-    pub const SALT_LENGTH: usize = 16;
+    pub const SALT_SIZE: usize = 16;
 
     pub fn new(opts: &SlowKeyOptions) -> Self {
-        SlowKey {
+        Self {
             iterations: opts.iterations,
             length: opts.length,
             scrypt: Scrypt::new(opts.length, &opts.scrypt),
@@ -159,8 +159,8 @@ impl SlowKey {
     pub fn derive_key_with_callback<F: FnMut(u32, &Vec<u8>)>(
         &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: u32, mut callback: F,
     ) -> Vec<u8> {
-        if salt.len() != SlowKey::SALT_LENGTH {
-            panic!("salt must be {} long", SlowKey::SALT_LENGTH);
+        if salt.len() != Self::SALT_SIZE {
+            panic!("salt must be {} long", Self::SALT_SIZE);
         }
 
         let mut res = match offset {
@@ -168,7 +168,7 @@ impl SlowKey {
             _ => offset_data.to_vec(),
         };
 
-        for i in 0..(self.iterations - offset) {
+        for i in offset..self.iterations {
             // Calculate the SHA2 and SHA3 hashes of the result and the inputs
             self.double_hash(salt, password, &mut res);
 
