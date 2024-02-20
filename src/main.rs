@@ -352,8 +352,8 @@ fn main() {
 
             if offset != 0 {
                 println!(
-                    "Resuming from iteration {offset} with intermediary offset data 0x{}",
-                    hex::encode(&offset_data)
+                    "Resuming from iteration {offset} with intermediary offset data {} (please highlight to see)",
+                    hex::encode(&offset_data).black().on_black()
                 );
                 println!();
             }
