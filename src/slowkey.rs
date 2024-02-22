@@ -8,22 +8,22 @@ use sha3::{Digest, Keccak512};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlowKeyOptions {
-    pub iterations: u32,
+    pub iterations: usize,
     pub length: usize,
     pub scrypt: ScryptOptions,
     pub argon2id: Argon2idOptions,
 }
 
 impl SlowKeyOptions {
-    pub const MIN_ITERATIONS: u32 = 1;
-    pub const MAX_ITERATIONS: u32 = u32::MAX;
-    pub const DEFAULT_ITERATIONS: u32 = 100;
+    pub const MIN_ITERATIONS: usize = 1;
+    pub const MAX_ITERATIONS: usize = u32::MAX as usize;
+    pub const DEFAULT_ITERATIONS: usize = 100;
 
     pub const MIN_KEY_SIZE: usize = 10;
     pub const MAX_KEY_SIZE: usize = 128;
     pub const DEFAULT_KEY_SIZE: usize = 16;
 
-    pub fn new(iterations: u32, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
+    pub fn new(iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
         if iterations < Self::MIN_ITERATIONS {
             panic!(
                 "iterations {} is lesser than the min value of {}",
@@ -74,7 +74,7 @@ pub struct TestSlowKeyOptions {
     pub salt: Vec<u8>,
     pub password: Vec<u8>,
     pub offset_data: Vec<u8>,
-    pub offset: u32,
+    pub offset: usize,
 }
 
 lazy_static! {
@@ -107,7 +107,7 @@ lazy_static! {
 }
 
 pub struct SlowKey {
-    iterations: u32,
+    iterations: usize,
     length: usize,
     scrypt: Scrypt,
     argon2id: Argon2id,
@@ -157,8 +157,8 @@ impl SlowKey {
         *res = self.argon2id.hash(salt, res);
     }
 
-    pub fn derive_key_with_callback<F: FnMut(u32, &Vec<u8>)>(
-        &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: u32, mut callback: F,
+    pub fn derive_key_with_callback<F: FnMut(usize, &Vec<u8>)>(
+        &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, mut callback: F,
     ) -> Vec<u8> {
         if salt.len() != Self::SALT_SIZE {
             panic!("salt must be {} long", Self::SALT_SIZE);
@@ -192,7 +192,7 @@ impl SlowKey {
         res
     }
 
-    pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: u32) -> Vec<u8> {
+    pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize) -> Vec<u8> {
         self.derive_key_with_callback(salt, password, offset_data, offset, |_, _| {})
     }
 }
@@ -293,7 +293,7 @@ mod tests {
 
     fn derive_test(
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
-        #[case] offset: u32, #[case] expected: &str,
+        #[case] offset: usize, #[case] expected: &str,
     ) {
         initialize();
 

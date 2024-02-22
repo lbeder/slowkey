@@ -57,7 +57,7 @@ enum Commands {
     #[command(about = "Derive a key using using Scrypt, Argon2, SHA2, and SHA3")]
     Derive {
         #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
-        iterations: u32,
+        iterations: usize,
 
         #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE))]
         length: usize,
@@ -85,11 +85,10 @@ enum Commands {
 
         #[arg(
             long,
-            required = false,
             requires = "checkpoint_interval",
-            help = "Optional checkpoint file path"
+            help = "Optional directory for storing checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named \"checkpoint.i\", indicating the iteration number at which the checkpoint was created"
         )]
-        checkpoint_path: Option<PathBuf>,
+        checkpoint_dir: Option<PathBuf>,
 
         #[arg(
             long,
@@ -97,15 +96,14 @@ enum Commands {
             default_value = "0",
             help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided"
         )]
-        checkpoint_interval: u32,
+        checkpoint_interval: usize,
 
         #[arg(
             long,
             requires = "checkpoint_path",
-            action = clap::ArgAction::SetTrue,
-            help = "Start the derivation from a previous checkpoint"
+            help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
-        restore_from_checkpoint: bool,
+        restore_from_checkpoint: Option<PathBuf>,
     },
 
     #[command(about = "Print test vectors")]
@@ -281,7 +279,7 @@ fn main() {
             argon2_m_cost,
             argon2_t_cost,
             checkpoint_interval,
-            checkpoint_path,
+            checkpoint_dir,
             restore_from_checkpoint,
         }) => {
             println!(
@@ -291,55 +289,32 @@ fn main() {
             println!();
 
             let slowkey_opts: SlowKeyOptions;
+
+            let mut output_encryption_key: Option<Vec<u8>> = None;
             let mut checkpoint: Option<Checkpoint> = None;
-            let mut offset: u32 = 0;
+
+            let mut offset: usize = 0;
             let mut offset_data = Vec::new();
 
-            if let Some(path) = checkpoint_path {
-                if *checkpoint_interval == 0 {
-                    panic!("Invalid checkpoint interval")
+            if let Some(path) = restore_from_checkpoint {
+                if output_encryption_key.is_none() {
+                    output_encryption_key = Some(get_checkpoint_key());
                 }
 
-                let key = get_checkpoint_key();
+                let data = Checkpoint::get(&OpenCheckpointOptions {
+                    key: output_encryption_key.clone().unwrap(),
+                    path: path.clone(),
+                });
 
-                if *restore_from_checkpoint {
-                    let existing_checkpoint = Checkpoint::open(&OpenCheckpointOptions {
-                        path: path.to_owned(),
-                        key,
-                    });
+                slowkey_opts = data.slowkey.clone();
 
-                    let data = existing_checkpoint.checkpoint();
-                    slowkey_opts = data.slowkey.clone();
-                    offset = data.iteration + 1;
-                    offset_data = data.data.clone();
-
-                    checkpoint = Some(existing_checkpoint);
-
-                    println!(
-                        "Using SlowKey parameters extracted from the checkpoint. Resuming from iteration {} with intermediary offset data {} (please highlight to see). ",
-                        offset.to_string().cyan(),
-                        hex::encode(&offset_data).black().on_black()
-                    );
-                    println!();
-                } else {
-                    slowkey_opts = SlowKeyOptions::new(
-                        *iterations,
-                        *length,
-                        &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
-                        &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
-                    );
-
-                    checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-                        path: path.to_owned(),
-                        key,
-                        slowkey: slowkey_opts.clone(),
-                    }))
-                }
+                offset = data.iteration + 1;
+                offset_data = data.data.clone();
 
                 println!(
-                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoint file",
-                    checkpoint_interval.to_string().cyan(),
-                    &path.to_string_lossy().cyan()
+                    "Using SlowKey parameters extracted from the checkpoint. Resuming from iteration {} with intermediary offset data {} (please highlight to see). ",
+                    offset.to_string().cyan(),
+                    hex::encode(&offset_data).black().on_black()
                 );
                 println!();
             } else {
@@ -349,6 +324,30 @@ fn main() {
                     &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
                     &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
                 );
+            }
+
+            if let Some(dir) = checkpoint_dir {
+                if *checkpoint_interval == 0 {
+                    panic!("Invalid checkpoint interval")
+                }
+
+                if output_encryption_key.as_ref().is_none() {
+                    output_encryption_key = Some(get_checkpoint_key());
+                }
+
+                checkpoint = Some(Checkpoint::new(&CheckpointOptions {
+                    iterations: *iterations,
+                    dir: dir.to_owned(),
+                    key: output_encryption_key.clone().unwrap(),
+                    slowkey: slowkey_opts.clone(),
+                }));
+
+                println!(
+                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory",
+                    checkpoint_interval.to_string().cyan(),
+                    &dir.to_string_lossy().cyan()
+                );
+                println!();
             }
 
             let salt = get_salt();
@@ -373,7 +372,7 @@ fn main() {
 
             println!();
 
-            let mut pb = ProgressBar::new(u64::from(*iterations));
+            let mut pb = ProgressBar::new(*iterations as u64);
             pb.show_speed = false;
             pb.message("Processing: ");
             pb.tick();

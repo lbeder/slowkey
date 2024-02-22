@@ -1194,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "slowkey"
-version = "1.0.0"
+version = "1.0.0-beta.1"
 dependencies = [
  "base64",
  "better-panic",
@@ -1204,6 +1204,7 @@ dependencies = [
  "color-backtrace",
  "crossterm",
  "dialoguer",
+ "glob",
  "hex",
  "humantime",
  "lazy_static",
