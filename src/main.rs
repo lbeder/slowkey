@@ -1,3 +1,5 @@
+mod utils;
+
 extern crate chacha20poly1305;
 extern crate hex;
 extern crate libsodium_sys;
@@ -6,18 +8,8 @@ extern crate serde;
 extern crate serde_json;
 extern crate tempfile;
 
-mod utils;
-
 #[macro_use]
 extern crate lazy_static;
-
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
-use mimalloc::MiMalloc;
-use sha2::{Digest, Sha512};
-use utils::argon2id::Argon2idOptions;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 mod slowkey;
 
@@ -33,8 +25,11 @@ use crate::{
 use base64::{engine::general_purpose, Engine as _};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
+use mimalloc::MiMalloc;
 use pbr::ProgressBar;
+use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
     env,
@@ -42,6 +37,10 @@ use std::{
     str::from_utf8,
     time::{Duration, Instant},
 };
+use utils::argon2id::Argon2idOptions;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

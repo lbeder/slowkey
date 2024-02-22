@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::{Read, Write},
-    path::{Path, PathBuf},
-};
+use crate::slowkey::SlowKeyOptions;
 
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -10,8 +6,12 @@ use chacha20poly1305::{
 };
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
-
-use crate::slowkey::SlowKeyOptions;
+use std::{
+    collections::VecDeque,
+    fs::File,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CheckpointOptions {
