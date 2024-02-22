@@ -84,7 +84,7 @@ impl Argon2id {
             );
 
             if ret != 0 {
-                println!("crypto_pwhash_argon2id failed with: {ret}");
+                panic!("crypto_pwhash_argon2id failed with: {ret}");
             }
         }
 

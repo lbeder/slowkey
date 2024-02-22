@@ -67,7 +67,7 @@ impl Scrypt {
             );
 
             if ret != 0 {
-                println!("crypto_pwhash_scryptsalsa208sha256_ll failed with: {ret}");
+                panic!("crypto_pwhash_scryptsalsa208sha256_ll failed with: {ret}");
             }
         }
 
