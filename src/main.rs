@@ -25,7 +25,7 @@ use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
     utils::{
         argon2id::Argon2id,
-        checkpoint::{Checkpoint, CheckpointOptions},
+        checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
         scrypt::ScryptOptions,
         sodium_init::initialize,
     },
@@ -284,35 +284,13 @@ fn main() {
             checkpoint_path,
             restore_from_checkpoint,
         }) => {
-            let opts = SlowKeyOptions::new(
-                *iterations,
-                *length,
-                &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
-                &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
-            );
-
             println!(
-                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
-                "SlowKey".yellow(),
-                iterations.to_string().cyan(),
-                length.to_string().cyan(),
-                "Scrypt".green(),
-                scrypt_n.to_string().cyan(),
-                scrypt_r.to_string().cyan(),
-                scrypt_p.to_string().cyan(),
-                "Argon2id".green(),
-                Argon2id::VERSION.to_string().cyan(),
-                argon2_m_cost.to_string().cyan(),
-                argon2_t_cost.to_string().cyan(),
-            );
-            println!();
-
-            println!(
-                "Please input all data either in raw or hex format starting with the {} prefix)",
+                "Please input all data either in raw or hex format starting with the {} prefix",
                 HEX_PREFIX
             );
             println!();
 
+            let slowkey_opts: SlowKeyOptions;
             let mut checkpoint: Option<Checkpoint> = None;
             let mut offset: u32 = 0;
             let mut offset_data = Vec::new();
@@ -324,25 +302,53 @@ fn main() {
 
                 let key = get_checkpoint_key();
 
-                checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-                    restore: *restore_from_checkpoint,
-                    path: path.to_owned(),
-                    key,
-                }));
+                if *restore_from_checkpoint {
+                    let existing_checkpoint = Checkpoint::open(&OpenCheckpointOptions {
+                        path: path.to_owned(),
+                        key,
+                    });
+
+                    let data = existing_checkpoint.checkpoint();
+                    slowkey_opts = data.slowkey.clone();
+                    offset = data.iteration + 1;
+                    offset_data = data.data.clone();
+
+                    checkpoint = Some(existing_checkpoint);
+
+                    println!(
+                        "Using SlowKey parameters extracted from the checkpoint. Resuming from iteration {} with intermediary offset data {} (please highlight to see). ",
+                        offset.to_string().cyan(),
+                        hex::encode(&offset_data).black().on_black()
+                    );
+                    println!();
+                } else {
+                    slowkey_opts = SlowKeyOptions::new(
+                        *iterations,
+                        *length,
+                        &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
+                        &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
+                    );
+
+                    checkpoint = Some(Checkpoint::new(&CheckpointOptions {
+                        path: path.to_owned(),
+                        key,
+                        slowkey: slowkey_opts.clone(),
+                    }))
+                }
 
                 println!(
-                    "Checkpoint will be created every {checkpoint_interval} iterations and saved to the \"{}\" checkpoint file",
-                    &path.to_str().unwrap()
+                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoint file",
+                    checkpoint_interval.to_string().cyan(),
+                    &path.to_string_lossy().cyan()
                 );
                 println!();
-
-                if *restore_from_checkpoint {
-                    if let Some(checkpoint) = &checkpoint {
-                        let data = checkpoint.checkpoint();
-                        offset = data.iteration + 1;
-                        offset_data = data.data.clone();
-                    }
-                }
+            } else {
+                slowkey_opts = SlowKeyOptions::new(
+                    *iterations,
+                    *length,
+                    &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
+                    &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
+                );
             }
 
             let salt = get_salt();
@@ -350,13 +356,22 @@ fn main() {
 
             println!();
 
-            if offset != 0 {
-                println!(
-                    "Resuming from iteration {offset} with intermediary offset data {} (please highlight to see)",
-                    hex::encode(&offset_data).black().on_black()
-                );
-                println!();
-            }
+            println!(
+                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
+                "SlowKey".yellow(),
+                &slowkey_opts.iterations.to_string().cyan(),
+                &slowkey_opts.length.to_string().cyan(),
+                "Scrypt".green(),
+                &slowkey_opts.scrypt.n.to_string().cyan(),
+                &slowkey_opts.scrypt.r.to_string().cyan(),
+                &slowkey_opts.scrypt.p.to_string().cyan(),
+                "Argon2id".green(),
+                Argon2id::VERSION.to_string().cyan(),
+                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
+                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
+            );
+
+            println!();
 
             let mut pb = ProgressBar::new(u64::from(*iterations));
             pb.show_speed = false;
@@ -366,7 +381,7 @@ fn main() {
 
             let start_time = Instant::now();
 
-            let slowkey = SlowKey::new(&opts);
+            let slowkey = SlowKey::new(&slowkey_opts);
 
             let key = slowkey.derive_key_with_callback(
                 &salt,

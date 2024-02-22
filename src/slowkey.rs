@@ -2,10 +2,11 @@ use crate::utils::{
     argon2id::{Argon2id, Argon2idOptions},
     scrypt::{Scrypt, ScryptOptions},
 };
+use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlowKeyOptions {
     pub iterations: u32,
     pub length: usize,

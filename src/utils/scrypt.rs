@@ -1,6 +1,7 @@
 use libsodium_sys::crypto_pwhash_scryptsalsa208sha256_ll;
+use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct ScryptOptions {
     pub n: u64,
     pub r: u32,

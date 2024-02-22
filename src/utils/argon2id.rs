@@ -1,6 +1,7 @@
 use libsodium_sys::{crypto_pwhash_ALG_ARGON2ID13, crypto_pwhash_argon2id};
+use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Argon2idOptions {
     pub m_cost: u32,
     pub t_cost: u32,

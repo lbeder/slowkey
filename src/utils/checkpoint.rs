@@ -10,9 +10,17 @@ use chacha20poly1305::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::slowkey::SlowKeyOptions;
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct CheckpointOptions {
-    pub restore: bool,
+    pub path: PathBuf,
+    pub key: Vec<u8>,
+    pub slowkey: SlowKeyOptions,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct OpenCheckpointOptions {
     pub path: PathBuf,
     pub key: Vec<u8>,
 }
@@ -21,6 +29,7 @@ pub struct CheckpointOptions {
 pub struct CheckpointData {
     pub iteration: u32,
     pub data: Vec<u8>,
+    pub slowkey: SlowKeyOptions,
 }
 
 pub struct Checkpoint {
@@ -39,40 +48,49 @@ impl Checkpoint {
         }
 
         if opts.path.is_dir() {
-            panic!("Checkpoints file \"{}\" is a directory", opts.path.to_str().unwrap())
+            panic!("Checkpoints file \"{}\" is a directory", opts.path.to_str().unwrap());
         }
 
         if opts.path.exists() {
-            if !opts.restore {
-                panic!("Checkpoints file \"{}\" already exists", opts.path.to_str().unwrap())
-            }
+            panic!("Checkpoints file \"{}\" already exists", opts.path.to_str().unwrap());
+        }
 
-            let mut encrypted_data = Vec::new();
-            File::open(&opts.path)
-                .unwrap()
-                .read_to_end(&mut encrypted_data)
-                .unwrap();
+        Self {
+            path: opts.path.clone(),
+            key: opts.key.clone(),
+            data: CheckpointData {
+                iteration: 0,
+                data: Vec::new(),
+                slowkey: opts.slowkey.clone(),
+            },
+        }
+    }
 
-            let data = Self::decrypt(&hex::decode(encrypted_data).unwrap(), &opts.key);
+    pub fn open(opts: &OpenCheckpointOptions) -> Self {
+        if opts.key.len() != Self::KEY_SIZE {
+            panic!("key must be {} long", Self::KEY_SIZE);
+        }
 
-            Self {
-                path: opts.path.clone(),
-                key: opts.key.clone(),
-                data,
-            }
-        } else {
-            if opts.restore {
-                panic!("Checkpoints file \"{}\" does not exist", opts.path.to_str().unwrap())
-            }
+        if opts.path.is_dir() {
+            panic!("Checkpoints file \"{}\" is a directory", opts.path.to_str().unwrap());
+        }
 
-            Self {
-                path: opts.path.clone(),
-                key: opts.key.clone(),
-                data: CheckpointData {
-                    iteration: 0,
-                    data: Vec::new(),
-                },
-            }
+        if !opts.path.exists() {
+            panic!("Checkpoints file \"{}\" does not exist", opts.path.to_str().unwrap());
+        }
+
+        let mut encrypted_data = Vec::new();
+        File::open(&opts.path)
+            .unwrap()
+            .read_to_end(&mut encrypted_data)
+            .unwrap();
+
+        let data = Self::decrypt(&hex::decode(encrypted_data).unwrap(), &opts.key);
+
+        Self {
+            path: opts.path.clone(),
+            key: opts.key.clone(),
+            data,
         }
     }
 
@@ -81,7 +99,7 @@ impl Checkpoint {
     }
 
     pub fn create_checkpoint(&mut self, iteration: u32, data: &[u8]) {
-        let encrypted_data = Self::encrypt(iteration, data, &self.key);
+        let encrypted_data = Self::encrypt(iteration, data, &self.data.slowkey, &self.key);
 
         let final_path = Path::new(&self.path);
         let mut file = tempfile::NamedTempFile::new_in(final_path.parent().unwrap()).unwrap();
@@ -89,22 +107,21 @@ impl Checkpoint {
         file.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
         file.persist(final_path).unwrap();
 
-        self.data = CheckpointData {
-            iteration,
-            data: data.to_vec(),
-        };
+        self.data.iteration = iteration;
+        self.data.data = data.to_vec();
     }
 
-    fn encrypt(iteration: u32, data: &[u8], key: &[u8]) -> Vec<u8> {
-        let data = serde_json::to_string(&CheckpointData {
+    fn encrypt(iteration: u32, data: &[u8], slowkey: &SlowKeyOptions, key: &[u8]) -> Vec<u8> {
+        let json = serde_json::to_string(&CheckpointData {
             iteration,
             data: data.to_vec(),
+            slowkey: slowkey.clone(),
         })
         .unwrap();
 
         let cipher = ChaCha20Poly1305::new(key.into());
         let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
-        let encrypted_data = cipher.encrypt(&nonce, data.as_bytes()).unwrap();
+        let encrypted_data = cipher.encrypt(&nonce, json.as_bytes()).unwrap();
 
         // Return the random nonce and the encrypted data
         [nonce.as_slice(), encrypted_data.as_slice()].concat()
@@ -112,10 +129,10 @@ impl Checkpoint {
 
     fn decrypt(encrypted_data: &[u8], key: &[u8]) -> CheckpointData {
         // Split the nonce and the encrypted data
-        let (raw_nonce, data) = encrypted_data.split_at(Self::NONCE_SIZE);
+        let (raw_nonce, json) = encrypted_data.split_at(Self::NONCE_SIZE);
 
         let cipher = ChaCha20Poly1305::new(key.into());
 
-        serde_json::from_slice(&cipher.decrypt(Nonce::from_slice(raw_nonce), data.as_ref()).unwrap()).unwrap()
+        serde_json::from_slice(&cipher.decrypt(Nonce::from_slice(raw_nonce), json.as_ref()).unwrap()).unwrap()
     }
 }
