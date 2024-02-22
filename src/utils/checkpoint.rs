@@ -53,6 +53,13 @@ impl Checkpoint {
             panic!("key must be {} long", Self::KEY_SIZE);
         }
 
+        if !opts.dir.exists() {
+            panic!(
+                "Checkpoints directory \"{}\" does not exist",
+                opts.dir.to_str().unwrap()
+            );
+        }
+
         if !opts.dir.is_dir() {
             panic!(
                 "Checkpoints directory \"{}\" is not a directory",
