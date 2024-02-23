@@ -29,7 +29,7 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use sha2::{Digest, Sha512};
+use sha2::{Digest, Sha256, Sha512};
 use std::{
     cmp::Ordering,
     env,
@@ -419,14 +419,12 @@ fn main() {
             println!();
 
             let mb = MultiProgress::new();
-            let style =
-                ProgressStyle::with_template("{prefix:12} {bar:80.cyan/blue} {pos:>7}/{len:7} {percent}% ({eta})")
-                    .unwrap();
 
             let pb = mb
                 .add(ProgressBar::new(iterations as u64))
-                .with_style(style.clone())
-                .with_prefix("Iterations")
+                .with_style(
+                    ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
+                )
                 .with_position(offset as u64);
 
             pb.enable_steady_tick(Duration::from_secs(1));
@@ -436,8 +434,7 @@ fn main() {
             if checkpoint.is_some() && checkpoint_interval != 0 {
                 cpb = Some(
                     mb.add(ProgressBar::new((iterations / checkpoint_interval) as u64))
-                        .with_style(style.clone())
-                        .with_prefix("Checkpoints")
+                        .with_style(ProgressStyle::with_template("{msg}").unwrap())
                         .with_position((offset / checkpoint_interval) as u64),
                 );
 
@@ -463,7 +460,15 @@ fn main() {
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                cpb.inc(1);
+                                let mut sha256 = Sha256::new();
+                                sha256.update(current_data);
+                                let hash = hex::encode(sha256.finalize());
+
+                                cpb.set_message(format!(
+                                    "\nCreated checkpoint #{} with data hash {}\n",
+                                    (current_iteration + 1).to_string().cyan(),
+                                    hash.cyan()
+                                ));
                             }
                         }
 
@@ -472,6 +477,7 @@ fn main() {
                 );
 
                 pb.finish();
+                pb.reset_eta();
 
                 if let Some(ref mut cpb) = &mut cpb {
                     cpb.finish();
@@ -485,14 +491,13 @@ fn main() {
             let key = handle.join().unwrap();
 
             println!(
-                "Finished in {}\n",
+                "Finished in {}",
                 format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
                     .to_string()
                     .cyan()
             );
+            println!();
 
-            println!();
-            println!();
             println!(
                 "Key (hex) is (please highlight to see): {}",
                 hex::encode(&key).black().on_black()
