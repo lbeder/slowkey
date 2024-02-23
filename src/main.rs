@@ -55,31 +55,67 @@ struct Cli {
 enum Commands {
     #[command(about = "Derive a key using using Scrypt, Argon2, SHA2, and SHA3")]
     Derive {
-        #[arg(short, long, default_value = SlowKeyOptions::default().iterations.to_string(), help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS))]
+        #[arg(
+            short,
+            long,
+            default_value = SlowKeyOptions::default().iterations.to_string(),
+            help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS)
+        )]
         iterations: usize,
 
-        #[arg(short, long, default_value = SlowKeyOptions::default().length.to_string(), help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE))]
+        #[arg(
+            short,
+            long,
+            default_value = SlowKeyOptions::default().length.to_string(),
+            help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE)
+        )]
         length: usize,
 
-        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base64 (in addition to hex)")]
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Output the result in Base64 (in addition to hex)"
+        )]
         base64: bool,
 
-        #[arg(long, action = clap::ArgAction::SetTrue, help = "Output the result in Base58 (in addition to hex)")]
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Output the result in Base58 (in addition to hex)"
+        )]
         base58: bool,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.n.to_string(), help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N))]
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().scrypt.n.to_string(),
+            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
+        )]
         scrypt_n: u64,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.r.to_string(), help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R))]
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().scrypt.r.to_string(),
+            help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R)
+        )]
         scrypt_r: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().scrypt.p.to_string(), help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P))]
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().scrypt.p.to_string(),
+            help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P)
+        )]
         scrypt_p: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.m_cost.to_string(), help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().argon2id.m_cost.to_string(),
+            help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
 
-        #[arg(long, default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(), help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(),
+            help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
 
         #[arg(
@@ -103,6 +139,14 @@ enum Commands {
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
         restore_from_checkpoint: Option<PathBuf>,
+
+        #[arg(
+            long,
+            requires = "checkpoint_path",
+            default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
+            help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
+        )]
+        max_checkpoints_to_keep: usize,
     },
 
     #[command(about = "Print test vectors")]
@@ -280,6 +324,7 @@ fn main() {
             checkpoint_interval,
             checkpoint_dir,
             restore_from_checkpoint,
+            max_checkpoints_to_keep,
         }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix",
@@ -338,6 +383,7 @@ fn main() {
                     iterations: *iterations,
                     dir: dir.to_owned(),
                     key: output_encryption_key.clone().unwrap(),
+                    max_checkpoints_to_keep: *max_checkpoints_to_keep,
                     slowkey: slowkey_opts.clone(),
                 }));
 

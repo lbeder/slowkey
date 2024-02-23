@@ -8,7 +8,7 @@ use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
-    fs::File,
+    fs::{remove_file, File},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
@@ -18,7 +18,12 @@ pub struct CheckpointOptions {
     pub iterations: usize,
     pub dir: PathBuf,
     pub key: Vec<u8>,
+    pub max_checkpoints_to_keep: usize,
     pub slowkey: SlowKeyOptions,
+}
+
+impl CheckpointOptions {
+    pub const DEFAULT_MAX_CHECKPOINTS_TO_KEEP: usize = 1;
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -38,7 +43,8 @@ pub struct Checkpoint {
     dir: PathBuf,
     key: Vec<u8>,
     data: CheckpointData,
-    padding: usize,
+    checkpoint_extension_padding: usize,
+    checkpoint_paths: VecDeque<PathBuf>,
 }
 
 impl Checkpoint {
@@ -65,6 +71,10 @@ impl Checkpoint {
                 "Checkpoints directory \"{}\" is not a directory",
                 opts.dir.to_str().unwrap()
             );
+        }
+
+        if opts.max_checkpoints_to_keep == 0 {
+            panic!("Invalid max checkpoints to keep value");
         }
 
         if !Vec::from_iter(
@@ -94,7 +104,8 @@ impl Checkpoint {
                 data: Vec::new(),
                 slowkey: opts.slowkey.clone(),
             },
-            padding: (opts.iterations as f64).log10().round() as usize + 1,
+            checkpoint_extension_padding: (opts.iterations as f64).log10().round() as usize + 1,
+            checkpoint_paths: VecDeque::with_capacity(opts.max_checkpoints_to_keep),
         }
     }
 
@@ -123,17 +134,30 @@ impl Checkpoint {
     pub fn create_checkpoint(&mut self, iteration: usize, data: &[u8]) {
         let encrypted_data = Self::encrypt(iteration, data, &self.data.slowkey, &self.key);
 
-        let padding = self.padding;
-        let final_path = Path::new(&self.dir)
+        let padding = self.checkpoint_extension_padding;
+        let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
             .with_extension(format!("{:0padding$}", iteration + 1));
-        let mut file = tempfile::NamedTempFile::new_in(final_path.parent().unwrap()).unwrap();
+        let mut file = tempfile::NamedTempFile::new_in(checkpoint_path.parent().unwrap()).unwrap();
 
         file.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
-        file.persist(final_path).unwrap();
+        file.persist(&checkpoint_path).unwrap();
+
+        self.process_checkpoints(&checkpoint_path);
 
         self.data.iteration = iteration;
         self.data.data = data.to_vec();
+    }
+
+    fn process_checkpoints(&mut self, last_checkpoint_path: &Path) {
+        // Ensure that the checkpoints queue does not exceed the fixed capacity
+        if self.checkpoint_paths.len() == self.checkpoint_paths.capacity() {
+            if let Some(path) = self.checkpoint_paths.pop_front() {
+                remove_file(path).unwrap();
+            }
+        }
+
+        self.checkpoint_paths.push_back(last_checkpoint_path.to_path_buf());
     }
 
     fn encrypt(iteration: usize, data: &[u8], slowkey: &SlowKeyOptions, key: &[u8]) -> Vec<u8> {
