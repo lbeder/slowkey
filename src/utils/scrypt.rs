@@ -37,6 +37,7 @@ impl Default for ScryptOptions {
         }
     }
 }
+
 pub struct Scrypt {
     length: usize,
     opts: ScryptOptions,
