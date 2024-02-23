@@ -29,7 +29,7 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
     env,
@@ -456,18 +456,16 @@ fn main() {
                         // Create a checkpoint if we've reached the checkpoint interval
                         if checkpoint_interval != 0 && (current_iteration + 1) % checkpoint_interval == 0 {
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(current_iteration, current_data);
+                                checkpoint.create_checkpoint(&salt, current_iteration, current_data);
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                let mut sha256 = Sha256::new();
-                                sha256.update(current_data);
-                                let hash = hex::encode(sha256.finalize());
+                                let hash = Checkpoint::hash_checkpoint(&salt, current_iteration, current_data);
 
                                 cpb.set_message(format!(
-                                    "\nCreated checkpoint #{} with data hash {}\n",
+                                    "\nCreated checkpoint #{} with data hash (salted) {}\n",
                                     (current_iteration + 1).to_string().cyan(),
-                                    hash.cyan()
+                                    hex::encode(hash).cyan()
                                 ));
                             }
                         }

@@ -6,6 +6,7 @@ use chacha20poly1305::{
 };
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     collections::VecDeque,
     fs::{remove_file, File},
@@ -131,13 +132,14 @@ impl Checkpoint {
         Self::decrypt(&hex::decode(encrypted_data).unwrap(), &opts.key)
     }
 
-    pub fn create_checkpoint(&mut self, iteration: usize, data: &[u8]) {
+    pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8]) {
         let encrypted_data = Self::encrypt(iteration, data, &self.data.slowkey, &self.key);
 
+        let hash = Self::hash_checkpoint(salt, iteration, data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
-            .with_extension(format!("{:0padding$}", iteration + 1));
+            .with_extension(format!("{:0padding$}.{}", iteration + 1, hex::encode(hash)));
         let mut file = tempfile::NamedTempFile::new_in(checkpoint_path.parent().unwrap()).unwrap();
 
         file.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
@@ -147,6 +149,16 @@ impl Checkpoint {
 
         self.data.iteration = iteration;
         self.data.data = data.to_vec();
+    }
+
+    pub fn hash_checkpoint(salt: &[u8], iteration: usize, data: &[u8]) -> Vec<u8> {
+        let mut salted_data = data.to_vec();
+        salted_data.extend_from_slice(salt);
+        salted_data.extend_from_slice(&iteration.to_be_bytes());
+
+        let mut sha256 = Sha256::new();
+        sha256.update(salted_data);
+        sha256.finalize().to_vec()
     }
 
     fn process_checkpoints(&mut self, last_checkpoint_path: &Path) {
