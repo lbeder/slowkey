@@ -2,8 +2,8 @@ mod utils;
 
 extern crate chacha20poly1305;
 extern crate hex;
+extern crate indicatif;
 extern crate libsodium_sys;
-extern crate pbr;
 extern crate serde;
 extern crate serde_json;
 extern crate tempfile;
@@ -27,14 +27,15 @@ use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use pbr::ProgressBar;
 use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
     env,
     path::PathBuf,
     str::from_utf8,
+    thread,
     time::{Duration, Instant},
 };
 use utils::argon2id::Argon2idOptions;
@@ -310,7 +311,7 @@ fn main() {
 
     let cli = Cli::parse();
 
-    match &cli.command {
+    match cli.command {
         Some(Commands::Derive {
             iterations,
             length,
@@ -363,15 +364,15 @@ fn main() {
                 println!();
             } else {
                 slowkey_opts = SlowKeyOptions::new(
-                    *iterations,
-                    *length,
-                    &ScryptOptions::new(*scrypt_n, *scrypt_r, *scrypt_p),
-                    &Argon2idOptions::new(*argon2_m_cost, *argon2_t_cost),
+                    iterations,
+                    length,
+                    &ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p),
+                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
                 );
             }
 
             if let Some(dir) = checkpoint_dir {
-                if *checkpoint_interval == 0 {
+                if checkpoint_interval == 0 {
                     panic!("Invalid checkpoint interval")
                 }
 
@@ -380,10 +381,10 @@ fn main() {
                 }
 
                 checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-                    iterations: *iterations,
+                    iterations,
                     dir: dir.to_owned(),
                     key: output_encryption_key.clone().unwrap(),
-                    max_checkpoints_to_keep: *max_checkpoints_to_keep,
+                    max_checkpoints_to_keep,
                     slowkey: slowkey_opts.clone(),
                 }));
 
@@ -417,31 +418,77 @@ fn main() {
 
             println!();
 
-            let mut pb = ProgressBar::new(*iterations as u64);
-            pb.show_speed = false;
-            pb.message("Processing: ");
-            pb.tick();
-            pb.set(offset as u64);
+            let mb = MultiProgress::new();
+            let style =
+                ProgressStyle::with_template("{prefix:12} {bar:80.cyan/blue} {pos:>7}/{len:7} {percent}% ({eta})")
+                    .unwrap();
+
+            let pb = mb
+                .add(ProgressBar::new(iterations as u64))
+                .with_style(style.clone())
+                .with_prefix("Iterations")
+                .with_position(offset as u64);
+
+            pb.enable_steady_tick(Duration::from_secs(1));
+
+            let mut cpb: Option<ProgressBar> = None;
+
+            if checkpoint.is_some() && checkpoint_interval != 0 {
+                cpb = Some(
+                    mb.add(ProgressBar::new((iterations / checkpoint_interval) as u64))
+                        .with_style(style.clone())
+                        .with_prefix("Checkpoints")
+                        .with_position((offset / checkpoint_interval) as u64),
+                );
+
+                if let Some(ref mut cpb) = &mut cpb {
+                    cpb.enable_steady_tick(Duration::from_secs(1));
+                }
+            }
 
             let start_time = Instant::now();
-
             let slowkey = SlowKey::new(&slowkey_opts);
 
-            let key = slowkey.derive_key_with_callback(
-                &salt,
-                &password,
-                &offset_data,
-                offset,
-                |current_iteration, current_data| {
-                    // Create a checkpoint if we've reached the checkpoint interval
-                    if *checkpoint_interval != 0 && (current_iteration + 1) % *checkpoint_interval == 0 {
-                        if let Some(checkpoint) = &mut checkpoint {
-                            checkpoint.create_checkpoint(current_iteration, current_data);
-                        }
-                    }
+            let handle = thread::spawn(move || {
+                let key = slowkey.derive_key_with_callback(
+                    &salt,
+                    &password,
+                    &offset_data,
+                    offset,
+                    |current_iteration, current_data| {
+                        // Create a checkpoint if we've reached the checkpoint interval
+                        if checkpoint_interval != 0 && (current_iteration + 1) % checkpoint_interval == 0 {
+                            if let Some(checkpoint) = &mut checkpoint {
+                                checkpoint.create_checkpoint(current_iteration, current_data);
+                            }
 
-                    pb.inc();
-                },
+                            if let Some(ref mut cpb) = &mut cpb {
+                                cpb.inc(1);
+                            }
+                        }
+
+                        pb.inc(1);
+                    },
+                );
+
+                pb.finish();
+
+                if let Some(ref mut cpb) = &mut cpb {
+                    cpb.finish();
+                }
+
+                key
+            });
+
+            mb.clear().unwrap();
+
+            let key = handle.join().unwrap();
+
+            println!(
+                "Finished in {}\n",
+                format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
+                    .to_string()
+                    .cyan()
             );
 
             println!();
@@ -451,26 +498,19 @@ fn main() {
                 hex::encode(&key).black().on_black()
             );
 
-            if *base64 {
+            if base64 {
                 println!(
                     "Key (base64) is (please highlight to see): {}",
                     general_purpose::STANDARD.encode(&key).black().on_black()
                 );
             }
 
-            if *base58 {
+            if base58 {
                 println!(
                     "Key (base58) is (please highlight to see): {}",
                     bs58::encode(&key).into_string().black().on_black()
                 );
             }
-
-            pb.finish_println(&format!(
-                "Finished in {}\n",
-                format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
-                    .to_string()
-                    .cyan()
-            ));
         },
 
         Some(Commands::Test {}) => {
