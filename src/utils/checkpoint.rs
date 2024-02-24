@@ -195,6 +195,9 @@ impl Checkpoint {
 
         let cipher = ChaCha20Poly1305::new(key.into());
 
-        serde_json::from_slice(&cipher.decrypt(Nonce::from_slice(raw_nonce), json.as_ref()).unwrap()).unwrap()
+        let data = cipher
+            .decrypt(Nonce::from_slice(raw_nonce), json.as_ref())
+            .expect("Decryption failed");
+        serde_json::from_slice(&data).unwrap()
     }
 }

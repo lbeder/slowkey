@@ -150,6 +150,12 @@ enum Commands {
         max_checkpoints_to_keep: usize,
     },
 
+    #[command(about = "Decrypt a checkpoint")]
+    ShowCheckpoint {
+        #[arg(long, help = "Path to an existing checkpoint to decrypt and show")]
+        checkpoint: PathBuf,
+    },
+
     #[command(about = "Print test vectors")]
     Test {},
 }
@@ -346,18 +352,19 @@ fn main() {
                     output_encryption_key = Some(get_checkpoint_key());
                 }
 
-                let data = Checkpoint::get(&OpenCheckpointOptions {
+                let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
                     key: output_encryption_key.clone().unwrap(),
                     path: path.clone(),
                 });
 
-                slowkey_opts = data.slowkey.clone();
+                slowkey_opts = checkpoint_data.slowkey.clone();
 
-                offset = data.iteration + 1;
-                offset_data = data.data.clone();
+                offset = checkpoint_data.iteration + 1;
+                offset_data = checkpoint_data.data.clone();
 
                 println!(
-                    "Using SlowKey parameters extracted from the checkpoint. Resuming from iteration {} with intermediary offset data {} (please highlight to see). ",
+                    "{}: iteration: {}, data (please highlight to see): {}",
+                    "Checkpoint".yellow(),
                     offset.to_string().cyan(),
                     hex::encode(&offset_data).black().on_black()
                 );
@@ -514,6 +521,48 @@ fn main() {
                     bs58::encode(&key).into_string().black().on_black()
                 );
             }
+        },
+
+        Some(Commands::ShowCheckpoint { checkpoint }) => {
+            println!(
+                "Please input all data either in raw or hex format starting with the {} prefix",
+                HEX_PREFIX
+            );
+            println!();
+
+            let output_encryption_key = get_checkpoint_key();
+
+            let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
+                key: output_encryption_key,
+                path: checkpoint,
+            });
+
+            let offset = checkpoint_data.iteration + 1;
+            let offset_data = checkpoint_data.data.clone();
+
+            println!(
+                "{}: iteration: {}, data (please highlight to see): {}",
+                "Checkpoint".yellow(),
+                offset.to_string().cyan(),
+                hex::encode(offset_data).black().on_black()
+            );
+
+            let slowkey_opts = checkpoint_data.slowkey.clone();
+
+            println!(
+                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
+                "SlowKey Parameters".yellow(),
+                &slowkey_opts.iterations.to_string().cyan(),
+                &slowkey_opts.length.to_string().cyan(),
+                "Scrypt".green(),
+                &slowkey_opts.scrypt.n.to_string().cyan(),
+                &slowkey_opts.scrypt.r.to_string().cyan(),
+                &slowkey_opts.scrypt.p.to_string().cyan(),
+                "Argon2id".green(),
+                Argon2id::VERSION.to_string().cyan(),
+                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
+                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
+            );
         },
 
         Some(Commands::Test {}) => {
