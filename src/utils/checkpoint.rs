@@ -140,12 +140,8 @@ impl Checkpoint {
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
             .with_extension(format!("{:0padding$}.{}", iteration + 1, hex::encode(hash)));
-        let mut file = tempfile::NamedTempFile::new_in(checkpoint_path.parent().unwrap()).unwrap();
 
-        file.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
-        file.persist(&checkpoint_path).unwrap();
-
-        self.process_checkpoints(&checkpoint_path);
+        self.store_checkpoint(&checkpoint_path, &encrypted_data);
 
         self.data.iteration = iteration;
         self.data.data = data.to_vec();
@@ -161,7 +157,12 @@ impl Checkpoint {
         sha256.finalize().to_vec()
     }
 
-    fn process_checkpoints(&mut self, last_checkpoint_path: &Path) {
+    fn store_checkpoint(&mut self, checkpoint_path: &Path, data: &[u8]) {
+        let mut file = tempfile::NamedTempFile::new_in(checkpoint_path.parent().unwrap()).unwrap();
+
+        file.write_all(hex::encode(data).as_bytes()).unwrap();
+        file.persist(checkpoint_path).unwrap();
+
         // Ensure that the checkpoints queue does not exceed the fixed capacity
         if self.checkpoint_paths.len() == self.checkpoint_paths.capacity() {
             if let Some(path) = self.checkpoint_paths.pop_front() {
@@ -169,7 +170,7 @@ impl Checkpoint {
             }
         }
 
-        self.checkpoint_paths.push_back(last_checkpoint_path.to_path_buf());
+        self.checkpoint_paths.push_back(checkpoint_path.to_path_buf());
     }
 
     fn encrypt(iteration: usize, data: &[u8], slowkey: &SlowKeyOptions, key: &[u8]) -> Vec<u8> {
