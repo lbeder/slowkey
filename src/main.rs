@@ -18,6 +18,7 @@ use crate::{
     utils::{
         argon2id::Argon2id,
         checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
+        output::{Output, OutputOptions},
         scrypt::ScryptOptions,
         sodium_init::initialize,
     },
@@ -38,7 +39,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use utils::argon2id::Argon2idOptions;
+use utils::{argon2id::Argon2idOptions, chacha20poly1305::ChaCha20Poly1305};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -86,6 +87,9 @@ enum Commands {
         )]
         base58: bool,
 
+        #[arg(long, help = "Optional path for storing the encrypted output")]
+        output: Option<PathBuf>,
+
         #[arg(
             long,
             default_value = SlowKeyOptions::default().scrypt.n.to_string(),
@@ -122,7 +126,7 @@ enum Commands {
         #[arg(
             long,
             requires = "checkpoint_interval",
-            help = "Optional directory for storing checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named \"checkpoint.i\", indicating the iteration number at which the checkpoint was created"
+            help = "Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named \"checkpoint.i\", indicating the iteration number at which the checkpoint was created"
         )]
         checkpoint_dir: Option<PathBuf>,
 
@@ -152,8 +156,14 @@ enum Commands {
 
     #[command(about = "Decrypt a checkpoint")]
     ShowCheckpoint {
-        #[arg(long, help = "Path to an existing checkpoint to decrypt and show")]
+        #[arg(long, help = "Path to an existing checkpoint")]
         checkpoint: PathBuf,
+    },
+
+    #[command(about = "Decrypt an output file")]
+    ShowOutput {
+        #[arg(long, help = "Path to an existing output")]
+        output: PathBuf,
     },
 
     #[command(about = "Print test vectors")]
@@ -240,10 +250,13 @@ fn get_password() -> Vec<u8> {
     }
 }
 
-fn get_checkpoint_key() -> Vec<u8> {
+fn get_output_key() -> Vec<u8> {
     let key = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your checkpoint encryption key")
-        .with_confirmation("Enter your checkpoint encryption key again", "Error: keys don't match")
+        .with_prompt("Enter your checkpoint/output encryption key")
+        .with_confirmation(
+            "Enter your checkpoint/output encryption key again",
+            "Error: keys don't match",
+        )
         .interact()
         .unwrap();
 
@@ -254,21 +267,21 @@ fn get_checkpoint_key() -> Vec<u8> {
     };
 
     let key_len = key.len();
-    match key_len.cmp(&Checkpoint::KEY_SIZE) {
+    match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
             println!();
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Checkpoint encryption key is shorter than {} and will padded with 0s. Do you want to continue?",
-                    Checkpoint::KEY_SIZE
+                    "Output encryption key is shorter than {} and will padded with 0s. Do you want to continue?",
+                    ChaCha20Poly1305::KEY_SIZE
                 ))
                 .wait_for_newline(true)
                 .interact()
                 .unwrap();
 
             if confirmation {
-                key.resize(Checkpoint::KEY_SIZE, 0)
+                key.resize(ChaCha20Poly1305::KEY_SIZE, 0)
             } else {
                 panic!("Aborting");
             }
@@ -280,7 +293,7 @@ fn get_checkpoint_key() -> Vec<u8> {
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Checkpoint encryption key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    "Output encryption key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
                     SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
                 ))
                 .wait_for_newline(true)
@@ -292,7 +305,7 @@ fn get_checkpoint_key() -> Vec<u8> {
                 sha512.update(&key);
                 key = sha512.finalize().to_vec();
 
-                key.truncate(Checkpoint::KEY_SIZE);
+                key.truncate(ChaCha20Poly1305::KEY_SIZE);
             } else {
                 panic!("Aborting");
             }
@@ -323,6 +336,7 @@ fn main() {
             length,
             base64,
             base58,
+            output,
             scrypt_n,
             scrypt_r,
             scrypt_p,
@@ -341,19 +355,19 @@ fn main() {
 
             let slowkey_opts: SlowKeyOptions;
 
-            let mut output_encryption_key: Option<Vec<u8>> = None;
+            let mut output_key: Option<Vec<u8>> = None;
             let mut checkpoint: Option<Checkpoint> = None;
 
             let mut offset: usize = 0;
             let mut offset_data = Vec::new();
 
             if let Some(path) = restore_from_checkpoint {
-                if output_encryption_key.is_none() {
-                    output_encryption_key = Some(get_checkpoint_key());
+                if output_key.is_none() {
+                    output_key = Some(get_output_key());
                 }
 
                 let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
-                    key: output_encryption_key.clone().unwrap(),
+                    key: output_key.clone().unwrap(),
                     path: path.clone(),
                 });
 
@@ -378,19 +392,28 @@ fn main() {
                 );
             }
 
+            let mut out: Option<Output> = None;
+            if let Some(path) = output {
+                if output_key.is_none() {
+                    let key = get_output_key();
+
+                    out = Some(Output::new(&OutputOptions { path, key: key.clone() }))
+                }
+            }
+
             if let Some(dir) = checkpoint_dir {
                 if checkpoint_interval == 0 {
                     panic!("Invalid checkpoint interval")
                 }
 
-                if output_encryption_key.as_ref().is_none() {
-                    output_encryption_key = Some(get_checkpoint_key());
+                if output_key.as_ref().is_none() {
+                    output_key = Some(get_output_key());
                 }
 
                 checkpoint = Some(Checkpoint::new(&CheckpointOptions {
                     iterations,
                     dir: dir.to_owned(),
-                    key: output_encryption_key.clone().unwrap(),
+                    key: output_key.clone().unwrap(),
                     max_checkpoints_to_keep,
                     slowkey: slowkey_opts.clone(),
                 }));
@@ -521,6 +544,14 @@ fn main() {
                     bs58::encode(&key).into_string().black().on_black()
                 );
             }
+
+            if let Some(out) = out {
+                println!();
+
+                out.save(&key);
+
+                println!("Saved encrypted output to \"{}\"", &out.path.to_str().unwrap().cyan(),);
+            }
         },
 
         Some(Commands::ShowCheckpoint { checkpoint }) => {
@@ -530,10 +561,10 @@ fn main() {
             );
             println!();
 
-            let output_encryption_key = get_checkpoint_key();
+            let output_key = get_output_key();
 
             let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
-                key: output_encryption_key,
+                key: output_key,
                 path: checkpoint,
             });
 
@@ -562,6 +593,26 @@ fn main() {
                 Argon2id::VERSION.to_string().cyan(),
                 &slowkey_opts.argon2id.m_cost.to_string().cyan(),
                 &slowkey_opts.argon2id.t_cost.to_string().cyan(),
+            );
+        },
+
+        Some(Commands::ShowOutput { output }) => {
+            println!(
+                "Please input all data either in raw or hex format starting with the {} prefix",
+                HEX_PREFIX
+            );
+            println!();
+
+            let output_key = get_output_key();
+
+            let output_data = Output::get(&OutputOptions {
+                key: output_key,
+                path: output,
+            });
+
+            println!(
+                "Key (hex) is (please highlight to see): {}",
+                hex::encode(output_data.data).black().on_black()
             );
         },
 

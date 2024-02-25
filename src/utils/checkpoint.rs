@@ -1,9 +1,5 @@
 use crate::slowkey::SlowKeyOptions;
 
-use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-    ChaCha20Poly1305, Nonce,
-};
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,6 +9,8 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+
+use super::chacha20poly1305::{ChaCha20Poly1305, Nonce};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CheckpointOptions {
@@ -42,24 +40,17 @@ pub struct CheckpointData {
 
 pub struct Checkpoint {
     dir: PathBuf,
-    key: Vec<u8>,
     data: CheckpointData,
     checkpoint_extension_padding: usize,
     checkpoint_paths: VecDeque<PathBuf>,
+    cipher: ChaCha20Poly1305,
 }
 
 impl Checkpoint {
     const CHECKPOINT_PREFIX: &'static str = "checkpoint";
     const CHECKPOINTS_PATTERN: &'static str = "checkpoint.[0-9]*";
 
-    pub const KEY_SIZE: usize = 32;
-    const NONCE_SIZE: usize = 12; // 96 bits
-
     pub fn new(opts: &CheckpointOptions) -> Self {
-        if opts.key.len() != Self::KEY_SIZE {
-            panic!("key must be {} long", Self::KEY_SIZE);
-        }
-
         if !opts.dir.exists() {
             panic!(
                 "Checkpoints directory \"{}\" does not exist",
@@ -99,7 +90,6 @@ impl Checkpoint {
 
         Self {
             dir: opts.dir.clone(),
-            key: opts.key.clone(),
             data: CheckpointData {
                 iteration: 0,
                 data: Vec::new(),
@@ -107,13 +97,12 @@ impl Checkpoint {
             },
             checkpoint_extension_padding: (opts.iterations as f64).log10().round() as usize + 1,
             checkpoint_paths: VecDeque::with_capacity(opts.max_checkpoints_to_keep),
+            cipher: ChaCha20Poly1305::new(&opts.key),
         }
     }
 
     pub fn get(opts: &OpenCheckpointOptions) -> CheckpointData {
-        if opts.key.len() != Self::KEY_SIZE {
-            panic!("key must be {} long", Self::KEY_SIZE);
-        }
+        let cipher = ChaCha20Poly1305::new(&opts.key);
 
         if opts.path.is_dir() {
             panic!("Checkpoint file \"{}\" is a directory", opts.path.to_str().unwrap());
@@ -129,11 +118,18 @@ impl Checkpoint {
             .read_to_end(&mut encrypted_data)
             .unwrap();
 
-        Self::decrypt(&hex::decode(encrypted_data).unwrap(), &opts.key)
+        cipher.decrypt(&hex::decode(encrypted_data).unwrap())
     }
 
     pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8]) {
-        let encrypted_data = Self::encrypt(iteration, data, &self.data.slowkey, &self.key);
+        let encrypted_data = self.cipher.encrypt(
+            Nonce::Random,
+            &CheckpointData {
+                iteration,
+                data: data.to_vec(),
+                slowkey: self.data.slowkey.clone(),
+            },
+        );
 
         let hash = Self::hash_checkpoint(salt, iteration, data);
         let padding = self.checkpoint_extension_padding;
@@ -171,33 +167,5 @@ impl Checkpoint {
         }
 
         self.checkpoint_paths.push_back(checkpoint_path.to_path_buf());
-    }
-
-    fn encrypt(iteration: usize, data: &[u8], slowkey: &SlowKeyOptions, key: &[u8]) -> Vec<u8> {
-        let json = serde_json::to_string(&CheckpointData {
-            iteration,
-            data: data.to_vec(),
-            slowkey: slowkey.clone(),
-        })
-        .unwrap();
-
-        let cipher = ChaCha20Poly1305::new(key.into());
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
-        let encrypted_data = cipher.encrypt(&nonce, json.as_bytes()).unwrap();
-
-        // Return the random nonce and the encrypted data
-        [nonce.as_slice(), encrypted_data.as_slice()].concat()
-    }
-
-    fn decrypt(encrypted_data: &[u8], key: &[u8]) -> CheckpointData {
-        // Split the nonce and the encrypted data
-        let (raw_nonce, json) = encrypted_data.split_at(Self::NONCE_SIZE);
-
-        let cipher = ChaCha20Poly1305::new(key.into());
-
-        let data = cipher
-            .decrypt(Nonce::from_slice(raw_nonce), json.as_ref())
-            .expect("Decryption failed");
-        serde_json::from_slice(&data).unwrap()
     }
 }
