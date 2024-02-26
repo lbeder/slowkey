@@ -518,12 +518,7 @@ fn main() {
 
             let key = handle.join().unwrap();
 
-            println!(
-                "Finished in {}",
-                format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
-                    .to_string()
-                    .cyan()
-            );
+            println!();
             println!();
 
             println!(
@@ -545,13 +540,22 @@ fn main() {
                 );
             }
 
-            if let Some(out) = out {
-                println!();
+            println!();
 
+            if let Some(out) = out {
                 out.save(&key);
 
                 println!("Saved encrypted output to \"{}\"", &out.path.to_str().unwrap().cyan(),);
+                println!();
             }
+
+            println!(
+                "Finished in {}",
+                format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
+                    .to_string()
+                    .cyan()
+            );
+            println!();
         },
 
         Some(Commands::ShowCheckpoint { checkpoint }) => {
