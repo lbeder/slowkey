@@ -78,7 +78,7 @@ impl Output {
             },
         );
 
-        let mut file = File::create_new(&self.path).unwrap();
+        let mut file = File::create(&self.path).unwrap();
 
         file.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
         file.flush().unwrap();
