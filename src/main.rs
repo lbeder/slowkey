@@ -18,7 +18,7 @@ use crate::{
     utils::{
         argon2id::Argon2id,
         checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
-        output::{Output, OutputOptions},
+        output::{OpenOutputOptions, Output, OutputOptions},
         scrypt::ScryptOptions,
         sodium_init::initialize,
     },
@@ -203,8 +203,6 @@ fn get_salt() -> Vec<u8> {
             } else {
                 panic!("Aborting");
             }
-
-            println!();
         },
         Ordering::Greater => {
             println!();
@@ -227,11 +225,11 @@ fn get_salt() -> Vec<u8> {
             } else {
                 panic!("Aborting");
             }
-
-            println!();
         },
         Ordering::Equal => {},
     }
+
+    println!();
 
     salt
 }
@@ -243,6 +241,8 @@ fn get_password() -> Vec<u8> {
         .interact()
         .unwrap();
 
+    println!();
+
     if password.starts_with(HEX_PREFIX) {
         hex::decode(password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
@@ -250,15 +250,22 @@ fn get_password() -> Vec<u8> {
     }
 }
 
-fn get_output_key() -> Vec<u8> {
-    let key = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your checkpoint/output encryption key")
-        .with_confirmation(
-            "Enter your checkpoint/output encryption key again",
-            "Error: keys don't match",
-        )
-        .interact()
-        .unwrap();
+fn get_output_key(with_confirmation: bool) -> Vec<u8> {
+    let key = if with_confirmation {
+        Password::with_theme(&ColorfulTheme::default())
+            .with_prompt("Enter your checkpoint/output encryption key")
+            .with_confirmation(
+                "Enter your checkpoint/output encryption key again",
+                "Error: keys don't match",
+            )
+            .interact()
+            .unwrap()
+    } else {
+        Password::with_theme(&ColorfulTheme::default())
+            .with_prompt("Enter your checkpoint/output encryption key")
+            .interact()
+            .unwrap()
+    };
 
     let mut key = if key.starts_with(HEX_PREFIX) {
         hex::decode(key.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
@@ -285,8 +292,6 @@ fn get_output_key() -> Vec<u8> {
             } else {
                 panic!("Aborting");
             }
-
-            println!();
         },
         Ordering::Greater => {
             println!();
@@ -309,11 +314,11 @@ fn get_output_key() -> Vec<u8> {
             } else {
                 panic!("Aborting");
             }
-
-            println!();
         },
         Ordering::Equal => {},
     }
+
+    println!();
 
     key
 }
@@ -363,7 +368,7 @@ fn main() {
 
             if let Some(path) = restore_from_checkpoint {
                 if output_key.is_none() {
-                    output_key = Some(get_output_key());
+                    output_key = Some(get_output_key(false));
                 }
 
                 let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
@@ -395,9 +400,13 @@ fn main() {
             let mut out: Option<Output> = None;
             if let Some(path) = output {
                 if output_key.is_none() {
-                    let key = get_output_key();
+                    let key = get_output_key(true);
 
-                    out = Some(Output::new(&OutputOptions { path, key: key.clone() }))
+                    out = Some(Output::new(&OutputOptions {
+                        path,
+                        key: key.clone(),
+                        slowkey: slowkey_opts.clone(),
+                    }))
                 }
             }
 
@@ -407,7 +416,7 @@ fn main() {
                 }
 
                 if output_key.as_ref().is_none() {
-                    output_key = Some(get_output_key());
+                    output_key = Some(get_output_key(true));
                 }
 
                 checkpoint = Some(Checkpoint::new(&CheckpointOptions {
@@ -428,8 +437,6 @@ fn main() {
 
             let salt = get_salt();
             let password = get_password();
-
-            println!();
 
             println!(
                 "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
@@ -505,7 +512,6 @@ fn main() {
                 );
 
                 pb.finish();
-                pb.reset_eta();
 
                 if let Some(ref mut cpb) = &mut cpb {
                     cpb.finish();
@@ -543,7 +549,7 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                out.save(&key);
+                out.save(length, &key);
 
                 println!("Saved encrypted output to \"{}\"", &out.path.to_str().unwrap().cyan(),);
                 println!();
@@ -565,7 +571,7 @@ fn main() {
             );
             println!();
 
-            let output_key = get_output_key();
+            let output_key = get_output_key(false);
 
             let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
                 key: output_key,
@@ -607,16 +613,35 @@ fn main() {
             );
             println!();
 
-            let output_key = get_output_key();
+            let output_key = get_output_key(false);
 
-            let output_data = Output::get(&OutputOptions {
+            let output_data = Output::get(&OpenOutputOptions {
                 key: output_key,
                 path: output,
             });
 
             println!(
-                "Key (hex) is (please highlight to see): {}",
+                "{}: iteration: {}, data (please highlight to see): {}",
+                "Output".yellow(),
+                output_data.iteration,
                 hex::encode(output_data.data).black().on_black()
+            );
+
+            let slowkey_opts = output_data.slowkey.clone();
+
+            println!(
+                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
+                "SlowKey Parameters".yellow(),
+                &slowkey_opts.iterations.to_string().cyan(),
+                &slowkey_opts.length.to_string().cyan(),
+                "Scrypt".green(),
+                &slowkey_opts.scrypt.n.to_string().cyan(),
+                &slowkey_opts.scrypt.r.to_string().cyan(),
+                &slowkey_opts.scrypt.p.to_string().cyan(),
+                "Argon2id".green(),
+                Argon2id::VERSION.to_string().cyan(),
+                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
+                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
             );
         },
 

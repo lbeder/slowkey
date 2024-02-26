@@ -5,22 +5,34 @@ use std::{
     path::PathBuf,
 };
 
+use crate::slowkey::SlowKeyOptions;
+
 use super::chacha20poly1305::{ChaCha20Poly1305, Nonce};
-
-#[derive(Serialize, Deserialize)]
-pub struct OutputData {
-    pub data: Vec<u8>,
-}
-
-pub struct Output {
-    pub path: PathBuf,
-    cipher: ChaCha20Poly1305,
-}
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct OutputOptions {
     pub path: PathBuf,
     pub key: Vec<u8>,
+    pub slowkey: SlowKeyOptions,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct OpenOutputOptions {
+    pub path: PathBuf,
+    pub key: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct OutputData {
+    pub iteration: usize,
+    pub data: Vec<u8>,
+    pub slowkey: SlowKeyOptions,
+}
+
+pub struct Output {
+    pub path: PathBuf,
+    cipher: ChaCha20Poly1305,
+    slowkey: SlowKeyOptions,
 }
 
 impl Output {
@@ -32,10 +44,11 @@ impl Output {
         Self {
             path: opts.path.clone(),
             cipher: ChaCha20Poly1305::new(&opts.key),
+            slowkey: opts.slowkey.clone(),
         }
     }
 
-    pub fn get(opts: &OutputOptions) -> OutputData {
+    pub fn get(opts: &OpenOutputOptions) -> OutputData {
         let cipher = ChaCha20Poly1305::new(&opts.key);
 
         if !opts.path.exists() {
@@ -55,8 +68,15 @@ impl Output {
         cipher.decrypt(&hex::decode(encrypted_data).unwrap())
     }
 
-    pub fn save(&self, data: &[u8]) {
-        let encrypted_data = self.cipher.encrypt(Nonce::Random, &OutputData { data: data.to_vec() });
+    pub fn save(&self, iteration: usize, data: &[u8]) {
+        let encrypted_data = self.cipher.encrypt(
+            Nonce::Random,
+            &OutputData {
+                iteration,
+                data: data.to_vec(),
+                slowkey: self.slowkey.clone(),
+            },
+        );
 
         let mut file = File::create_new(&self.path).unwrap();
 
