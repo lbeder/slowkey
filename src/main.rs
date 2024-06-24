@@ -379,7 +379,7 @@ fn main() {
                 slowkey_opts = checkpoint_data.slowkey.clone();
 
                 offset = checkpoint_data.iteration + 1;
-                offset_data = checkpoint_data.data.clone();
+                offset_data.clone_from(&checkpoint_data.data);
 
                 println!(
                     "{}: iteration: {}, data (please highlight to see): {}",
