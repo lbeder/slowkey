@@ -6,22 +6,22 @@ version = "1.0.0-beta.1"
 
 [dependencies]
 better-panic = "0.3.0"
-clap = { version = "4.5.0", features = ["derive", "string"] }
+clap = { version = "4.5.17", features = ["derive", "string"] }
 color-backtrace = "0.6.1"
 crossterm = "0.27.0"
 hex = "0.4.3"
 humantime = "2.1.0"
-mimalloc = { version = "0.1.39", default-features = false }
+mimalloc = { version = "0.1.43", default-features = false }
 sha2 = "0.10.8"
 sha3 = "0.10.8"
-lazy_static = "1.4.0"
+lazy_static = "1.5.0"
 base64 = "0.21.7"
-bs58 = "0.5.0"
-libsodium-sys-stable = { version = "1.20.4", features = ["optimized"] }
+bs58 = "0.5.1"
+libsodium-sys-stable = { version = "1.21.1", features = ["optimized"] }
 dialoguer = "0.11.0"
-tempfile = "3.10.0"
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.113"
+tempfile = "3.12.0"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
 chacha20poly1305 = "0.10.1"
 glob = "0.3.1"
 indicatif = "0.17.8"
