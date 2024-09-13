@@ -47,7 +47,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None, arg_required_else_help = true, disable_help_subcommand = true)]
+#[command(author, about, long_about = None, arg_required_else_help = true, disable_help_subcommand = true)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
