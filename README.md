@@ -129,7 +129,7 @@ Options:
 
 ## Build
 
-### Mac OS
+### Mac OS ARM64
 
 ```sh
 git clone https://github.com/lbeder/slowkey
@@ -145,7 +145,7 @@ rustup target add x86_64-apple-darwin
 rustup target add aarch64-apple-darwin
 ```
 
-### Linux x86_x64
+### Linux x64
 
 In order to get stuff working later, use the `nightly` branch of Rust:
 
