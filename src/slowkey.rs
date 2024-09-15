@@ -187,6 +187,7 @@ impl SlowKey {
 
         // Calculate the final SHA2 and SHA3 hashes (and trim the result, if required)
         self.double_hash(salt, password, &mut res);
+
         res.truncate(self.length);
 
         res

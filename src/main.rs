@@ -26,7 +26,7 @@ use crate::{
 use base64::{engine::general_purpose, Engine as _};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
+use dialoguer::{theme::ColorfulTheme, Confirm, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
@@ -133,10 +133,9 @@ enum Commands {
         #[arg(
             long,
             requires = "checkpoint_path",
-            default_value = "0",
             help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided"
         )]
-        checkpoint_interval: usize,
+        checkpoint_interval: Option<usize>,
 
         #[arg(
             long,
@@ -173,10 +172,13 @@ enum Commands {
 const HEX_PREFIX: &str = "0x";
 
 fn get_salt() -> Vec<u8> {
-    let input: String = Input::with_theme(&ColorfulTheme::default())
+    let input = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
+        .with_confirmation("Enter your salt again", "Error: salts don't match")
         .interact()
         .unwrap();
+
+    println!();
 
     let mut salt = if input.starts_with(HEX_PREFIX) {
         hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
@@ -187,29 +189,31 @@ fn get_salt() -> Vec<u8> {
     let salt_len = salt.len();
     match salt_len.cmp(&SlowKey::SALT_SIZE) {
         Ordering::Less => {
-            println!();
-
             let confirmation = Confirm::new()
-                .with_prompt(format!(
-                    "Salt is shorter than {} and will padded with 0s. Do you want to continue?",
-                    SlowKey::SALT_SIZE
-                ))
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
+            .with_prompt(format!(
+                "Salt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                salt_len,
+                SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
+            ))
+            .wait_for_newline(true)
+            .interact()
+            .unwrap();
 
             if confirmation {
-                salt.resize(SlowKey::SALT_SIZE, 0)
+                let mut sha512 = Sha512::new();
+                sha512.update(&salt);
+                salt = sha512.finalize().to_vec();
+
+                salt.truncate(SlowKey::SALT_SIZE);
             } else {
                 panic!("Aborting");
             }
         },
         Ordering::Greater => {
-            println!();
-
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Salt is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    "Salt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    salt_len,
                     SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
                 ))
                 .wait_for_newline(true)
@@ -250,22 +254,15 @@ fn get_password() -> Vec<u8> {
     }
 }
 
-fn get_output_key(with_confirmation: bool) -> Vec<u8> {
-    let key = if with_confirmation {
-        Password::with_theme(&ColorfulTheme::default())
-            .with_prompt("Enter your checkpoint/output encryption key")
-            .with_confirmation(
-                "Enter your checkpoint/output encryption key again",
-                "Error: keys don't match",
-            )
-            .interact()
-            .unwrap()
-    } else {
-        Password::with_theme(&ColorfulTheme::default())
-            .with_prompt("Enter your checkpoint/output encryption key")
-            .interact()
-            .unwrap()
-    };
+fn get_output_key() -> Vec<u8> {
+    let key = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter your checkpoint/output encryption key")
+        .with_confirmation(
+            "Enter your checkpoint/output encryption key again",
+            "Error: keys don't match",
+        )
+        .interact()
+        .unwrap();
 
     let mut key = if key.starts_with(HEX_PREFIX) {
         hex::decode(key.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
@@ -279,16 +276,21 @@ fn get_output_key(with_confirmation: bool) -> Vec<u8> {
             println!();
 
             let confirmation = Confirm::new()
-                .with_prompt(format!(
-                    "Output encryption key is shorter than {} and will padded with 0s. Do you want to continue?",
-                    ChaCha20Poly1305::KEY_SIZE
-                ))
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
+            .with_prompt(format!(
+                "Output encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                key_len,
+                ChaCha20Poly1305::KEY_SIZE, ChaCha20Poly1305::KEY_SIZE
+            ))
+            .wait_for_newline(true)
+            .interact()
+            .unwrap();
 
             if confirmation {
-                key.resize(ChaCha20Poly1305::KEY_SIZE, 0)
+                let mut sha512 = Sha512::new();
+                sha512.update(&key);
+                key = sha512.finalize().to_vec();
+
+                key.truncate(ChaCha20Poly1305::KEY_SIZE);
             } else {
                 panic!("Aborting");
             }
@@ -298,8 +300,9 @@ fn get_output_key(with_confirmation: bool) -> Vec<u8> {
 
             let confirmation = Confirm::new()
                 .with_prompt(format!(
-                    "Output encryption key is longer than {} and will first SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                    SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
+                    "Output encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                    key_len,
+                    ChaCha20Poly1305::KEY_SIZE, ChaCha20Poly1305::KEY_SIZE
                 ))
                 .wait_for_newline(true)
                 .interact()
@@ -368,7 +371,7 @@ fn main() {
 
             if let Some(path) = restore_from_checkpoint {
                 if output_key.is_none() {
-                    output_key = Some(get_output_key(false));
+                    output_key = Some(get_output_key());
                 }
 
                 let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
@@ -400,27 +403,27 @@ fn main() {
             let mut out: Option<Output> = None;
             if let Some(path) = output {
                 if output_key.is_none() {
-                    let key = get_output_key(true);
+                    output_key = Some(get_output_key());
 
                     out = Some(Output::new(&OutputOptions {
                         path,
-                        key: key.clone(),
+                        key: output_key.clone().unwrap(),
                         slowkey: slowkey_opts.clone(),
                     }))
                 }
             }
 
-            if let Some(dir) = checkpoint_dir {
-                if checkpoint_interval == 0 {
-                    panic!("Invalid checkpoint interval")
-                }
+            let mut checkpointing_interval: usize = 0;
 
-                if output_key.as_ref().is_none() {
-                    output_key = Some(get_output_key(true));
+            if let Some(dir) = checkpoint_dir {
+                checkpointing_interval = checkpoint_interval.unwrap();
+
+                if output_key.is_none() {
+                    output_key = Some(get_output_key());
                 }
 
                 checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-                    iterations,
+                    iterations: slowkey_opts.iterations,
                     dir: dir.to_owned(),
                     key: output_key.clone().unwrap(),
                     max_checkpoints_to_keep,
@@ -429,7 +432,7 @@ fn main() {
 
                 println!(
                     "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory",
-                    checkpoint_interval.to_string().cyan(),
+                    checkpointing_interval.to_string().cyan(),
                     &dir.to_string_lossy().cyan()
                 );
                 println!();
@@ -458,7 +461,7 @@ fn main() {
             let mb = MultiProgress::new();
 
             let pb = mb
-                .add(ProgressBar::new(iterations as u64))
+                .add(ProgressBar::new(slowkey_opts.iterations as u64))
                 .with_style(
                     ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
                 )
@@ -468,11 +471,13 @@ fn main() {
 
             let mut cpb: Option<ProgressBar> = None;
 
-            if checkpoint.is_some() && checkpoint_interval != 0 {
+            if checkpoint.is_some() && checkpointing_interval != 0 {
                 cpb = Some(
-                    mb.add(ProgressBar::new((iterations / checkpoint_interval) as u64))
-                        .with_style(ProgressStyle::with_template("{msg}").unwrap())
-                        .with_position((offset / checkpoint_interval) as u64),
+                    mb.add(ProgressBar::new(
+                        (slowkey_opts.iterations / checkpointing_interval) as u64,
+                    ))
+                    .with_style(ProgressStyle::with_template("{msg}").unwrap())
+                    .with_position((offset / checkpointing_interval) as u64),
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
@@ -491,7 +496,7 @@ fn main() {
                     offset,
                     |current_iteration, current_data| {
                         // Create a checkpoint if we've reached the checkpoint interval
-                        if checkpoint_interval != 0 && (current_iteration + 1) % checkpoint_interval == 0 {
+                        if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
                             if let Some(checkpoint) = &mut checkpoint {
                                 checkpoint.create_checkpoint(&salt, current_iteration, current_data);
                             }
@@ -571,7 +576,7 @@ fn main() {
             );
             println!();
 
-            let output_key = get_output_key(false);
+            let output_key = get_output_key();
 
             let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
                 key: output_key,
@@ -613,7 +618,7 @@ fn main() {
             );
             println!();
 
-            let output_key = get_output_key(false);
+            let output_key = get_output_key();
 
             let output_data = Output::get(&OpenOutputOptions {
                 key: output_key,

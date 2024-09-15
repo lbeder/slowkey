@@ -29,7 +29,7 @@ The SlowKey Key Derivation Scheme is defined as follows:
 ### Inputs
 
 - `password`: User's password.
-- `salt`: Unique salt for hashing. Please note that the salt must be `16` bytes long, therefore shorter salts will be padded with 0s, while longer salts will be first SHA512 hashed and then truncated to `16` bytes.
+- `salt`: Unique salt for hashing. Please note that the salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated to `16` bytes.
 - `iterations`: Number of iterations the process should be repeated.
 
 ### Output
@@ -107,7 +107,7 @@ Options:
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
-          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided [default: 0]
+          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided]
       --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
@@ -188,7 +188,7 @@ SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id
 
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
@@ -198,38 +198,40 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Final result:
 
 ```sh
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
-████████████████████████████████████████████████████████████████████████████████       1/1       100%    (0s)
+████████████████████████████████████████████████████████████████████████████████     100/100     100%    (0s)
 
 Key (hex) is (please highlight to see): fd194763d687d50dafa952eec758df13
 
 Finished in 8m 9s
 ```
 
-Please note that salt must be `16` bytes long, therefore shorter salts will be padded with 0s, while longer salts will be first SHA512 hashed and then truncated to `16` bytes:
+Please note that salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated to `16` bytes:
 
 ```sh
-✔ Enter your salt · salt
+✔ Enter your salt · ********
 
-Salt is shorter than 16 and will padded with 0s. Do you want to continue? [y/n]
+Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated to 16 bytes. Do you want to continue? [y/n]
 ```
 
 ```sh
-✔ Enter your salt · saltsaltsaltsaltsalt
+✔ Enter your salt · ********
 
-Salt is longer than 16 and will first SHA512 hashed and then truncated to 16 bytes. Do you want to continue? [y/n]
+Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to 16 bytes. Do you want to continue? [y/n]
 ```
 
 ### Checkpoints
 
 The tool also supports the creation of periodic checkpoints, which are securely encrypted and stored on the disk. Each checkpoint captures all parameters and the output from the last iteration, enabling you to resume computation from a previously established checkpoint. Additionally, the tool allows for the retention of multiple checkpoints.
 
+Please note that even if the last checkpoint is done at the final iteration (in the case that the number of iterations divides by the checkpointing interval), the checkpoint still won't have the actual output until you complete the recovery process.
+
 Please exercise caution when using this feature. Resuming computation from a compromised checkpoint may undermine your expectations regarding the duration of the key stretching process.
 
-Please note that encryption key must be `32` bytes long, therefore shorter keys will be padded with 0s, while longer keys will be first SHA512 hashed and then truncated to `32` bytes:
+Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated to `32` bytes:
 
 For instance, to elaborate on the previous example, suppose we want to create a checkpoint every `5` iterations forcefully terminate the execution at the `22nd` iteration:
 
@@ -242,7 +244,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" checkpoints directory
 
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
@@ -253,7 +255,7 @@ SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id
 Created checkpoint #20 with data hash (salted) b4c0a8ef28897913854364bc80ab0676edb5e95384918c48700f1b5a57ac2c2c
 ```
 
-We can see that the last `checkpoint.020.b4c0a8ef28897913854364bc80ab0676edb5e95384918c48700f1b5a57ac2c2c` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.020.b4c0a8ef28897913854364bc80ab0676edb5e95384918c48700f1b5a57ac2c2c` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
@@ -280,7 +282,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint: iteration: 20, data (please highlight to see): 9edb1ad22baf39c9d7865e181caf7852
 
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
@@ -310,7 +312,7 @@ SlowKey: iterations: 100, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id
 
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
@@ -332,7 +334,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your checkpoint/output encryption key · ********
 
-✔ Enter your salt · saltsaltsaltsalt
+✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
