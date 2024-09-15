@@ -178,8 +178,6 @@ fn get_salt() -> Vec<u8> {
         .interact()
         .unwrap();
 
-    println!();
-
     let mut salt = if input.starts_with(HEX_PREFIX) {
         hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
@@ -189,6 +187,8 @@ fn get_salt() -> Vec<u8> {
     let salt_len = salt.len();
     match salt_len.cmp(&SlowKey::SALT_SIZE) {
         Ordering::Less => {
+            println!();
+
             let confirmation = Confirm::new()
             .with_prompt(format!(
                 "Salt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
@@ -210,6 +210,8 @@ fn get_salt() -> Vec<u8> {
             }
         },
         Ordering::Greater => {
+            println!();
+
             let confirmation = Confirm::new()
                 .with_prompt(format!(
                     "Salt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
