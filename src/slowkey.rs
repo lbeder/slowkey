@@ -185,9 +185,6 @@ impl SlowKey {
             callback(i, &res);
         }
 
-        // Calculate the final SHA2 and SHA3 hashes (and trim the result, if required)
-        self.double_hash(salt, password, &mut res);
-
         res.truncate(self.length);
 
         res
@@ -205,92 +202,92 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "93e1459001ad83e3b39133cfba4ced8ce69f68e58553b093114abeee4174118b87d87d1b3d2c67d2d3ea5ca050b83ab49346eb9583e5fb31cc8f51f8d3343bf1")]
-    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "746f3a93557814a0e496a13af627a25954f3f15e129471b8eec713958ed12a273b932d02ba4f218edacb7d8a4b9bd4e6368004531f77e1981393f127c7f3ab64")]
+    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "1805476033e579abf06772db32b52886e07d9c579c99be05dcc1826e2f162b5c4bf846b7fae13ac5e57991da69769f1d2aac2d9046b9c60cbce9af35b371d4bd")]
+    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "edada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e06850cf03dc50dd9eef63275061cb85cdff8b47c3593d749145f1a226e8b7b")]
     #[case(&SlowKeyOptions {
         iterations: 1,
         length: 64,
         scrypt: ScryptOptions::default(),
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "d1870125c94e2525c39cfe926f64010f53326f30c6f9800c8b13e11adc9a6ec35ccdf1aa0278aa5684c2f6fb1c46bdddea3360975eefa4455435fbc92b64e1b3")]
+    "3dcbcc11d08ee43af8c4b537daf61087ce4c740f70e89b72b1f19083a6aa25a6d978eb94e452db49fc9c2309db56edbae93f68a0858e6b1d31aa38e1c63bbe03")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "3a0e5d6dc5bebaea2dbf60fec066e1a224263000c96dc123b786576a1773aad4")]
+    "2943950259d56a78c439065d0bf2baa86e32a7be9ad9509e3e0ba78c2bc1494a")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions::default(),
         argon2id: Argon2idOptions { m_cost: 16, t_cost: 2 }
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "35320ebf4ec70ef596c769c41b0922a740cf162d7959557971b7832cc7118d9e")]
+    "d4509baa22a5cd0065e99b304e3efe2681a564e4d1fe5f19e57017d58f06c59e")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "6f823e9b1dbb8ed1890dc1b417ae45d47f0f8449611349323eaea840fa4ec1a4aab516b1448ac893e2ac543c77d06305a05342bdc403215dc8bc6ff3ed6c949e")]
+    "6b66b1280b06539fbb571cfd4b44b3f114ab0d4f40e2d5e881cc1a329f2dd615088aa2b86f63422897cdf465ab11d68919bc247cb1517e4bd5abff78677dfb47")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: 128,
         scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "6fce30905ab3f0af90443d2b4501845447003d4f07b76a9ba0de716fb2cacd72c3d0ec8f51ab0c3bff1f40e5ccd5909f2cce21afc5a94fa535ca28dc01f81fd5")]
+    "ecfe68be26c4cd219e44ab9a0d287252b07e9fc4ce3203563d578bc713fbfe65bb2c4cb167ff67dad2225521eb78aa73ee646c3a3b4d5caca7ff37cc59573a047c66d7761164d5b1b5586ec4bc953e75e128accda5fe2cb70ac4f860a825de3483a61839d6f6f9e14a3826a4fab2a6fbc8fad0f8ce4a71e7c15f4f14b08635cc")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"", &Vec::new(), 0,
-    "f006bfa25a0584f7031a91ca2449f4f733d974e9f880b79534185c6154e53ef0b430c24433354b18548083594cff870ae4342b72dcfcc1435373c2b36e2b2aa6")]
+    "dcec23f3d34f980291e6a5246eb87a87039729d68f71b6c601ad1bbb7997c4b3584edb681eda73b60a232cd5fd672afc4516ed9c0d3ed922a209a93e155b22fb")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "897778a12e2e2a82e1c351f4f3c3935bdd81ebd67de1f9a4b92922e6b318f677877b7a28f5cdcaa722baf4ebefad7dfb71daae4b9850b120d9463b47b73aa9c0")]
+    "bc4f95aeddc434ba2f308865a31a06365fc45d9bcb47f70fbcb59be948f3c104a18eed7a3eaa595bf90233b3f1cafe545cf3e06eee49e2f9952b68a86a66b2a9")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsal2", b"test", &Vec::new(), 0,
-    "d911524b4f5d60bf682f10c73858bfe02895ddfec7edd1481cb575cf2bd99220bb6cd9e91a4b4c7a88356d01dab41269b0bc5bf4ab139a36e1d5f3ff21c75228")]
+    "8006abf493c49f65ed7a8d47719fd5b2b90f63e8c3d6759ba012d87e9bcd8791598984de8100bbaadef4c9228683f69dab74b53dcda8f8693e7bff58c3491b36")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test2", &Vec::new(), 0,
-    "9d4d28b7d8320a6f67bb4b2e70afbc07a043f0c23a8506faa9d3fb780fed5927b9223cf96269d5bf33833d9faf7f2d0e1a260043fdc8e301c123ade23835aa2c")]
+    "07b6fc97a02cd99fd6d7b1618dcf972421bed33bffa72eaea7c22e6ac224735ac80192dc90818d02ff1ab8c00d84513c6156f1f301e951a4cb9a313874c2df59")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 1,
-    "a67355dd4bac46f8e7b4b7a397dbf3ba4c932ff6e3edcc73ba7ac8bde78af8ee")]
+    "653f16de895c368d2ec8cd1950fe68b1fd4177050118f98d967a39c1057c1cc8")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
-    "3b4122fc16d9246ccf3a6edd7de721c0a81446be1fae445e1ce9ef84d71bebf5faad2b26ee8dc316f4b8f1ca638db64071b93d156844d3f6d4e0b82d8807b0f4")]
+    "f5bd30aebebdaa919d54a0cabceba79dd1ee175de91a5ce9b2b9ba83b96dfd6a1dda7cf298e8aeccc56a5826ead128b9eb1669150426499f3cc8475b54702c18")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 128,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
-    "960aef828739c9e1a3c932d51b1d05fbc9fd57956b1e67bc78cabdf3aa4d8e67eb1472ef6668160040423487fe2907340b7474932f1319c7b796542f17437cd8")]
+    "93c1738ae91ff2011cc630f781f278573f0397f5bebc676fd43619fe92019ac0f53c00a6773bfa06275ce4d92828f66fa33681f88950fd59b20d6f7e9ecb9b454d0988a0ff76a1780e7d93a9fca7b0869de6ebb5f673e200ea7def18ddf1923597e75d2e6985750e62d2326f887bef2c1d88a8252d2d4d0c77d23af8535bf020")]
 
     fn derive_test(
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
