@@ -24,6 +24,7 @@ use crate::{
     },
 };
 use base64::{engine::general_purpose, Engine as _};
+use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Password};
@@ -37,7 +38,7 @@ use std::{
     path::PathBuf,
     str::from_utf8,
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use utils::{argon2id::Argon2idOptions, chacha20poly1305::ChaCha20Poly1305};
 
@@ -487,7 +488,8 @@ fn main() {
                 }
             }
 
-            let start_time = Instant::now();
+            let start_time = SystemTime::now();
+            let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
 
             let handle = thread::spawn(move || {
@@ -563,8 +565,22 @@ fn main() {
             }
 
             println!(
-                "Finished in {}",
-                format_duration(Duration::new(start_time.elapsed().as_secs(), 0))
+                "Start time: {}",
+                DateTime::<Utc>::from(start_time)
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string()
+                    .cyan()
+            );
+            println!(
+                "End time: {}",
+                DateTime::<Utc>::from(SystemTime::now())
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string()
+                    .cyan()
+            );
+            println!(
+                "Total running time: {}",
+                format_duration(Duration::new(running_time.elapsed().as_secs(), 0))
                     .to_string()
                     .cyan()
             );

@@ -206,7 +206,9 @@ Final result:
 
 Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
 
-Finished in 49s
+Start time: 2024-09-18 18:57:34
+End time: 2024-09-18 18:58:26
+Total running time: 52s
 ```
 
 Please note that salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated to `16` bytes:
@@ -298,7 +300,9 @@ Final result:
 
 Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
 
-Finished in 26s
+Start time: 2024-09-18 19:00:59
+End time: 2024-09-18 19:01:25
+Total running time: 25s
 ```
 
 ### Outputs
@@ -322,7 +326,9 @@ Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
 Key (base64) is (please highlight to see): jvmUoDg7KkRdP1WhJR6wAg==
 Key (base58) is (please highlight to see): JezwF9TWYHNERQAi63dHcu
 
-Finished in 50s
+Start time: 2024-09-18 18:57:34
+End time: 2024-09-18 18:58:26
+Total running time: 52s
 ```
 
 In addition to the above, the tool also supports saving the output to be encrypted and stored to the disk:
@@ -346,7 +352,9 @@ Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
 
 Saved encrypted output to "~/output.enc"
 
-Finished in 50s
+Start time: 2024-09-18 18:57:34
+End time: 2024-09-18 18:58:26
+Total running time: 52s
 ```
 
 Let's use the `show-output` command to decrypt its contents:
@@ -408,7 +416,7 @@ Derived key: edada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e0
 
 MIT License
 
-Copyright (c) 2018 Leonid Beder
+Copyright (c) 2024 Leonid Beder
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
