@@ -388,7 +388,7 @@ fn main() {
                 offset_data.clone_from(&checkpoint_data.data);
 
                 println!(
-                    "{}: iteration: {}, data (please highlight to see): {}",
+                    "{}: iteration: {}, data (please highlight to see): 0x{}",
                     "Checkpoint".yellow(),
                     offset.to_string().cyan(),
                     hex::encode(&offset_data).black().on_black()
@@ -605,7 +605,7 @@ fn main() {
             let offset_data = checkpoint_data.data.clone();
 
             println!(
-                "{}: iteration: {}, data (please highlight to see): {}",
+                "{}: iteration: {}, data (please highlight to see): 0x{}",
                 "Checkpoint".yellow(),
                 offset.to_string().cyan(),
                 hex::encode(offset_data).black().on_black()
@@ -644,7 +644,7 @@ fn main() {
             });
 
             println!(
-                "{}: iteration: {}, data (please highlight to see): {}",
+                "{}: iteration: {}, data (please highlight to see): 0x{}",
                 "Output".yellow(),
                 output_data.iteration,
                 hex::encode(output_data.data).black().on_black()
