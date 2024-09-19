@@ -388,10 +388,10 @@ fn main() {
                 offset_data.clone_from(&checkpoint_data.data);
 
                 println!(
-                    "{}: iteration: {}, data (please highlight to see): 0x{}",
+                    "{}: iteration: {}, data (please highlight to see): {}",
                     "Checkpoint".yellow(),
                     offset.to_string().cyan(),
-                    hex::encode(&offset_data).black().on_black()
+                    format!("0x{}", hex::encode(&offset_data)).black().on_black()
                 );
                 println!();
             } else {
@@ -511,7 +511,7 @@ fn main() {
                                 cpb.set_message(format!(
                                     "\nCreated checkpoint #{} with data hash (salted) {}\n",
                                     (current_iteration + 1).to_string().cyan(),
-                                    hex::encode(hash).cyan()
+                                    format!("0x{}", hex::encode(hash)).cyan()
                                 ));
                             }
                         }
@@ -537,8 +537,8 @@ fn main() {
             println!();
 
             println!(
-                "Key (hex) is (please highlight to see): {}",
-                hex::encode(&key).black().on_black()
+                "Key is (please highlight to see): {}",
+                format!("0x{}", hex::encode(&key)).black().on_black()
             );
 
             if base64 {
@@ -605,10 +605,10 @@ fn main() {
             let offset_data = checkpoint_data.data.clone();
 
             println!(
-                "{}: iteration: {}, data (please highlight to see): 0x{}",
+                "{}: iteration: {}, data (please highlight to see): {}",
                 "Checkpoint".yellow(),
                 offset.to_string().cyan(),
-                hex::encode(offset_data).black().on_black()
+                format!("0x{}", hex::encode(offset_data)).black().on_black()
             );
 
             let slowkey_opts = checkpoint_data.slowkey.clone();
@@ -644,10 +644,10 @@ fn main() {
             });
 
             println!(
-                "{}: iteration: {}, data (please highlight to see): 0x{}",
+                "{}: iteration: {}, data (please highlight to see): {}",
                 "Output".yellow(),
                 output_data.iteration,
-                hex::encode(output_data.data).black().on_black()
+                format!("0x{}", hex::encode(output_data.data)).black().on_black()
             );
 
             let slowkey_opts = output_data.slowkey.clone();
@@ -698,7 +698,7 @@ fn main() {
                     test_vector.offset,
                 );
 
-                println!("Derived key: {}", hex::encode(&key).cyan());
+                println!("Derived key: {}", format!("0x{}", hex::encode(&key)).cyan());
 
                 println!();
             }
