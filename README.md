@@ -87,7 +87,7 @@ Options:
   -i, --iterations <ITERATIONS>
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
   -l, --length <LENGTH>
-          Length of the derived result (must be greater than 10 and lesser than or equal to 128) [default: 16]
+          Length of the derived result (must be greater than 10 and lesser than or equal to 128) [default: 32]
       --base64
           Output the result in Base64 (in addition to hex)
       --base58
@@ -184,7 +184,7 @@ Let's try to derive the key for the password `password`, using the salt `saltsal
 > slowkey derive -i 10
 
 ```sh
-SlowKey: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 Please input all data either in raw or hex format starting with the 0x prefix
 
@@ -204,7 +204,7 @@ Final result:
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
+Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
 
 Start time: 2024-09-18 18:57:34
 End time: 2024-09-18 18:58:26
@@ -250,26 +250,26 @@ Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" c
 
 ✔ Enter your password · ********
 
-SlowKey: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       8/10      80%    (10s)
 
-Created checkpoint #5 with data hash (salted) f9b672d127624538787ebc6089e45d04282eb20f1874007c4d18fa1e653fd08a
+Created checkpoint #5 with data hash (salted) 0xe0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5
 ```
 
-We can see that the `checkpoint.05.f9b672d127624538787ebc6089e45d04282eb20f1874007c4d18fa1e653fd08a` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.05.e0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.f9b672d127624538787ebc6089e45d04282eb20f1874007c4d18fa1e653fd08a
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.e0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your checkpoint/output encryption key · ********
 
-Checkpoint: iteration: 5, data (please highlight to see): ce86faae3b21e621b472f79a836a0dff
-SlowKey Parameters: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+Checkpoint: iteration: 5, data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
+SlowKey Parameters: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
 Let's now continue the derivation process from this checkpoint and verify that we get the same final result as in the beginning:
@@ -282,13 +282,13 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your checkpoint/output encryption key · ********
 
-Checkpoint: iteration: 5, data (please highlight to see): ce86faae3b21e621b472f79a836a0dff
+Checkpoint: iteration: 5, data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
 
 ✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
-SlowKey: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       5/10      50%    (4s)
 ```
@@ -298,7 +298,7 @@ Final result:
 ```sh
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
+Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
 
 Start time: 2024-09-18 19:00:59
 End time: 2024-09-18 19:01:25
@@ -312,7 +312,7 @@ By default, the tool outputs they key in a hexadecimal format, but the tool also
 > slowkey derive -i 10 --base64 --base58
 
 ```sh
-SlowKey: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 Please input all data either in raw or hex format starting with the 0x prefix
 
@@ -322,9 +322,9 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
-Key (base64) is (please highlight to see): jvmUoDg7KkRdP1WhJR6wAg==
-Key (base58) is (please highlight to see): JezwF9TWYHNERQAi63dHcu
+Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+Key (base64) is (please highlight to see): wCVdNgmkbCad4JqKNTcsO9irSq1B1RElV5NkUQyP+W4
+Key (base58) is (please highlight to see): Dw4KjVFNSGXz3R1oG81KvmDVUyrdQ9QbHAQwp4iTcZXj
 
 Start time: 2024-09-18 18:57:34
 End time: 2024-09-18 18:58:26
@@ -344,11 +344,11 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your password · ********
 
-SlowKey: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key (hex) is (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
+Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
 
 Saved encrypted output to "~/output.enc"
 
@@ -362,8 +362,8 @@ Let's use the `show-output` command to decrypt its contents:
 > slowkey show-output --output ~/output.enc
 
 ```sh
-Output: iteration: 16, data (please highlight to see): 8ef994a0383b2a445d3f55a1251eb002
-SlowKey Parameters: iterations: 10, length: 16, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+Output: iteration: 16, data (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+SlowKey Parameters: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
 ## Test Vectors
@@ -406,10 +406,10 @@ Results should be:
 
 ```sh
 SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: ""
-Derived key: 1805476033e579abf06772db32b52886e07d9c579c99be05dcc1826e2f162b5c4bf846b7fae13ac5e57991da69769f1d2aac2d9046b9c60cbce9af35b371d4bd
+Derived key: 0x1805476033e579abf06772db32b52886e07d9c579c99be05dcc1826e2f162b5c4bf846b7fae13ac5e57991da69769f1d2aac2d9046b9c60cbce9af35b371d4bd
 
 SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: "Hello World"
-Derived key: edada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e06850cf03dc50dd9eef63275061cb85cdff8b47c3593d749145f1a226e8b7b
+Derived key: 0xedada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e06850cf03dc50dd9eef63275061cb85cdff8b47c3593d749145f1a226e8b7b
 ```
 
 ## License
