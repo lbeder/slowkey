@@ -21,7 +21,7 @@ impl SlowKeyOptions {
 
     pub const MIN_KEY_SIZE: usize = 10;
     pub const MAX_KEY_SIZE: usize = 128;
-    pub const DEFAULT_KEY_SIZE: usize = 16;
+    pub const DEFAULT_KEY_SIZE: usize = 32;
 
     pub fn new(iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
         if iterations < Self::MIN_ITERATIONS {
