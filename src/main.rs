@@ -6,7 +6,6 @@ extern crate indicatif;
 extern crate libsodium_sys;
 extern crate serde;
 extern crate serde_json;
-extern crate tempfile;
 
 #[macro_use]
 extern crate lazy_static;
@@ -15,13 +14,7 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::{
-        argon2id::Argon2id,
-        checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
-        output::{OpenOutputOptions, Output, OutputOptions},
-        scrypt::ScryptOptions,
-        sodium_init::initialize,
-    },
+    utils::{argon2id::Argon2id, scrypt::ScryptOptions, sodium_init::initialize},
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
@@ -40,7 +33,12 @@ use std::{
     thread,
     time::{Duration, Instant, SystemTime},
 };
-use utils::{argon2id::Argon2idOptions, chacha20poly1305::ChaCha20Poly1305};
+use utils::{
+    argon2id::Argon2idOptions,
+    chacha20poly1305::ChaCha20Poly1305,
+    checkpoints::checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
+    outputs::output::{OpenOutputOptions, Output, OutputOptions},
+};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -377,19 +375,20 @@ fn main() {
                     output_key = Some(get_output_key());
                 }
 
-                let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
+                let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
                     key: output_key.clone().unwrap(),
                     path: path.clone(),
                 });
 
-                slowkey_opts = checkpoint_data.slowkey.clone();
+                slowkey_opts = checkpoint_data.data.slowkey.clone();
 
-                offset = checkpoint_data.iteration + 1;
-                offset_data.clone_from(&checkpoint_data.data);
+                offset = checkpoint_data.data.iteration + 1;
+                offset_data.clone_from(&checkpoint_data.data.data);
 
                 println!(
-                    "{}: iteration: {}, data (please highlight to see): {}",
+                    "{}: version: {}, iteration: {}, data (please highlight to see): {}",
                     "Checkpoint".yellow(),
+                    u8::from(checkpoint_data.version),
                     offset.to_string().cyan(),
                     format!("0x{}", hex::encode(&offset_data)).black().on_black()
                 );
@@ -596,22 +595,23 @@ fn main() {
 
             let output_key = get_output_key();
 
-            let checkpoint_data = Checkpoint::get(&OpenCheckpointOptions {
+            let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
                 key: output_key,
                 path: checkpoint,
             });
 
-            let offset = checkpoint_data.iteration + 1;
-            let offset_data = checkpoint_data.data.clone();
+            let offset = checkpoint_data.data.iteration + 1;
+            let offset_data = checkpoint_data.data.data;
 
             println!(
-                "{}: iteration: {}, data (please highlight to see): {}",
+                "{}: version: {}, iteration: {}, data (please highlight to see): {}",
                 "Checkpoint".yellow(),
+                u8::from(checkpoint_data.version),
                 offset.to_string().cyan(),
                 format!("0x{}", hex::encode(offset_data)).black().on_black()
             );
 
-            let slowkey_opts = checkpoint_data.slowkey.clone();
+            let slowkey_opts = checkpoint_data.data.slowkey.clone();
 
             println!(
                 "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
@@ -646,11 +646,11 @@ fn main() {
             println!(
                 "{}: iteration: {}, data (please highlight to see): {}",
                 "Output".yellow(),
-                output_data.iteration,
-                format!("0x{}", hex::encode(output_data.data)).black().on_black()
+                output_data.data.iteration,
+                format!("0x{}", hex::encode(output_data.data.data)).black().on_black()
             );
 
-            let slowkey_opts = output_data.slowkey.clone();
+            let slowkey_opts = output_data.data.slowkey.clone();
 
             println!(
                 "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",

@@ -1,4 +1,7 @@
-use crate::slowkey::SlowKeyOptions;
+use crate::{
+    slowkey::SlowKeyOptions,
+    utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
+};
 
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
@@ -6,11 +9,11 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::VecDeque,
     fs::{remove_file, File},
-    io::{Read, Write},
+    io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
 };
 
-use super::chacha20poly1305::{ChaCha20Poly1305, Nonce};
+use super::version::Version;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct CheckpointOptions {
@@ -32,10 +35,16 @@ pub struct OpenCheckpointOptions {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CheckpointData {
+pub struct SlowKeyData {
     pub iteration: usize,
     pub data: Vec<u8>,
     pub slowkey: SlowKeyOptions,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CheckpointData {
+    pub version: Version,
+    pub data: SlowKeyData,
 }
 
 pub struct Checkpoint {
@@ -91,9 +100,12 @@ impl Checkpoint {
         Self {
             dir: opts.dir.clone(),
             data: CheckpointData {
-                iteration: 0,
-                data: Vec::new(),
-                slowkey: opts.slowkey.clone(),
+                version: Version::V1,
+                data: SlowKeyData {
+                    iteration: 0,
+                    data: Vec::new(),
+                    slowkey: opts.slowkey.clone(),
+                },
             },
             checkpoint_extension_padding: (opts.iterations as f64).log10().round() as usize + 1,
             checkpoint_paths: VecDeque::with_capacity(opts.max_checkpoints_to_keep),
@@ -101,46 +113,28 @@ impl Checkpoint {
         }
     }
 
-    pub fn get(opts: &OpenCheckpointOptions) -> CheckpointData {
-        let cipher = ChaCha20Poly1305::new(&opts.key);
-
-        if opts.path.is_dir() {
-            panic!("Checkpoint file \"{}\" is a directory", opts.path.to_str().unwrap());
-        }
-
-        if !opts.path.exists() {
-            panic!("Checkpoint file \"{}\" does not exist", opts.path.to_str().unwrap());
-        }
-
-        let mut encrypted_data = Vec::new();
-        File::open(&opts.path)
-            .unwrap()
-            .read_to_end(&mut encrypted_data)
-            .unwrap();
-
-        cipher.decrypt(&hex::decode(encrypted_data).unwrap())
-    }
-
     pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8]) {
-        let encrypted_data = self.cipher.encrypt(
-            Nonce::Random,
-            &CheckpointData {
-                iteration,
-                data: data.to_vec(),
-                slowkey: self.data.slowkey.clone(),
-            },
-        );
-
         let hash = Self::hash_checkpoint(salt, iteration, data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
             .with_extension(format!("{:0padding$}.{}", iteration + 1, hex::encode(hash)));
 
-        self.store_checkpoint(&checkpoint_path, &encrypted_data);
+        let checkpoint = CheckpointData {
+            version: Version::V1,
+            data: SlowKeyData {
+                iteration,
+                data: data.to_vec(),
+                slowkey: self.data.data.slowkey.clone(),
+            },
+        };
 
-        self.data.iteration = iteration;
-        self.data.data = data.to_vec();
+        self.store_checkpoint(&checkpoint_path, &checkpoint);
+
+        self.data = CheckpointData {
+            version: Version::V1,
+            data: checkpoint.data,
+        }
     }
 
     pub fn hash_checkpoint(salt: &[u8], iteration: usize, data: &[u8]) -> Vec<u8> {
@@ -153,11 +147,52 @@ impl Checkpoint {
         sha256.finalize().to_vec()
     }
 
-    fn store_checkpoint(&mut self, checkpoint_path: &Path, data: &[u8]) {
-        let mut file = tempfile::NamedTempFile::new_in(checkpoint_path.parent().unwrap()).unwrap();
+    pub fn get_checkpoint(opts: &OpenCheckpointOptions) -> CheckpointData {
+        if opts.path.is_dir() {
+            panic!("Checkpoint file \"{}\" is a directory", opts.path.to_str().unwrap());
+        }
 
-        file.write_all(hex::encode(data).as_bytes()).unwrap();
-        file.persist(checkpoint_path).unwrap();
+        if !opts.path.exists() {
+            panic!("Checkpoint file \"{}\" does not exist", opts.path.to_str().unwrap());
+        }
+
+        let file = File::open(&opts.path).unwrap();
+        let mut reader = BufReader::new(file);
+
+        // Read the first byte (version)
+        let mut version_byte = [0u8; 1];
+        reader.read_exact(&mut version_byte).unwrap();
+        let version = Version::from(version_byte[0]);
+
+        // Return the struct based on the version
+        match version {
+            Version::V1 => {
+                let mut encrypted_data = Vec::new();
+                reader.read_to_end(&mut encrypted_data).unwrap();
+
+                let cipher = ChaCha20Poly1305::new(&opts.key);
+                let data = cipher.decrypt(&hex::decode(encrypted_data).unwrap());
+
+                CheckpointData {
+                    version: Version::V1,
+                    data,
+                }
+            },
+        }
+    }
+
+    fn store_checkpoint(&mut self, checkpoint_path: &Path, checkpoint: &CheckpointData) {
+        let file = File::create(checkpoint_path).unwrap();
+        let mut writer = BufWriter::new(file);
+
+        // Write the version as u8 first
+        let version_byte: u8 = checkpoint.version.clone().into();
+        writer.write_all(&[version_byte]).unwrap();
+
+        let encrypted_data = self.cipher.encrypt(Nonce::Random, &checkpoint.data);
+
+        writer.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
+        writer.flush().unwrap();
 
         // Ensure that the checkpoints queue does not exceed the fixed capacity
         if self.checkpoint_paths.len() == self.checkpoint_paths.capacity() {
