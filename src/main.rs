@@ -505,17 +505,15 @@ fn main() {
                     |current_iteration, current_data| {
                         // Create a checkpoint if we've reached the checkpoint interval
                         if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
+                            let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
+
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(
-                                    &salt,
-                                    current_iteration,
-                                    current_data,
-                                    if current_iteration == 0 { None } else { Some(&prev_data) },
-                                );
+                                checkpoint.create_checkpoint(&salt, current_iteration, current_data, prev_data);
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                let hash = Checkpoint::hash_checkpoint(&salt, current_iteration, current_data);
+                                let hash =
+                                    Checkpoint::hash_checkpoint(&salt, current_iteration, current_data, prev_data);
 
                                 cpb.set_message(format!(
                                     "\nCreated checkpoint #{} with data hash (salted) {}",
@@ -568,7 +566,7 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                out.save(length, &key);
+                out.save(iterations, &key);
 
                 println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
             }
@@ -632,11 +630,10 @@ fn main() {
         Some(Commands::Test {}) => {
             for test_vector in TEST_VECTORS.iter() {
                 println!(
-                    "{}: iterations: {}\n  length: {}\n   salt: \"{}\", password: \"{}\"\n{}",
-                    "SlowKey".yellow(),
-                    test_vector.opts.iterations.to_string().cyan(),
-                    test_vector.opts.length.to_string().cyan(),
+                    "{}: \"{}\"\n{}: \"{}\"\n{}",
+                    "Salt".yellow(),
                     from_utf8(&test_vector.salt).unwrap().cyan(),
+                    "Password".yellow(),
                     from_utf8(&test_vector.password).unwrap().cyan(),
                     test_vector.opts
                 );

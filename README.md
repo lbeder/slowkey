@@ -107,7 +107,7 @@ Options:
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
-          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided]
+          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided
       --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
@@ -184,9 +184,13 @@ Let's try to derive the key for the password `password`, using the salt `saltsal
 > slowkey derive -i 10
 
 ```sh
-SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-
 Please input all data either in raw or hex format starting with the 0x prefix
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -231,13 +235,15 @@ The tool also supports the creation of periodic checkpoints, which are securely 
 
 Please note that even if the last checkpoint is done at the final iteration (in the case that the number of iterations divides by the check-pointing interval), the checkpoint still won't have the actual output until you complete the recovery process.
 
+Each checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify, when restoring from a checkpoint, that the password and salt match the checkpoint by attempting to derive the checkpoint's iteration data from the previous iteration's data.
+
 Please exercise caution when using this feature. Resuming computation from a compromised checkpoint may undermine your expectations regarding the duration of the key stretching process.
 
 Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated to `32` bytes:
 
 For instance, to elaborate on the previous example, suppose we want to create a checkpoint every `5` iterations forcefully terminate the execution at the `8th` iteration:
 
-> slowkey derive -i 10 --checkpoint-interval 5 --checkpoint-dir ~/checkpoints
+> slowkey derive -i 10 --checkpoint-interval 5 --max-checkpoints-to-keep 2 --checkpoint-dir ~/checkpoints
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -246,35 +252,47 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" checkpoints directory
 
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+
 ✔ Enter your salt · ********
 
 ✔ Enter your password · ********
-
-SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       8/10      80%    (10s)
 
-Created checkpoint #5 with data hash (salted) 0xe0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5
+Created checkpoint #5 with data hash (salted) 0x2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
 ```
 
-We can see that the `checkpoint.05.e0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.e0e0a2c3b21c469de3e48edb33efe85818b7d26dac8804c0ad711f56a7dd52b5
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your checkpoint/output encryption key · ********
 
-Checkpoint: iteration: 5, data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
-SlowKey Parameters: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+Checkpoint:
+  Version: 1:
+  Iteration: 5:
+  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
+  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+
+SlowKey Parameters:
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
-Let's now continue the derivation process from this checkpoint and verify that we get the same final result as in the beginning:
+Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey derive --restore-from-checkpoint ~/checkpoints/checkpoint.05.f9b672d127624538787ebc6089e45d04282eb20f1874007c4d18fa1e653fd08a
+> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
 
 ```sh
 
@@ -282,15 +300,26 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your checkpoint/output encryption key · ********
 
-Checkpoint: iteration: 5, data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
+Checkpoint:
+  Version: 1:
+  Iteration: 5:
+  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
+  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
 ✔ Enter your password · ********
 
-SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+Verifying checkpoint...
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       5/10      50%    (4s)
+
 ```
 
 Final result:
@@ -305,6 +334,50 @@ End time: 2024-09-18 19:01:25
 Total running time: 25s
 ```
 
+In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
+
+> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
+
+TODO:
+
+```sh
+Please input all data either in raw or hex format starting with the 0x prefix
+
+✔ Enter your checkpoint/output encryption key · ********
+
+Checkpoint:
+  Version: 1:
+  Iteration: 5:
+  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
+  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+
+SlowKey Parameters:
+  Iterations: 20
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+
+✔ Enter your salt · ********
+
+✔ Enter your password · ********
+
+Verifying checkpoint...
+
+████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       5/20      50%    (56s)
+```
+
+Final result:
+
+```sh
+████████████████████████████████████████████████████████████████████████████████      20/20      100%    (0s)
+
+Key is (please highlight to see): 0x68c470bd2c478cc8a46af74af2faaa0171542acd9b97f1d8eaaf98f9122894a8
+
+Start time: 2024-09-18 19:00:59
+End time: 2024-09-18 19:01:25
+Total running time: 25s
+```
+
 ### Outputs
 
 By default, the tool outputs they key in a hexadecimal format, but the tool also supports both [Base64](https://en.wikipedia.org/wiki/Base64) and [Base58](https://en.wikipedia.org/wiki/Binary-to-text_encoding#Base58) formats optionally:
@@ -312,9 +385,13 @@ By default, the tool outputs they key in a hexadecimal format, but the tool also
 > slowkey derive -i 10 --base64 --base58
 
 ```sh
-SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-
 Please input all data either in raw or hex format starting with the 0x prefix
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -344,7 +421,11 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your password · ********
 
-SlowKey: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
@@ -362,13 +443,22 @@ Let's use the `show-output` command to decrypt its contents:
 > slowkey show-output --output ~/output.enc
 
 ```sh
-Output: iteration: 16, data (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
-SlowKey Parameters: iterations: 10, length: 32, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+Output:
+  Iteration: 10
+  Data (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
 ## Test Vectors
 
-In order to verify the validity of the Scrypt calculation, you can pass the `-t/--test` flag.
+In order to verify the validity of the Scrypt calculation, you can run the `test` command:
+
+> slowkey test
 
 Test vectors:
 
@@ -405,10 +495,22 @@ Test vectors:
 Results should be:
 
 ```sh
-SlowKey: iterations: 1, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: ""
+Salt: "SlowKeySlowKey16"
+Password: ""
+SlowKey Parameters:
+  Iterations: 1
+  Length: 64
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 Derived key: 0x1805476033e579abf06772db32b52886e07d9c579c99be05dcc1826e2f162b5c4bf846b7fae13ac5e57991da69769f1d2aac2d9046b9c60cbce9af35b371d4bd
 
-SlowKey: iterations: 3, length: 64, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (version: 19, m_cost: 2097152, t_cost: 2), salt: "SlowKeySlowKey16", password: "Hello World"
+Salt: "SlowKeySlowKey16"
+Password: "Hello World"
+SlowKey Parameters:
+  Iterations: 3
+  Length: 64
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 Derived key: 0xedada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e06850cf03dc50dd9eef63275061cb85cdff8b47c3593d749145f1a226e8b7b
 ```
 

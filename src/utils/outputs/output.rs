@@ -36,7 +36,7 @@ pub struct OutputData {
 impl Display for OutputData {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let output = format!(
-            "{}:\n  {}: {}\n  {} (please highlight to see): {}\n",
+            "{}:\n  {}: {}\n  {} (please highlight to see): {}",
             "Output".yellow(),
             "Iteration".green(),
             self.data.iteration,

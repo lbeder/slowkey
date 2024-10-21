@@ -126,7 +126,7 @@ impl Display for CheckpointData {
             "Checkpoint".yellow(),
             "Version".green(),
             u8::from(self.version.clone()),
-            "Iteration".green(),
+            "Iterations".green(),
             (self.data.iteration + 1).to_string().cyan(),
             "Data".green(),
             format!("0x{}", hex::encode(&self.data.data)).black().on_black(),
@@ -206,7 +206,7 @@ impl Checkpoint {
     }
 
     pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
-        let hash = Self::hash_checkpoint(salt, iteration, data);
+        let hash = Self::hash_checkpoint(salt, iteration, data, prev_data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
@@ -230,10 +230,14 @@ impl Checkpoint {
         }
     }
 
-    pub fn hash_checkpoint(salt: &[u8], iteration: usize, data: &[u8]) -> Vec<u8> {
+    pub fn hash_checkpoint(salt: &[u8], iteration: usize, data: &[u8], prev_data: Option<&[u8]>) -> Vec<u8> {
         let mut salted_data = data.to_vec();
         salted_data.extend_from_slice(salt);
         salted_data.extend_from_slice(&iteration.to_be_bytes());
+
+        if let Some(prev_data) = prev_data {
+            salted_data.extend_from_slice(prev_data);
+        }
 
         let mut sha256 = Sha256::new();
         sha256.update(salted_data);
