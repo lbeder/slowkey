@@ -380,7 +380,19 @@ fn main() {
                     path: path.clone(),
                 });
 
-                slowkey_opts = checkpoint_data.data.slowkey.clone();
+                if iterations <= checkpoint_data.data.iteration {
+                    panic!(
+                        "Invalid iterations number {} for checkpoint {}",
+                        iterations, checkpoint_data.data.iteration
+                    );
+                }
+
+                slowkey_opts = SlowKeyOptions {
+                    iterations,
+                    length: checkpoint_data.data.slowkey.length,
+                    scrypt: checkpoint_data.data.slowkey.scrypt,
+                    argon2id: checkpoint_data.data.slowkey.argon2id,
+                };
 
                 offset = checkpoint_data.data.iteration + 1;
                 offset_data.clone_from(&checkpoint_data.data.data);
@@ -614,9 +626,8 @@ fn main() {
             let slowkey_opts = checkpoint_data.data.slowkey.clone();
 
             println!(
-                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
+                "{}: length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
                 "SlowKey Parameters".yellow(),
-                &slowkey_opts.iterations.to_string().cyan(),
                 &slowkey_opts.length.to_string().cyan(),
                 "Scrypt".green(),
                 &slowkey_opts.scrypt.n.to_string().cyan(),

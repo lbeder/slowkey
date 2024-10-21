@@ -1,6 +1,10 @@
 use crate::{
     slowkey::SlowKeyOptions,
-    utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
+    utils::{
+        argon2id::Argon2idOptions,
+        chacha20poly1305::{ChaCha20Poly1305, Nonce},
+        scrypt::ScryptOptions,
+    },
 };
 
 use glob::{glob_with, MatchOptions};
@@ -34,11 +38,28 @@ pub struct OpenCheckpointOptions {
     pub key: Vec<u8>,
 }
 
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct CheckpointSlowKeyOptions {
+    pub length: usize,
+    pub scrypt: ScryptOptions,
+    pub argon2id: Argon2idOptions,
+}
+
+impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
+    fn from(options: SlowKeyOptions) -> Self {
+        CheckpointSlowKeyOptions {
+            length: options.length,
+            scrypt: options.scrypt,
+            argon2id: options.argon2id,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct SlowKeyData {
     pub iteration: usize,
     pub data: Vec<u8>,
-    pub slowkey: SlowKeyOptions,
+    pub slowkey: CheckpointSlowKeyOptions,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -104,7 +125,7 @@ impl Checkpoint {
                 data: SlowKeyData {
                     iteration: 0,
                     data: Vec::new(),
-                    slowkey: opts.slowkey.clone(),
+                    slowkey: opts.slowkey.clone().into(),
                 },
             },
             checkpoint_extension_padding: (opts.iterations as f64).log10().round() as usize + 1,
