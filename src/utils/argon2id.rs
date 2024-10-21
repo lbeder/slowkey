@@ -1,7 +1,7 @@
 use libsodium_sys::{crypto_pwhash_ALG_ARGON2ID13, crypto_pwhash_argon2id};
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Argon2idOptions {
     pub m_cost: u32,
     pub t_cost: u32,
@@ -62,10 +62,7 @@ impl Argon2id {
     const BYTES_IN_KIB: usize = 1024;
 
     pub fn new(length: usize, opts: &Argon2idOptions) -> Self {
-        Self {
-            length,
-            opts: opts.clone(),
-        }
+        Self { length, opts: *opts }
     }
 
     pub fn hash(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {

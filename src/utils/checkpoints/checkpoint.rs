@@ -1,17 +1,19 @@
 use crate::{
-    slowkey::SlowKeyOptions,
+    slowkey::{SlowKey, SlowKeyOptions},
     utils::{
-        argon2id::Argon2idOptions,
+        argon2id::{Argon2id, Argon2idOptions},
         chacha20poly1305::{ChaCha20Poly1305, Nonce},
         scrypt::ScryptOptions,
     },
 };
 
+use crossterm::style::Stylize;
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::VecDeque,
+    fmt::{self, Display, Formatter},
     fs::{remove_file, File},
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
@@ -45,6 +47,27 @@ pub struct CheckpointSlowKeyOptions {
     pub argon2id: Argon2idOptions,
 }
 
+impl Display for CheckpointSlowKeyOptions {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let output = format!(
+            "{}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})",
+            "SlowKey Parameters".yellow(),
+            "Length".green(),
+            &self.length.to_string().cyan(),
+            "Scrypt".green(),
+            &self.scrypt.n.to_string().cyan(),
+            &self.scrypt.r.to_string().cyan(),
+            &self.scrypt.p.to_string().cyan(),
+            "Argon2id".green(),
+            Argon2id::VERSION.to_string().cyan(),
+            &self.argon2id.m_cost.to_string().cyan(),
+            &self.argon2id.t_cost.to_string().cyan()
+        );
+
+        write!(f, "{}", output)
+    }
+}
+
 impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
     fn from(options: SlowKeyOptions) -> Self {
         CheckpointSlowKeyOptions {
@@ -59,6 +82,7 @@ impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
 pub struct SlowKeyData {
     pub iteration: usize,
     pub data: Vec<u8>,
+    pub prev_data: Option<Vec<u8>>,
     pub slowkey: CheckpointSlowKeyOptions,
 }
 
@@ -66,6 +90,52 @@ pub struct SlowKeyData {
 pub struct CheckpointData {
     pub version: Version,
     pub data: SlowKeyData,
+}
+
+impl CheckpointData {
+    pub fn verify(&self, salt: &[u8], password: &[u8]) -> bool {
+        // Use the checkpoint's previous data to derive the current data and return if it matches
+        let options = SlowKeyOptions {
+            iterations: 2,
+            length: self.data.slowkey.length,
+            scrypt: self.data.slowkey.scrypt,
+            argon2id: self.data.slowkey.argon2id,
+        };
+
+        let prev_data = match &self.data.prev_data {
+            Some(data) => data,
+            None => panic!("Unable to verify the checkpoint!"),
+        };
+
+        let slowkey = SlowKey::new(&options);
+        let key = slowkey.derive_key(salt, password, prev_data, 1);
+
+        key == self.data.data
+    }
+}
+
+impl Display for CheckpointData {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let prev_data = match &self.data.prev_data {
+            Some(data) => hex::encode(data),
+            None => "".to_string(),
+        };
+
+        let output = format!(
+            "{}:\n  {}: {}:\n  {}: {}:\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+            "Checkpoint".yellow(),
+            "Version".green(),
+            u8::from(self.version.clone()),
+            "Iteration".green(),
+            (self.data.iteration + 1).to_string().cyan(),
+            "Data".green(),
+            format!("0x{}", hex::encode(&self.data.data)).black().on_black(),
+            "Previous Iteration's Data".green(),
+            format!("0x{}", prev_data).black().on_black()
+        );
+
+        write!(f, "{}", output)
+    }
 }
 
 pub struct Checkpoint {
@@ -125,6 +195,7 @@ impl Checkpoint {
                 data: SlowKeyData {
                     iteration: 0,
                     data: Vec::new(),
+                    prev_data: None,
                     slowkey: opts.slowkey.clone().into(),
                 },
             },
@@ -134,7 +205,7 @@ impl Checkpoint {
         }
     }
 
-    pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8]) {
+    pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
         let hash = Self::hash_checkpoint(salt, iteration, data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
@@ -146,6 +217,7 @@ impl Checkpoint {
             data: SlowKeyData {
                 iteration,
                 data: data.to_vec(),
+                prev_data: prev_data.map(|slice| slice.to_vec()),
                 slowkey: self.data.data.slowkey.clone(),
             },
         };

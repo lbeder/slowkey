@@ -1,5 +1,7 @@
+use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use std::{
+    fmt::{self, Display, Formatter},
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
     path::PathBuf,
@@ -29,6 +31,21 @@ pub struct OpenOutputOptions {
 pub struct OutputData {
     pub version: Version,
     pub data: SlowKeyData,
+}
+
+impl Display for OutputData {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let output = format!(
+            "{}:\n  {}: {}\n  {} (please highlight to see): {}\n",
+            "Output".yellow(),
+            "Iteration".green(),
+            self.data.iteration,
+            "Data".green(),
+            format!("0x{}", hex::encode(&self.data.data)).black().on_black()
+        );
+
+        write!(f, "{}", output)
+    }
 }
 
 #[derive(Serialize, Deserialize)]

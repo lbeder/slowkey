@@ -1,7 +1,7 @@
 use libsodium_sys::crypto_pwhash_scryptsalsa208sha256_ll;
 use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ScryptOptions {
     pub n: u64,
     pub r: u32,
@@ -45,10 +45,7 @@ pub struct Scrypt {
 
 impl Scrypt {
     pub fn new(length: usize, opts: &ScryptOptions) -> Self {
-        Self {
-            length,
-            opts: opts.clone(),
-        }
+        Self { length, opts: *opts }
     }
 
     pub fn hash(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {

@@ -14,7 +14,7 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::{argon2id::Argon2id, scrypt::ScryptOptions, sodium_init::initialize},
+    utils::{scrypt::ScryptOptions, sodium_init::initialize},
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
@@ -36,7 +36,7 @@ use std::{
 use utils::{
     argon2id::Argon2idOptions,
     chacha20poly1305::ChaCha20Poly1305,
-    checkpoints::checkpoint::{Checkpoint, CheckpointOptions, OpenCheckpointOptions},
+    checkpoints::checkpoint::{Checkpoint, CheckpointData, CheckpointOptions, OpenCheckpointOptions},
     outputs::output::{OpenOutputOptions, Output, OutputOptions},
 };
 
@@ -334,8 +334,7 @@ fn main() {
     // Initialize libsodium
     initialize();
 
-    println!("SlowKey v{VERSION}");
-    println!();
+    println!("SlowKey v{VERSION}\n");
 
     let cli = Cli::parse();
 
@@ -357,15 +356,15 @@ fn main() {
             max_checkpoints_to_keep,
         }) => {
             println!(
-                "Please input all data either in raw or hex format starting with the {} prefix",
+                "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
             );
-            println!();
 
             let slowkey_opts: SlowKeyOptions;
 
             let mut output_key: Option<Vec<u8>> = None;
             let mut checkpoint: Option<Checkpoint> = None;
+            let mut restore_from_checkpoint_data: Option<CheckpointData> = None;
 
             let mut offset: usize = 0;
             let mut offset_data = Vec::new();
@@ -387,6 +386,8 @@ fn main() {
                     );
                 }
 
+                println!("{}\n", &checkpoint_data);
+
                 slowkey_opts = SlowKeyOptions {
                     iterations,
                     length: checkpoint_data.data.slowkey.length,
@@ -397,14 +398,7 @@ fn main() {
                 offset = checkpoint_data.data.iteration + 1;
                 offset_data.clone_from(&checkpoint_data.data.data);
 
-                println!(
-                    "{}: version: {}, iteration: {}, data (please highlight to see): {}",
-                    "Checkpoint".yellow(),
-                    u8::from(checkpoint_data.version),
-                    offset.to_string().cyan(),
-                    format!("0x{}", hex::encode(&offset_data)).black().on_black()
-                );
-                println!();
+                restore_from_checkpoint_data = Some(checkpoint_data)
             } else {
                 slowkey_opts = SlowKeyOptions::new(
                     iterations,
@@ -445,32 +439,30 @@ fn main() {
                 }));
 
                 println!(
-                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory",
+                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
                     checkpointing_interval.to_string().cyan(),
                     &dir.to_string_lossy().cyan()
                 );
-                println!();
             }
+
+            println!("{}\n", &slowkey_opts);
 
             let salt = get_salt();
             let password = get_password();
 
-            println!(
-                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
-                "SlowKey".yellow(),
-                &slowkey_opts.iterations.to_string().cyan(),
-                &slowkey_opts.length.to_string().cyan(),
-                "Scrypt".green(),
-                &slowkey_opts.scrypt.n.to_string().cyan(),
-                &slowkey_opts.scrypt.r.to_string().cyan(),
-                &slowkey_opts.scrypt.p.to_string().cyan(),
-                "Argon2id".green(),
-                Argon2id::VERSION.to_string().cyan(),
-                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
-                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
-            );
+            if let Some(checkpoint_data) = restore_from_checkpoint_data {
+                if checkpoint_data.data.iteration > 0 {
+                    println!("Verifying checkpoint...");
 
-            println!();
+                    if !checkpoint_data.verify(&salt, &password) {
+                        panic!("The password or salt provided for the checkpoint is incorrect!");
+                    }
+
+                    println!();
+                } else {
+                    println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
+                }
+            }
 
             let mb = MultiProgress::new();
 
@@ -502,6 +494,7 @@ fn main() {
             let start_time = SystemTime::now();
             let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
+            let mut prev_data = Vec::new();
 
             let handle = thread::spawn(move || {
                 let key = slowkey.derive_key_with_callback(
@@ -513,19 +506,28 @@ fn main() {
                         // Create a checkpoint if we've reached the checkpoint interval
                         if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(&salt, current_iteration, current_data);
+                                checkpoint.create_checkpoint(
+                                    &salt,
+                                    current_iteration,
+                                    current_data,
+                                    if current_iteration == 0 { None } else { Some(&prev_data) },
+                                );
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
                                 let hash = Checkpoint::hash_checkpoint(&salt, current_iteration, current_data);
 
                                 cpb.set_message(format!(
-                                    "\nCreated checkpoint #{} with data hash (salted) {}\n",
+                                    "\nCreated checkpoint #{} with data hash (salted) {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
                                 ));
                             }
                         }
+
+                        // Store the current data in order to store it in the checkpoint for future verification of the
+                        // parameters
+                        prev_data.clone_from(current_data);
 
                         pb.inc(1);
                     },
@@ -544,11 +546,8 @@ fn main() {
 
             let key = handle.join().unwrap();
 
-            println!();
-            println!();
-
             println!(
-                "Key is (please highlight to see): {}",
+                "\n\nKey is (please highlight to see): {}",
                 format!("0x{}", hex::encode(&key)).black().on_black()
             );
 
@@ -571,8 +570,7 @@ fn main() {
             if let Some(out) = out {
                 out.save(length, &key);
 
-                println!("Saved encrypted output to \"{}\"", &out.path.to_str().unwrap().cyan(),);
-                println!();
+                println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
             }
 
             println!(
@@ -590,20 +588,18 @@ fn main() {
                     .cyan()
             );
             println!(
-                "Total running time: {}",
+                "Total running time: {}\n",
                 format_duration(Duration::new(running_time.elapsed().as_secs(), 0))
                     .to_string()
                     .cyan()
             );
-            println!();
         },
 
         Some(Commands::ShowCheckpoint { checkpoint }) => {
             println!(
-                "Please input all data either in raw or hex format starting with the {} prefix",
+                "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
             );
-            println!();
 
             let output_key = get_output_key();
 
@@ -612,40 +608,15 @@ fn main() {
                 path: checkpoint,
             });
 
-            let offset = checkpoint_data.data.iteration + 1;
-            let offset_data = checkpoint_data.data.data;
-
-            println!(
-                "{}: version: {}, iteration: {}, data (please highlight to see): {}",
-                "Checkpoint".yellow(),
-                u8::from(checkpoint_data.version),
-                offset.to_string().cyan(),
-                format!("0x{}", hex::encode(offset_data)).black().on_black()
-            );
-
-            let slowkey_opts = checkpoint_data.data.slowkey.clone();
-
-            println!(
-                "{}: length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
-                "SlowKey Parameters".yellow(),
-                &slowkey_opts.length.to_string().cyan(),
-                "Scrypt".green(),
-                &slowkey_opts.scrypt.n.to_string().cyan(),
-                &slowkey_opts.scrypt.r.to_string().cyan(),
-                &slowkey_opts.scrypt.p.to_string().cyan(),
-                "Argon2id".green(),
-                Argon2id::VERSION.to_string().cyan(),
-                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
-                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
-            );
+            println!("{}\n", &checkpoint_data);
+            println!("{}\n", &checkpoint_data.data.slowkey);
         },
 
         Some(Commands::ShowOutput { output }) => {
             println!(
-                "Please input all data either in raw or hex format starting with the {} prefix",
+                "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
             );
-            println!();
 
             let output_key = get_output_key();
 
@@ -654,51 +625,20 @@ fn main() {
                 path: output,
             });
 
-            println!(
-                "{}: iteration: {}, data (please highlight to see): {}",
-                "Output".yellow(),
-                output_data.data.iteration,
-                format!("0x{}", hex::encode(output_data.data.data)).black().on_black()
-            );
-
-            let slowkey_opts = output_data.data.slowkey.clone();
-
-            println!(
-                "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {})",
-                "SlowKey Parameters".yellow(),
-                &slowkey_opts.iterations.to_string().cyan(),
-                &slowkey_opts.length.to_string().cyan(),
-                "Scrypt".green(),
-                &slowkey_opts.scrypt.n.to_string().cyan(),
-                &slowkey_opts.scrypt.r.to_string().cyan(),
-                &slowkey_opts.scrypt.p.to_string().cyan(),
-                "Argon2id".green(),
-                Argon2id::VERSION.to_string().cyan(),
-                &slowkey_opts.argon2id.m_cost.to_string().cyan(),
-                &slowkey_opts.argon2id.t_cost.to_string().cyan(),
-            );
+            println!("{}\n", &output_data);
+            println!("{}\n", &output_data.data.slowkey);
         },
 
         Some(Commands::Test {}) => {
             for test_vector in TEST_VECTORS.iter() {
-                let scrypt = &test_vector.opts.scrypt;
-                let argon2id = &test_vector.opts.argon2id;
-
                 println!(
-                    "{}: iterations: {}, length: {}, {}: (n: {}, r: {}, p: {}), {}: (version: {}, m_cost: {}, t_cost: {}), salt: \"{}\", password: \"{}\"",
+                    "{}: iterations: {}\n  length: {}\n   salt: \"{}\", password: \"{}\"\n{}",
                     "SlowKey".yellow(),
                     test_vector.opts.iterations.to_string().cyan(),
                     test_vector.opts.length.to_string().cyan(),
-                    "Scrypt".green(),
-                    scrypt.n.to_string().cyan(),
-                    scrypt.r.to_string().cyan(),
-                    scrypt.p.to_string().cyan(),
-                    "Argon2id".green(),
-                    Argon2id::VERSION.to_string().cyan(),
-                    argon2id.m_cost.to_string().cyan(),
-                    argon2id.t_cost.to_string().cyan(),
                     from_utf8(&test_vector.salt).unwrap().cyan(),
                     from_utf8(&test_vector.password).unwrap().cyan(),
+                    test_vector.opts
                 );
 
                 let slowkey = SlowKey::new(&test_vector.opts);
@@ -709,9 +649,7 @@ fn main() {
                     test_vector.offset,
                 );
 
-                println!("Derived key: {}", format!("0x{}", hex::encode(&key)).cyan());
-
-                println!();
+                println!("Derived key: {}\n", format!("0x{}", hex::encode(&key)).cyan());
             }
         },
         None => {},

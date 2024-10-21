@@ -1,7 +1,10 @@
+use std::fmt::{self, Display, Formatter};
+
 use crate::utils::{
     argon2id::{Argon2id, Argon2idOptions},
     scrypt::{Scrypt, ScryptOptions},
 };
+use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
@@ -51,9 +54,32 @@ impl SlowKeyOptions {
         Self {
             iterations,
             length,
-            scrypt: scrypt.clone(),
-            argon2id: argon2id.clone(),
+            scrypt: *scrypt,
+            argon2id: *argon2id,
         }
+    }
+}
+
+impl Display for SlowKeyOptions {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let output = format!(
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})",
+            "SlowKey Parameters".yellow(),
+            "Iterations".green(),
+            &self.iterations.to_string().cyan(),
+            "Length".green(),
+            &self.length.to_string().cyan(),
+            "Scrypt".green(),
+            &self.scrypt.n.to_string().cyan(),
+            &self.scrypt.r.to_string().cyan(),
+            &self.scrypt.p.to_string().cyan(),
+            "Argon2id".green(),
+            Argon2id::VERSION.to_string().cyan(),
+            &self.argon2id.m_cost.to_string().cyan(),
+            &self.argon2id.t_cost.to_string().cyan()
+        );
+
+        write!(f, "{}", output)
     }
 }
 
@@ -125,38 +151,6 @@ impl SlowKey {
         }
     }
 
-    fn double_hash(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
-        // Calculate the SHA2 hash of the result and the inputs
-        res.extend_from_slice(salt);
-        res.extend_from_slice(password);
-
-        let mut sha512 = Sha512::new();
-        sha512.update(&res);
-        *res = sha512.finalize().to_vec();
-
-        // Calculate the SHA3 hash of the result and the inputs
-        res.extend_from_slice(salt);
-        res.extend_from_slice(password);
-
-        let mut keccack512 = Keccak512::new();
-        keccack512.update(&res);
-        *res = keccack512.finalize().to_vec();
-    }
-
-    fn scrypt(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
-        res.extend_from_slice(salt);
-        res.extend_from_slice(password);
-
-        *res = self.scrypt.hash(salt, res);
-    }
-
-    fn argon2id(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
-        res.extend_from_slice(salt);
-        res.extend_from_slice(password);
-
-        *res = self.argon2id.hash(salt, res);
-    }
-
     pub fn derive_key_with_callback<F: FnMut(usize, &Vec<u8>)>(
         &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, mut callback: F,
     ) -> Vec<u8> {
@@ -192,6 +186,38 @@ impl SlowKey {
 
     pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize) -> Vec<u8> {
         self.derive_key_with_callback(salt, password, offset_data, offset, |_, _| {})
+    }
+
+    fn double_hash(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
+        // Calculate the SHA2 hash of the result and the inputs
+        res.extend_from_slice(salt);
+        res.extend_from_slice(password);
+
+        let mut sha512 = Sha512::new();
+        sha512.update(&res);
+        *res = sha512.finalize().to_vec();
+
+        // Calculate the SHA3 hash of the result and the inputs
+        res.extend_from_slice(salt);
+        res.extend_from_slice(password);
+
+        let mut keccack512 = Keccak512::new();
+        keccack512.update(&res);
+        *res = keccack512.finalize().to_vec();
+    }
+
+    fn scrypt(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
+        res.extend_from_slice(salt);
+        res.extend_from_slice(password);
+
+        *res = self.scrypt.hash(salt, res);
+    }
+
+    fn argon2id(&self, salt: &[u8], password: &[u8], res: &mut Vec<u8>) {
+        res.extend_from_slice(salt);
+        res.extend_from_slice(password);
+
+        *res = self.argon2id.hash(salt, res);
     }
 }
 
