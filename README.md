@@ -42,16 +42,14 @@ The SlowKey Key Derivation Scheme is defined as follows:
 function deriveKey(password, salt, iterations):
     previousResult = ""
 
-    for i from 1 to iterations:
-        step1 = SHA2(concatenate(previousResult, salt, password))
-        step2 = SHA3(concatenate(step1, salt, password))
-        step3 = Scrypt(step2, salt)
-        step4 = SHA2(concatenate(step3, salt, password))
-        step5 = SHA3(concatenate(step4, salt, password))
-        step6 = Argon2id(step5, salt)
+    for iteration from 1 to iterations:
+        step1 = SHA2(concatenate(previousResult, salt, password, iteration))
+        step2 = SHA3(concatenate(step1, salt, password, iteration))
+        step3 = Scrypt(concatenate(step2, salt, password, iteration), salt)
+        step4 = SHA2(concatenate(step3, salt, password, iteration))
+        step5 = SHA3(concatenate(step4, salt, password, iteration))
+        step6 = Argon2id(concatenate(step5, salt, password, iteration), salt)
         previousResult = step6
-
-    finalStep1 = SHA2(concatenate(previousResult, salt, password))
 
     finalKey = truncate(previousResult, keySize)
 
@@ -208,7 +206,7 @@ Final result:
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 
 Start time: 2024-09-18 18:57:34
 End time: 2024-09-18 18:58:26
@@ -235,7 +233,7 @@ The tool also supports the creation of periodic checkpoints, which are securely 
 
 Please note that even if the last checkpoint is done at the final iteration (in the case that the number of iterations divides by the check-pointing interval), the checkpoint still won't have the actual output until you complete the recovery process.
 
-Each checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify, when restoring from a checkpoint, that the password and salt match the checkpoint by attempting to derive the checkpoint's iteration data from the previous iteration's data.
+Each checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the checkpoint by attempting to derive the checkpoint's iteration data from the previous iteration's data.
 
 Please exercise caution when using this feature. Resuming computation from a compromised checkpoint may undermine your expectations regarding the duration of the key stretching process.
 
@@ -262,16 +260,16 @@ SlowKey Parameters:
 
 ✔ Enter your password · ********
 
-████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       8/10      80%    (10s)
+████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
-Created checkpoint #5 with data hash (salted) 0x2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
+Created checkpoint #5 with data hash (salted) 0x1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
 ```
 
-We can see that the `checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -281,8 +279,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Checkpoint:
   Version: 1:
   Iteration: 5:
-  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
-  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+  Data (please highlight to see): 0x394097ab2a70d59caf6f4f950830ba86fe7593b762a763705631b9752341d879
+  Previous Iteration's Data (please highlight to see): 0xf4d0306c5e72f644526e8d663b4b62209287238cce22fab0868e96acdaa9b8a1
 
 SlowKey Parameters:
   Length: 32
@@ -290,9 +288,38 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
+We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
+
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc --verify
+
+```sh
+Please input all data either in raw or hex format starting with the 0x prefix
+
+✔ Enter your checkpoint/output encryption key · ********
+
+Checkpoint:
+  Version: 1:
+  Iterations: 5:
+  Data (please highlight to see): 0x394097ab2a70d59caf6f4f950830ba86fe7593b762a763705631b9752341d879
+  Previous Iteration's Data (please highlight to see): 0xf4d0306c5e72f644526e8d663b4b62209287238cce22fab0868e96acdaa9b8a1
+
+SlowKey Parameters:
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+
+✔ Enter your salt · ********
+
+✔ Enter your password · ********
+
+Verifying the checkpoint...
+
+The password, salt and internal data are correct
+```
+
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
+> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
 
 ```sh
 
@@ -302,9 +329,9 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 1:
-  Iteration: 5:
-  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
-  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+  Iterations: 5:
+  Data (please highlight to see): 0x394097ab2a70d59caf6f4f950830ba86fe7593b762a763705631b9752341d879
+  Previous Iteration's Data (please highlight to see): 0xf4d0306c5e72f644526e8d663b4b62209287238cce22fab0868e96acdaa9b8a1
 
 SlowKey Parameters:
   Iterations: 10
@@ -316,7 +343,9 @@ SlowKey Parameters:
 
 ✔ Enter your password · ********
 
-Verifying checkpoint...
+Verifying the checkpoint...
+
+The password, salt and internal data are correct
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       5/10      50%    (4s)
 
@@ -327,7 +356,7 @@ Final result:
 ```sh
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 
 Start time: 2024-09-18 19:00:59
 End time: 2024-09-18 19:01:25
@@ -336,9 +365,7 @@ Total running time: 25s
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.2706f2dca6d2f5a3870d9b8c66451662ec5d4da3a8a638f1e3cfbc83725107af
-
-TODO:
+> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -347,9 +374,9 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 1:
-  Iteration: 5:
-  Data (please highlight to see): 0xaa9e712a3a5d83c5369bd0d31b319f24b552dcef1b429f019c82c660d4947869
-  Previous Iteration's Data (please highlight to see): 0x0abf29286d3c398904ab055ae6389a599bae2c75ad233216f44a8ffb02dc46d7
+  Iterations: 5:
+  Data (please highlight to see): 0x394097ab2a70d59caf6f4f950830ba86fe7593b762a763705631b9752341d879
+  Previous Iteration's Data (please highlight to see): 0xf4d0306c5e72f644526e8d663b4b62209287238cce22fab0868e96acdaa9b8a1
 
 SlowKey Parameters:
   Iterations: 20
@@ -361,7 +388,9 @@ SlowKey Parameters:
 
 ✔ Enter your password · ********
 
-Verifying checkpoint...
+Verifying the checkpoint...
+
+The password, salt and internal data are correct
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       5/20      50%    (56s)
 ```
@@ -371,7 +400,7 @@ Final result:
 ```sh
 ████████████████████████████████████████████████████████████████████████████████      20/20      100%    (0s)
 
-Key is (please highlight to see): 0x68c470bd2c478cc8a46af74af2faaa0171542acd9b97f1d8eaaf98f9122894a8
+Key is (please highlight to see): 0x07eee820a3f92c5577dedd07e7d325dc58bb1064f9ae05af30be9863ec6e7354
 
 Start time: 2024-09-18 19:00:59
 End time: 2024-09-18 19:01:25
@@ -399,9 +428,9 @@ SlowKey Parameters:
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
-Key (base64) is (please highlight to see): wCVdNgmkbCad4JqKNTcsO9irSq1B1RElV5NkUQyP+W4
-Key (base58) is (please highlight to see): Dw4KjVFNSGXz3R1oG81KvmDVUyrdQ9QbHAQwp4iTcZXj
+Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
+Key (base64) is (please highlight to see): rZqgMSh7QvRcQKXK87PtR/eV2TFdIqtQolZSs/KmtxY+W4
+Key (base58) is (please highlight to see): CggHSjC3rpDdCGcbL2uB28qpFeBsWVsUMph1iGpbnDGy
 
 Start time: 2024-09-18 18:57:34
 End time: 2024-09-18 18:58:26
@@ -429,7 +458,7 @@ SlowKey Parameters:
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
-Key is (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 
 Saved encrypted output to "~/output.enc"
 
@@ -444,14 +473,44 @@ Let's use the `show-output` command to decrypt its contents:
 
 ```sh
 Output:
-  Iteration: 10
-  Data (please highlight to see): 0xc0255d3609a46c269de09a8a35372c3bd8ab4aad41d51125579364510c8ff96e
+  Iterations: 10
+  Data (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
+  Previous Iteration's Data (please highlight to see): 0x2645534232e84c83989d6dae3d93be851771c7c47852301b413147780215bd08
 
 SlowKey Parameters:
   Iterations: 10
   Length: 32
   Scrypt: (n: 1048576, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+```
+
+The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
+
+> slowkey show-output --output ~/output.enc --verify
+
+```sh
+Please input all data either in raw or hex format starting with the 0x prefix
+
+✔ Enter your checkpoint/output encryption key · ********
+
+Output:
+  Iterations: 10
+  Data (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
+  Previous Iteration's Data (please highlight to see): 0x2645534232e84c83989d6dae3d93be851771c7c47852301b413147780215bd08
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+
+✔ Enter your salt · ********
+
+✔ Enter your password · ********
+
+Verifying the output...
+
+The password, salt and internal data are correct
 ```
 
 ## Test Vectors
@@ -502,7 +561,7 @@ SlowKey Parameters:
   Length: 64
   Scrypt: (n: 1048576, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-Derived key: 0x1805476033e579abf06772db32b52886e07d9c579c99be05dcc1826e2f162b5c4bf846b7fae13ac5e57991da69769f1d2aac2d9046b9c60cbce9af35b371d4bd
+Derived key: 0xb2c1bcd2674c0c96473e61b17d6e30d6e8a46ac258f730075b476a732284c64e36df041f7bd50260d68128b62e6cffac03e4ff585025d18b04d41dda4633b800
 
 Salt: "SlowKeySlowKey16"
 Password: "Hello World"
@@ -511,7 +570,7 @@ SlowKey Parameters:
   Length: 64
   Scrypt: (n: 1048576, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-Derived key: 0xedada70cd27e31ddcfc41edba2f63a03418fc1acd352ff78eff149573c5e247f0e06850cf03dc50dd9eef63275061cb85cdff8b47c3593d749145f1a226e8b7b
+Derived key: 0xe24c16e6912d2348e8be84977d22bd229382b72b65b501afe0066a32d6771df57f3557de0719070bbafb8faf1d0649562be693e3bf33c6e0a107d0af712030ef
 ```
 
 ## License

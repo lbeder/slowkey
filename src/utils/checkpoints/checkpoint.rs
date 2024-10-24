@@ -96,7 +96,7 @@ impl CheckpointData {
     pub fn verify(&self, salt: &[u8], password: &[u8]) -> bool {
         // Use the checkpoint's previous data to derive the current data and return if it matches
         let options = SlowKeyOptions {
-            iterations: 2,
+            iterations: self.data.iteration + 1,
             length: self.data.slowkey.length,
             scrypt: self.data.slowkey.scrypt,
             argon2id: self.data.slowkey.argon2id,
@@ -108,7 +108,7 @@ impl CheckpointData {
         };
 
         let slowkey = SlowKey::new(&options);
-        let key = slowkey.derive_key(salt, password, prev_data, 1);
+        let key = slowkey.derive_key(salt, password, prev_data, self.data.iteration);
 
         key == self.data.data
     }

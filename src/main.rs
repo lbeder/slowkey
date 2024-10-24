@@ -157,6 +157,9 @@ enum Commands {
     ShowCheckpoint {
         #[arg(long, help = "Path to an existing checkpoint")]
         checkpoint: PathBuf,
+
+        #[arg(long, help = "Verify that the password and salt match the checkpoint")]
+        verify: bool,
     },
 
     #[command(about = "Decrypt an output file")]
@@ -455,14 +458,14 @@ fn main() {
             let password = get_password();
 
             if let Some(checkpoint_data) = restore_from_checkpoint_data {
-                if checkpoint_data.data.iteration > 0 {
-                    println!("Verifying the checkpoint...");
+                println!("Verifying the checkpoint...\n");
 
+                if checkpoint_data.data.iteration > 0 {
                     if !checkpoint_data.verify(&salt, &password) {
-                        panic!("The password or salt provided for the checkpoint is incorrect!");
+                        panic!("The password, salt, or internal data is incorrect!");
                     }
 
-                    println!();
+                    println!("The password, salt and internal data are correct\n");
                 } else {
                     println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
                 }
@@ -609,7 +612,7 @@ fn main() {
             );
         },
 
-        Some(Commands::ShowCheckpoint { checkpoint }) => {
+        Some(Commands::ShowCheckpoint { checkpoint, verify }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
@@ -624,6 +627,23 @@ fn main() {
 
             println!("{}\n", &checkpoint_data);
             println!("{}\n", &checkpoint_data.data.slowkey);
+
+            if verify {
+                let salt = get_salt();
+                let password = get_password();
+
+                println!("Verifying the checkpoint...\n");
+
+                if checkpoint_data.data.iteration > 0 {
+                    if !checkpoint_data.verify(&salt, &password) {
+                        panic!("The password, salt, or internal data is incorrect!");
+                    }
+
+                    println!("The password, salt and internal data are correct\n");
+                } else {
+                    println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
+                }
+            }
         },
 
         Some(Commands::ShowOutput { output, verify }) => {
@@ -639,18 +659,21 @@ fn main() {
                 path: output,
             });
 
+            println!("{}\n", &output_data);
+            println!("{}\n", &output_data.data.slowkey);
+
             if verify {
                 let salt = get_salt();
                 let password = get_password();
 
-                if output_data.data.iteration > 0 {
-                    println!("Verifying the output...");
+                println!("Verifying the output...\n");
 
+                if output_data.data.iteration > 0 {
                     if !output_data.verify(&salt, &password) {
-                        panic!("The password or salt provided for the output is incorrect!");
+                        panic!("The password, salt, or internal data is incorrect!");
                     }
 
-                    println!();
+                    println!("The password, salt and internal data are correct\n");
                 } else {
                     println!(
                         "{}: Unable to verify the output of the first iteration checkpoint\n",
@@ -658,9 +681,6 @@ fn main() {
                     );
                 }
             }
-
-            println!("{}\n", &output_data);
-            println!("{}\n", &output_data.data.slowkey);
         },
 
         Some(Commands::Test {}) => {
