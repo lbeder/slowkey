@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    slowkey::SlowKeyOptions,
+    slowkey::{SlowKey, SlowKeyOptions},
     utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
 };
 
@@ -33,15 +33,44 @@ pub struct OutputData {
     pub data: SlowKeyData,
 }
 
+impl OutputData {
+    pub fn verify(&self, salt: &[u8], password: &[u8]) -> bool {
+        // Use the checkpoint's previous data to derive the current data and return if it matches
+        let options = SlowKeyOptions {
+            iterations: 2,
+            length: self.data.slowkey.length,
+            scrypt: self.data.slowkey.scrypt,
+            argon2id: self.data.slowkey.argon2id,
+        };
+
+        let prev_data = match &self.data.prev_data {
+            Some(data) => data,
+            None => panic!("Unable to verify the output!"),
+        };
+
+        let slowkey = SlowKey::new(&options);
+        let key = slowkey.derive_key(salt, password, prev_data, 1);
+
+        key == self.data.data
+    }
+}
+
 impl Display for OutputData {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let prev_data = match &self.data.prev_data {
+            Some(data) => hex::encode(data),
+            None => "".to_string(),
+        };
+
         let output = format!(
-            "{}:\n  {}: {}\n  {} (please highlight to see): {}",
+            "{}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
             "Output".yellow(),
             "Iteration".green(),
             self.data.iteration,
             "Data".green(),
-            format!("0x{}", hex::encode(&self.data.data)).black().on_black()
+            format!("0x{}", hex::encode(&self.data.data)).black().on_black(),
+            "Previous Iteration's Data".green(),
+            format!("0x{}", prev_data).black().on_black()
         );
 
         write!(f, "{}", output)
@@ -52,6 +81,7 @@ impl Display for OutputData {
 pub struct SlowKeyData {
     pub iteration: usize,
     pub data: Vec<u8>,
+    pub prev_data: Option<Vec<u8>>,
     pub slowkey: SlowKeyOptions,
 }
 
@@ -108,7 +138,7 @@ impl Output {
         }
     }
 
-    pub fn save(&self, iteration: usize, data: &[u8]) {
+    pub fn save(&self, iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
         let file = File::create(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
@@ -117,6 +147,7 @@ impl Output {
             data: SlowKeyData {
                 iteration,
                 data: data.to_vec(),
+                prev_data: prev_data.map(|slice| slice.to_vec()),
                 slowkey: self.slowkey.clone(),
             },
         };

@@ -30,6 +30,7 @@ use std::{
     env,
     path::PathBuf,
     str::from_utf8,
+    sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant, SystemTime},
 };
@@ -162,6 +163,9 @@ enum Commands {
     ShowOutput {
         #[arg(long, help = "Path to an existing output")]
         output: PathBuf,
+
+        #[arg(long, help = "Verify that the password and salt match the output")]
+        verify: bool,
     },
 
     #[command(about = "Print test vectors")]
@@ -452,7 +456,7 @@ fn main() {
 
             if let Some(checkpoint_data) = restore_from_checkpoint_data {
                 if checkpoint_data.data.iteration > 0 {
-                    println!("Verifying checkpoint...");
+                    println!("Verifying the checkpoint...");
 
                     if !checkpoint_data.verify(&salt, &password) {
                         panic!("The password or salt provided for the checkpoint is incorrect!");
@@ -494,7 +498,8 @@ fn main() {
             let start_time = SystemTime::now();
             let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
-            let mut prev_data = Vec::new();
+            let prev_data = Arc::new(Mutex::new(Vec::new()));
+            let prev_data_thread = Arc::clone(&prev_data);
 
             let handle = thread::spawn(move || {
                 let key = slowkey.derive_key_with_callback(
@@ -503,6 +508,8 @@ fn main() {
                     &offset_data,
                     offset,
                     |current_iteration, current_data| {
+                        let mut prev_data = prev_data_thread.lock().unwrap();
+
                         // Create a checkpoint if we've reached the checkpoint interval
                         if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
                             let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
@@ -525,7 +532,9 @@ fn main() {
 
                         // Store the current data in order to store it in the checkpoint for future verification of the
                         // parameters
-                        prev_data.clone_from(current_data);
+                        if current_iteration < iterations - 1 {
+                            prev_data.clone_from(current_data);
+                        }
 
                         pb.inc(1);
                     },
@@ -566,7 +575,14 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                out.save(iterations, &key);
+                let prev_data_guard = prev_data.lock().unwrap();
+                let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
+                    None
+                } else {
+                    Some(&prev_data_guard[..])
+                };
+
+                out.save(iterations, &key, prev_data_option);
 
                 println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
             }
@@ -610,7 +626,7 @@ fn main() {
             println!("{}\n", &checkpoint_data.data.slowkey);
         },
 
-        Some(Commands::ShowOutput { output }) => {
+        Some(Commands::ShowOutput { output, verify }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
@@ -622,6 +638,26 @@ fn main() {
                 key: output_key,
                 path: output,
             });
+
+            if verify {
+                let salt = get_salt();
+                let password = get_password();
+
+                if output_data.data.iteration > 0 {
+                    println!("Verifying the output...");
+
+                    if !output_data.verify(&salt, &password) {
+                        panic!("The password or salt provided for the output is incorrect!");
+                    }
+
+                    println!();
+                } else {
+                    println!(
+                        "{}: Unable to verify the output of the first iteration checkpoint\n",
+                        "Warning".dark_yellow()
+                    );
+                }
+            }
 
             println!("{}\n", &output_data);
             println!("{}\n", &output_data.data.slowkey);
