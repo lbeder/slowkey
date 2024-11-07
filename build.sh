@@ -18,7 +18,7 @@ cargo build --release --target=aarch64-apple-darwin
 echo "Building v${VERSION} for Mac OS x64..."
 cargo build --release --target=x86_64-apple-darwin
 
-echo "Building v${VERSION} for Linux AMD64..."
+echo "Building v${VERSION} for Linux x64..."
 export CC_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-gcc
 export CXX_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-g++
 export AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar

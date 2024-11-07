@@ -25,14 +25,14 @@ tar zcvf ${APPLE_X64_RELEASE} target/x86_64-apple-darwin/release/slowkey
 APPLE_X64_RELEASE_SHA512=$(shasum -a512 ${APPLE_X64_RELEASE})
 gpg --output ${APPLE_X64_RELEASE_SIG} --detach-sig ${APPLE_X64_RELEASE}
 
-echo "Creating v${VERSION} bundle for Linux AMD64..."
-LINUX_AMD64_TARGET="slowkey-${VERSION}-linux-amd64.tgz"
-LINUX_AMD64_TARGET_SIG=${LINUX_AMD64_TARGET}.sig
-LINUX_AMD64_RELEASE="target/${LINUX_AMD64_TARGET}"
-LINUX_AMD64_RELEASE_SIG=${LINUX_AMD64_RELEASE}.sig
-tar zcvf ${LINUX_AMD64_RELEASE} target/x86_64-unknown-linux-musl/release/slowkey
-LINUX_AMD64_RELEASE_SHA512=$(shasum -a512 ${LINUX_AMD64_RELEASE})
-gpg --output ${LINUX_AMD64_RELEASE_SIG} --detach-sig ${LINUX_AMD64_RELEASE}
+echo "Creating v${VERSION} bundle for Linux X64..."
+LINUX_X64_TARGET="slowkey-${VERSION}-linux-x64.tgz"
+LINUX_X64_TARGET_SIG=${LINUX_X64_TARGET}.sig
+LINUX_X64_RELEASE="target/${LINUX_X64_TARGET}"
+LINUX_X64_RELEASE_SIG=${LINUX_X64_RELEASE}.sig
+tar zcvf ${LINUX_X64_RELEASE} target/x86_64-unknown-linux-musl/release/slowkey
+LINUX_X64_RELEASE_SHA512=$(shasum -a512 ${LINUX_X64_RELEASE})
+gpg --output ${LINUX_X64_RELEASE_SIG} --detach-sig ${LINUX_X64_RELEASE}
 
 RELEASE_NOTES="target/release.md"
 echo "Preparing release notes..."
@@ -68,18 +68,18 @@ Verify the digital signature:
 gpg --verify ${APPLE_X64_TARGET_SIG} ${APPLE_X64_TARGET}
 \`\`\`
 
-## Linux AMD64
+## Linux X64
 
 Calculate the SHA512:
 
 \`\`\`sh
-shasum -a512 ${LINUX_AMD64_RELEASE} ${LINUX_AMD64_RELEASE_SHA512}
+shasum -a512 ${LINUX_X64_RELEASE} ${LINUX_X64_RELEASE_SHA512}
 \`\`\`
 
 Verify the digital signature:
 
 \`\`\`sh
-gpg --verify ${LINUX_AMD64_TARGET_SIG} ${LINUX_AMD64_TARGET}
+gpg --verify ${LINUX_X64_TARGET_SIG} ${LINUX_X64_TARGET}
 \`\`\`
 
 EOF
