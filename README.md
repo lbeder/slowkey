@@ -65,8 +65,8 @@ Usage: slowkey [COMMAND]
 
 Commands:
   derive           Derive a key using using Scrypt, Argon2, SHA2, and SHA3
-  show-checkpoint  Decrypt a checkpoint
-  show-output      Decrypt an output file
+  show-checkpoint  Decrypt and print a checkpoint
+  show-output      Decrypt and print an output file
   test             Print test vectors
 
 Options:
@@ -87,9 +87,9 @@ Options:
   -l, --length <LENGTH>
           Length of the derived result (must be greater than 10 and lesser than or equal to 128) [default: 32]
       --base64
-          Output the result in Base64 (in addition to hex)
+          Show the result in Base64 (in addition to hex)
       --base58
-          Output the result in Base58 (in addition to hex)
+          Show the result in Base58 (in addition to hex)
       --output <OUTPUT>
           Optional path for storing the encrypted output
       --scrypt-n <SCRYPT_N>
@@ -236,6 +236,19 @@ Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to
 ```
 
 ### Checkpoints
+
+```sh
+Decrypt and print a checkpoint
+
+Usage: slowkey show-checkpoint [OPTIONS] --checkpoint <CHECKPOINT>
+
+Options:
+      --checkpoint <CHECKPOINT>  Path to an existing checkpoint
+      --verify                   Verify that the password and salt match the checkpoint
+      --base64                   Show the result in Base64 (in addition to hex)
+      --base58                   Show the result in Base58 (in addition to hex)
+  -h, --help                     Print help
+```
 
 The tool also supports the creation of periodic checkpoints, which are securely encrypted and stored on the disk. Each checkpoint captures all parameters and the output from the last iteration, enabling you to resume computation from a previously established checkpoint. Additionally, the tool allows for the retention of multiple checkpoints.
 
@@ -476,6 +489,19 @@ Total running time: 52s
 ```
 
 Let's use the `show-output` command to decrypt its contents:
+
+```sh
+Decrypt and print an output file
+
+Usage: slowkey show-output [OPTIONS] --output <OUTPUT>
+
+Options:
+      --output <OUTPUT>  Path to an existing output
+      --verify           Verify that the password and salt match the output
+      --base64           Show the result in Base64 (in addition to hex)
+      --base58           Show the result in Base58 (in addition to hex)
+  -h, --help             Print help
+```
 
 > slowkey show-output --output ~/output.enc
 

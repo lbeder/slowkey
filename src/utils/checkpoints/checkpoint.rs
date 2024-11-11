@@ -5,8 +5,10 @@ use crate::{
         chacha20poly1305::{ChaCha20Poly1305, Nonce},
         scrypt::ScryptOptions,
     },
+    DisplayOptions,
 };
 
+use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
@@ -112,16 +114,14 @@ impl CheckpointData {
 
         key == self.data.data
     }
-}
 
-impl Display for CheckpointData {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    pub fn print(&self, display: DisplayOptions) {
         let prev_data = match &self.data.prev_data {
             Some(data) => hex::encode(data),
             None => "".to_string(),
         };
 
-        let output = format!(
+        let mut output = format!(
             "{}:\n  {}: {}:\n  {}: {}:\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
             "Checkpoint".yellow(),
             "Version".green(),
@@ -134,7 +134,29 @@ impl Display for CheckpointData {
             format!("0x{}", prev_data).black().on_black()
         );
 
-        write!(f, "{}", output)
+        if display.base64 {
+            output = format!(
+                "{}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+                output,
+                "Data (base64)".green(),
+                general_purpose::STANDARD.encode(&self.data.data).black().on_black(),
+                "Previous Iteration's Data (base64)".green(),
+                general_purpose::STANDARD.encode(&prev_data).black().on_black()
+            );
+        }
+
+        if display.base58 {
+            output = format!(
+                "{}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+                output,
+                "Data (base58)".green(),
+                bs58::encode(&self.data.data).into_string().black().on_black(),
+                "Previous Iteration's Data (base58)".green(),
+                bs58::encode(&prev_data).into_string().black().on_black()
+            );
+        }
+
+        println!("{}\n", output);
     }
 }
 

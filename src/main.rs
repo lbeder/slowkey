@@ -76,14 +76,14 @@ enum Commands {
         #[arg(
             long,
             action = clap::ArgAction::SetTrue,
-            help = "Output the result in Base64 (in addition to hex)"
+            help = "Show the result in Base64 (in addition to hex)"
         )]
         base64: bool,
 
         #[arg(
             long,
             action = clap::ArgAction::SetTrue,
-            help = "Output the result in Base58 (in addition to hex)"
+            help = "Show the result in Base58 (in addition to hex)"
         )]
         base58: bool,
 
@@ -153,22 +153,50 @@ enum Commands {
         max_checkpoints_to_keep: usize,
     },
 
-    #[command(about = "Decrypt a checkpoint")]
+    #[command(about = "Decrypt and print a checkpoint")]
     ShowCheckpoint {
         #[arg(long, help = "Path to an existing checkpoint")]
         checkpoint: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the checkpoint")]
         verify: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base64 (in addition to hex)"
+        )]
+        base64: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base58 (in addition to hex)"
+        )]
+        base58: bool,
     },
 
-    #[command(about = "Decrypt an output file")]
+    #[command(about = "Decrypt and print an output file")]
     ShowOutput {
         #[arg(long, help = "Path to an existing output")]
         output: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the output")]
         verify: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base64 (in addition to hex)"
+        )]
+        base64: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base58 (in addition to hex)"
+        )]
+        base58: bool,
     },
 
     #[command(about = "Print test vectors")]
@@ -176,6 +204,12 @@ enum Commands {
 }
 
 const HEX_PREFIX: &str = "0x";
+
+#[derive(PartialEq, Debug, Clone, Default)]
+pub struct DisplayOptions {
+    pub base64: bool,
+    pub base58: bool,
+}
 
 fn get_salt() -> Vec<u8> {
     let input = Password::with_theme(&ColorfulTheme::default())
@@ -393,7 +427,7 @@ fn main() {
                     );
                 }
 
-                println!("{}\n", &checkpoint_data);
+                checkpoint_data.print(DisplayOptions::default());
 
                 slowkey_opts = SlowKeyOptions {
                     iterations,
@@ -612,7 +646,12 @@ fn main() {
             );
         },
 
-        Some(Commands::ShowCheckpoint { checkpoint, verify }) => {
+        Some(Commands::ShowCheckpoint {
+            checkpoint,
+            verify,
+            base64,
+            base58,
+        }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
@@ -625,7 +664,8 @@ fn main() {
                 path: checkpoint,
             });
 
-            println!("{}\n", &checkpoint_data);
+            checkpoint_data.print(DisplayOptions { base64, base58 });
+
             println!("{}\n", &checkpoint_data.data.slowkey);
 
             if verify {
@@ -646,7 +686,12 @@ fn main() {
             }
         },
 
-        Some(Commands::ShowOutput { output, verify }) => {
+        Some(Commands::ShowOutput {
+            output,
+            verify,
+            base64,
+            base58,
+        }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix\n",
                 HEX_PREFIX
@@ -659,7 +704,8 @@ fn main() {
                 path: output,
             });
 
-            println!("{}\n", &output_data);
+            output_data.print(DisplayOptions { base64, base58 });
+
             println!("{}\n", &output_data.data.slowkey);
 
             if verify {
