@@ -177,6 +177,8 @@ cargo build --target=x86_64-unknown-linux-musl
 
 ## Examples
 
+In this tool, the input provided by the user is first evaluated to determine its format. If the input string begins with `0x`, it is interpreted as a hexadecimal representation of a byte array. The tool will then parse this hexadecimal string into its corresponding byte sequence, allowing for hexadecimal data to be input directly in a recognizable format. Conversely, if the input does not start with `0x`, it is treated as raw data and used as is, without any conversion. This dual functionality enables flexibility, allowing users to input either hexadecimal or raw data based on their needs.
+
 Let's try to derive the key for the password `password`, using the salt `saltsaltsaltsalt`:
 
 > slowkey derive -i 10
