@@ -215,6 +215,7 @@ fn get_salt() -> Vec<u8> {
     let input = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
         .with_confirmation("Enter your salt again", "Error: salts don't match")
+        .allow_empty_password(true)
         .interact()
         .unwrap();
 
@@ -225,34 +226,53 @@ fn get_salt() -> Vec<u8> {
     };
 
     let salt_len = salt.len();
-    match salt_len.cmp(&SlowKey::SALT_SIZE) {
-        Ordering::Less => {
+    match salt_len {
+        0 => {
             println!();
 
             let confirmation = Confirm::new()
-            .with_prompt(format!(
-                "Salt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                salt_len,
-                SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
-            ))
-            .wait_for_newline(true)
-            .interact()
-            .unwrap();
+                .with_prompt(format!(
+                    "Salt is empty; a default {}-byte zero-filled salt will be used. Do you want to continue?",
+                    SlowKey::SALT_SIZE
+                ))
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
 
             if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&salt);
-                salt = sha512.finalize().to_vec();
-
-                salt.truncate(SlowKey::SALT_SIZE);
+                salt = SlowKey::DEFAULT_SALT.to_vec();
             } else {
                 panic!("Aborting");
             }
         },
-        Ordering::Greater => {
-            println!();
+        _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
+            Ordering::Less => {
+                println!();
 
-            let confirmation = Confirm::new()
+                let confirmation = Confirm::new()
+                    .with_prompt(format!(
+                        "Salt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
+                        salt_len,
+                        SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
+                    ))
+                    .wait_for_newline(true)
+                    .interact()
+                    .unwrap();
+
+                if confirmation {
+                    let mut sha512 = Sha512::new();
+                    sha512.update(&salt);
+                    salt = sha512.finalize().to_vec();
+
+                    salt.truncate(SlowKey::SALT_SIZE);
+                } else {
+                    panic!("Aborting");
+                }
+            },
+            Ordering::Greater => {
+                println!();
+
+                let confirmation = Confirm::new()
                 .with_prompt(format!(
                     "Salt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
                     salt_len,
@@ -262,17 +282,18 @@ fn get_salt() -> Vec<u8> {
                 .interact()
                 .unwrap();
 
-            if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&salt);
-                salt = sha512.finalize().to_vec();
+                if confirmation {
+                    let mut sha512 = Sha512::new();
+                    sha512.update(&salt);
+                    salt = sha512.finalize().to_vec();
 
-                salt.truncate(SlowKey::SALT_SIZE);
-            } else {
-                panic!("Aborting");
-            }
+                    salt.truncate(SlowKey::SALT_SIZE);
+                } else {
+                    panic!("Aborting");
+                }
+            },
+            Ordering::Equal => {},
         },
-        Ordering::Equal => {},
     }
 
     println!();

@@ -141,6 +141,7 @@ pub struct SlowKey {
 
 impl SlowKey {
     pub const SALT_SIZE: usize = 16;
+    pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
     pub fn new(opts: &SlowKeyOptions) -> Self {
         Self {
