@@ -105,7 +105,7 @@ Options:
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
-          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided
+          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save
       --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>

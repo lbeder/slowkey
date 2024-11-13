@@ -133,7 +133,7 @@ enum Commands {
         #[arg(
             long,
             requires = "checkpoint_path",
-            help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save. This argument is only required if --checkpoint-interval is provided"
+            help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save"
         )]
         checkpoint_interval: Option<usize>,
 
