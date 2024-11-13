@@ -106,10 +106,10 @@ Options:
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
           Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save
-      --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
-          Path to an existing checkpoint from which to resume the derivation process
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
           Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
+      --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
+          Path to an existing checkpoint from which to resume the derivation process
   -h, --help
           Print help
 ```

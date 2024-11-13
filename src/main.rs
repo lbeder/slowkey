@@ -140,17 +140,17 @@ enum Commands {
         #[arg(
             long,
             requires = "checkpoint_path",
-            help = "Path to an existing checkpoint from which to resume the derivation process"
-        )]
-        restore_from_checkpoint: Option<PathBuf>,
-
-        #[arg(
-            long,
-            requires = "checkpoint_path",
             default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
             help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
         )]
         max_checkpoints_to_keep: usize,
+
+        #[arg(
+            long,
+            requires = "checkpoint_path",
+            help = "Path to an existing checkpoint from which to resume the derivation process"
+        )]
+        restore_from_checkpoint: Option<PathBuf>,
     },
 
     #[command(about = "Decrypt and print a checkpoint")]
