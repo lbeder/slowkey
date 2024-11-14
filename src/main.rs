@@ -538,11 +538,10 @@ fn main() {
             let mb = MultiProgress::new();
 
             let pb = mb
-                .add(ProgressBar::new(slowkey_opts.iterations as u64))
+                .add(ProgressBar::new((slowkey_opts.iterations - offset) as u64))
                 .with_style(
                     ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
-                )
-                .with_position(offset as u64);
+                );
 
             pb.enable_steady_tick(Duration::from_secs(1));
 
@@ -551,10 +550,9 @@ fn main() {
             if checkpoint.is_some() && checkpointing_interval != 0 {
                 cpb = Some(
                     mb.add(ProgressBar::new(
-                        (slowkey_opts.iterations / checkpointing_interval) as u64,
+                        ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64,
                     ))
-                    .with_style(ProgressStyle::with_template("{msg}").unwrap())
-                    .with_position((offset / checkpointing_interval) as u64),
+                    .with_style(ProgressStyle::with_template("{msg}").unwrap()),
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
