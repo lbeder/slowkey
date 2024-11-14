@@ -95,6 +95,10 @@ impl OutputData {
         }
 
         println!("{}\n", output);
+
+        if display.options {
+            self.data.slowkey.print();
+        }
     }
 }
 

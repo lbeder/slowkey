@@ -1,5 +1,3 @@
-use std::fmt::{self, Display, Formatter};
-
 use crate::utils::{
     argon2id::{Argon2id, Argon2idOptions},
     scrypt::{Scrypt, ScryptOptions},
@@ -58,12 +56,10 @@ impl SlowKeyOptions {
             argon2id: *argon2id,
         }
     }
-}
 
-impl Display for SlowKeyOptions {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let output = format!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})",
+    pub fn print(&self) {
+        println!(
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
@@ -78,8 +74,6 @@ impl Display for SlowKeyOptions {
             &self.argon2id.m_cost.to_string().cyan(),
             &self.argon2id.t_cost.to_string().cyan()
         );
-
-        write!(f, "{}", output)
     }
 }
 

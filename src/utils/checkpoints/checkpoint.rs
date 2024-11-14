@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     collections::VecDeque,
-    fmt::{self, Display, Formatter},
     fs::{remove_file, File},
     io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
@@ -47,27 +46,6 @@ pub struct CheckpointSlowKeyOptions {
     pub length: usize,
     pub scrypt: ScryptOptions,
     pub argon2id: Argon2idOptions,
-}
-
-impl Display for CheckpointSlowKeyOptions {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let output = format!(
-            "{}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})",
-            "SlowKey Parameters".yellow(),
-            "Length".green(),
-            &self.length.to_string().cyan(),
-            "Scrypt".green(),
-            &self.scrypt.n.to_string().cyan(),
-            &self.scrypt.r.to_string().cyan(),
-            &self.scrypt.p.to_string().cyan(),
-            "Argon2id".green(),
-            Argon2id::VERSION.to_string().cyan(),
-            &self.argon2id.m_cost.to_string().cyan(),
-            &self.argon2id.t_cost.to_string().cyan()
-        );
-
-        write!(f, "{}", output)
-    }
 }
 
 impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
@@ -153,6 +131,24 @@ impl CheckpointData {
                 bs58::encode(&self.data.data).into_string().black().on_black(),
                 "Previous Iteration's Data (base58)".green(),
                 bs58::encode(&prev_data).into_string().black().on_black()
+            );
+        }
+
+        if display.options {
+            output = format!(
+                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+                output,
+                "SlowKey Parameters".yellow(),
+                "Length".green(),
+                &self.data.slowkey.length.to_string().cyan(),
+                "Scrypt".green(),
+                &self.data.slowkey.scrypt.n.to_string().cyan(),
+                &self.data.slowkey.scrypt.r.to_string().cyan(),
+                &self.data.slowkey.scrypt.p.to_string().cyan(),
+                "Argon2id".green(),
+                Argon2id::VERSION.to_string().cyan(),
+                &self.data.slowkey.argon2id.m_cost.to_string().cyan(),
+                &self.data.slowkey.argon2id.t_cost.to_string().cyan()
             );
         }
 

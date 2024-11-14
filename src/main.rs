@@ -209,6 +209,7 @@ const HEX_PREFIX: &str = "0x";
 pub struct DisplayOptions {
     pub base64: bool,
     pub base58: bool,
+    pub options: bool,
 }
 
 fn get_salt() -> Vec<u8> {
@@ -507,7 +508,7 @@ fn main() {
                 );
             }
 
-            println!("{}\n", &slowkey_opts);
+            slowkey_opts.print();
 
             let salt = get_salt();
             let password = get_password();
@@ -685,9 +686,11 @@ fn main() {
                 path: checkpoint,
             });
 
-            checkpoint_data.print(DisplayOptions { base64, base58 });
-
-            println!("{}\n", &checkpoint_data.data.slowkey);
+            checkpoint_data.print(DisplayOptions {
+                base64,
+                base58,
+                options: true,
+            });
 
             if verify {
                 let salt = get_salt();
@@ -725,9 +728,11 @@ fn main() {
                 path: output,
             });
 
-            output_data.print(DisplayOptions { base64, base58 });
-
-            println!("{}\n", &output_data.data.slowkey);
+            output_data.print(DisplayOptions {
+                base64,
+                base58,
+                options: false,
+            });
 
             if verify {
                 let salt = get_salt();
@@ -753,13 +758,14 @@ fn main() {
         Some(Commands::Test {}) => {
             for test_vector in TEST_VECTORS.iter() {
                 println!(
-                    "{}: \"{}\"\n{}: \"{}\"\n{}",
+                    "{}: \"{}\"\n{}: \"{}\"\n",
                     "Salt".yellow(),
                     from_utf8(&test_vector.salt).unwrap().cyan(),
                     "Password".yellow(),
                     from_utf8(&test_vector.password).unwrap().cyan(),
-                    test_vector.opts
                 );
+
+                test_vector.opts.print();
 
                 let slowkey = SlowKey::new(&test_vector.opts);
                 let key = slowkey.derive_key(
