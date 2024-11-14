@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "slowkey"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "argon2",
  "base64",
