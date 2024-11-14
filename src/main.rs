@@ -475,13 +475,13 @@ fn main() {
             if let Some(path) = output {
                 if output_key.is_none() {
                     output_key = Some(get_output_key());
-
-                    out = Some(Output::new(&OutputOptions {
-                        path,
-                        key: output_key.clone().unwrap(),
-                        slowkey: slowkey_opts.clone(),
-                    }))
                 }
+
+                out = Some(Output::new(&OutputOptions {
+                    path,
+                    key: output_key.clone().unwrap(),
+                    slowkey: slowkey_opts.clone(),
+                }))
             }
 
             let mut checkpointing_interval: usize = 0;
