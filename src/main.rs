@@ -92,10 +92,10 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.n.to_string(),
-            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
+            default_value = SlowKeyOptions::default().scrypt.log_n.to_string(),
+            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_LOG_N)
         )]
-        scrypt_n: u64,
+        scrypt_log_n: u8,
 
         #[arg(
             long,
@@ -408,7 +408,7 @@ fn main() {
             base64,
             base58,
             output,
-            scrypt_n,
+            scrypt_log_n,
             scrypt_r,
             scrypt_p,
             argon2_m_cost,
@@ -466,7 +466,7 @@ fn main() {
                 slowkey_opts = SlowKeyOptions::new(
                     iterations,
                     length,
-                    &ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p),
+                    &ScryptOptions::new(scrypt_log_n, scrypt_r, scrypt_p),
                     &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
                 );
             }
