@@ -18,11 +18,11 @@ impl Argon2idOptions {
 
     pub const MIN_T_COST: u32 = Params::MIN_T_COST;
     pub const MAX_T_COST: u32 = Params::MAX_T_COST;
-    pub const DEFAULT_T_COST: u32 = Params::DEFAULT_T_COST;
+    pub const DEFAULT_T_COST: u32 = 2;
 
     pub const MIN_P_COST: u32 = Params::MIN_P_COST;
     pub const MAX_P_COST: u32 = Params::MAX_P_COST;
-    pub const DEFAULT_P_COST: u32 = Params::DEFAULT_P_COST;
+    pub const DEFAULT_P_COST: u32 = 1;
 
     pub fn new(m_cost: u32, t_cost: u32, p_cost: u32) -> Self {
         if m_cost < Self::MIN_M_COST {
@@ -57,7 +57,7 @@ impl Argon2idOptions {
 
         if p_cost > Self::MAX_P_COST {
             panic!(
-                "p_cost {} is greater than the min length of {}",
+                "p_cost {} is greater than the max length of {}",
                 Self::MAX_P_COST,
                 p_cost
             );

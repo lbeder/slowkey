@@ -25,7 +25,11 @@ impl ScryptOptions {
     pub const DEFAULT_P: u32 = 1;
 
     pub fn new(log_n: u8, r: u32, p: u32) -> Self {
-        // Note that there is no need to check if either n, r or p are in bounds, since both are bound by the maximum
+        if log_n > Self::MAX_LOG_N {
+            panic!("log_n {} is greater than the max length of {}", Self::MAX_LOG_N, log_n);
+        }
+
+        // Note that there is no need to check if either r or p are in bounds, since both are bound by the maximum
         // and the minimum values for this type
 
         Self { log_n, r, p }
