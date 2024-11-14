@@ -175,6 +175,32 @@ CROSS_COMPILE=x86_64-linux-musl- cargo build --target=x86_64-unknown-linux-musl
 cargo build --target=x86_64-unknown-linux-musl
 ```
 
+### For Windows
+
+In order to get stuff working later, use the `nightly` branch of Rust:
+
+```sh
+rustup override set nightly
+```
+
+Install the standard Windows target on a Mac (note, that the opposite is currently impossible):
+
+```sh
+rustup target add x86_64-pc-windows-gnu
+```
+
+Use `homebrew` to install mingw-w64:
+
+```sh
+brew install mingw-w64
+```
+
+Now you can build it:
+
+```sh
+cargo build --release --target=x86_64-pc-windows-gnu
+```
+
 ## Examples
 
 In this tool, the input provided by the user is first evaluated to determine its format. If the input string begins with `0x`, it is interpreted as a hexadecimal representation of a byte array. The tool will then parse this hexadecimal string into its corresponding byte sequence, allowing for hexadecimal data to be input directly in a recognizable format. Conversely, if the input does not start with `0x`, it is treated as raw data and used as is, without any conversion. This dual functionality enables flexibility, allowing users to input either hexadecimal or raw data based on their needs.

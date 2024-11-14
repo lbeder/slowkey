@@ -136,7 +136,7 @@ impl CheckpointData {
 
         if display.options {
             output = format!(
-                "{}\n {}:\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+                "{}\n {}:\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})\n",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
@@ -146,9 +146,10 @@ impl CheckpointData {
                 &self.data.slowkey.scrypt.r.to_string().cyan(),
                 &self.data.slowkey.scrypt.p.to_string().cyan(),
                 "Argon2id".green(),
-                Argon2id::VERSION.to_string().cyan(),
+                (Argon2id::VERSION as u8).to_string().cyan(),
                 &self.data.slowkey.argon2id.m_cost.to_string().cyan(),
-                &self.data.slowkey.argon2id.t_cost.to_string().cyan()
+                &self.data.slowkey.argon2id.t_cost.to_string().cyan(),
+                &self.data.slowkey.argon2id.p_cost.to_string().cyan()
             );
         }
 

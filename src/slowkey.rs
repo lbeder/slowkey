@@ -60,7 +60,7 @@ impl SlowKeyOptions {
 
     pub fn print(&self) {
         println!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
@@ -71,9 +71,10 @@ impl SlowKeyOptions {
             &self.scrypt.r.to_string().cyan(),
             &self.scrypt.p.to_string().cyan(),
             "Argon2id".green(),
-            Argon2id::VERSION.to_string().cyan(),
+            (Argon2id::VERSION as u8).to_string().cyan(),
             &self.argon2id.m_cost.to_string().cyan(),
-            &self.argon2id.t_cost.to_string().cyan()
+            &self.argon2id.t_cost.to_string().cyan(),
+            &self.argon2id.p_cost.to_string().cyan()
         );
     }
 }
@@ -127,14 +128,14 @@ lazy_static! {
     ];
 }
 
-pub struct SlowKey {
+pub struct SlowKey<'a> {
     iterations: usize,
     length: usize,
     scrypt: Scrypt,
-    argon2id: Argon2id,
+    argon2id: Argon2id<'a>,
 }
 
-impl SlowKey {
+impl<'a> SlowKey<'a> {
     pub const SALT_SIZE: usize = 16;
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
@@ -174,7 +175,7 @@ impl SlowKey {
             self.double_hash(salt, password, iteration, &mut res);
 
             // Calculate the Argon2 hash of the result and the inputs
-            self.argon2id(salt, password, iteration, &mut res);
+            self.argon2id(salt, &salt_string, password, iteration, &mut res);
 
             callback(i, &res);
         }
@@ -216,19 +217,18 @@ impl SlowKey {
         *res = self.scrypt.hash(salt_string, res);
     }
 
-    fn argon2id(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn argon2id(&self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, res: &mut Vec<u8>) {
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
 
-        *res = self.argon2id.hash(salt, res);
+        *res = self.argon2id.hash(salt_string, res);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::sodium_init::initialize;
     use rstest::rstest;
 
     #[rstest]
@@ -252,7 +252,7 @@ mod tests {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions::default(),
-        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2 }
+        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2, p_cost: 1 }
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "744cfcc54433dfb5f4027163cc94c81d4630a63a6e60799c44f2a5801ad2bc77")]
     #[case(&SlowKeyOptions {
@@ -309,8 +309,6 @@ mod tests {
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
         #[case] offset: usize, #[case] expected: &str,
     ) {
-        initialize();
-
         let kdf = SlowKey::new(options);
         let key = kdf.derive_key(salt, password, offset_data, offset);
         assert_eq!(hex::encode(key), expected);

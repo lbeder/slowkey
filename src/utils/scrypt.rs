@@ -65,7 +65,7 @@ impl Scrypt {
 
         match res.hash {
             Some(output) => output.as_bytes().to_vec(),
-            None => panic!("AAAA"),
+            None => panic!("Scrypt::hash_password_customized failed"),
         }
     }
 }
@@ -73,7 +73,6 @@ impl Scrypt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::sodium_init::initialize;
     use rstest::rstest;
 
     #[rstest]
@@ -92,8 +91,6 @@ mod tests {
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,
         #[case] expected: &str,
     ) {
-        initialize();
-
         let scrypt = Scrypt::new(length, opts);
         let key = scrypt.hash(&SaltString::encode_b64(salt).unwrap(), password);
 

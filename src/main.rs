@@ -3,7 +3,6 @@ mod utils;
 extern crate chacha20poly1305;
 extern crate hex;
 extern crate indicatif;
-extern crate libsodium_sys;
 extern crate serde;
 extern crate serde_json;
 
@@ -14,7 +13,7 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::{scrypt::ScryptOptions, sodium_init::initialize},
+    utils::scrypt::ScryptOptions,
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
@@ -122,6 +121,12 @@ enum Commands {
             default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
+
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().argon2id.p_cost.to_string(),
+            help = format!("Argon2 Degree of parallelism (must be greater than {} and lesser than {})", Argon2idOptions::MIN_P_COST, Argon2idOptions::MAX_P_COST))]
+        argon2_p_cost: u32,
 
         #[arg(
             long,
@@ -394,9 +399,6 @@ fn main() {
     better_panic::install();
     color_backtrace::install();
 
-    // Initialize libsodium
-    initialize();
-
     println!("SlowKey v{VERSION}\n");
 
     let cli = Cli::parse();
@@ -413,6 +415,7 @@ fn main() {
             scrypt_p,
             argon2_m_cost,
             argon2_t_cost,
+            argon2_p_cost,
             checkpoint_interval,
             checkpoint_dir,
             restore_from_checkpoint,
@@ -467,7 +470,7 @@ fn main() {
                     iterations,
                     length,
                     &ScryptOptions::new(scrypt_log_n, scrypt_r, scrypt_p),
-                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
+                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost, argon2_p_cost),
                 );
             }
 
