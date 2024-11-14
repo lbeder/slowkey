@@ -516,6 +516,8 @@ fn main() {
             let salt = get_salt();
             let password = get_password();
 
+            let mut prev_data = Vec::new();
+
             if let Some(checkpoint_data) = restore_from_checkpoint_data {
                 println!("Verifying the checkpoint...\n");
 
@@ -528,6 +530,9 @@ fn main() {
                 } else {
                     println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
                 }
+
+                // Since we are starting from this checkpoint, set the rolling previous data to its data
+                prev_data = checkpoint_data.data.data;
             }
 
             let mb = MultiProgress::new();
@@ -560,8 +565,9 @@ fn main() {
             let start_time = SystemTime::now();
             let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
-            let prev_data = Arc::new(Mutex::new(Vec::new()));
-            let prev_data_thread = Arc::clone(&prev_data);
+
+            let prev_data_mutex = Arc::new(Mutex::new(prev_data));
+            let prev_data_thread = Arc::clone(&prev_data_mutex);
 
             let handle = thread::spawn(move || {
                 let key = slowkey.derive_key_with_callback(
@@ -637,7 +643,7 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                let prev_data_guard = prev_data.lock().unwrap();
+                let prev_data_guard = prev_data_mutex.lock().unwrap();
                 let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
                     None
                 } else {
