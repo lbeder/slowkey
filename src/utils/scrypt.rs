@@ -69,7 +69,7 @@ impl Scrypt {
 
         match res.hash {
             Some(output) => output.as_bytes().to_vec(),
-            None => panic!("Scrypt::hash_password_customized failed"),
+            None => panic!("hash_password_customized failed"),
         }
     }
 }
