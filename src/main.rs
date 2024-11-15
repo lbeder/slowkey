@@ -581,22 +581,21 @@ fn main() {
                             let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(&salt, current_iteration, current_data, prev_data);
+                                checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                let hash =
-                                    Checkpoint::hash_checkpoint(&salt, current_iteration, current_data, prev_data);
+                                let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
 
                                 cpb.set_message(format!(
-                                    "\nCreated checkpoint #{} with data hash (salted) {}",
+                                    "\nCreated checkpoint #{} with data hash {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
                                 ));
                             }
                         }
 
-                        // Store the current data in order to store it in the checkpoint for future verification of the
+                        // Store the current  data in order to store it in the checkpoint for future verification of the
                         // parameters
                         if current_iteration < iterations - 1 {
                             prev_data.clone_from(current_data);

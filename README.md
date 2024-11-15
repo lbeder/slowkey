@@ -311,14 +311,14 @@ SlowKey Parameters:
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
-Created checkpoint #5 with data hash (salted) 0x1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
+Created checkpoint #5 with data hash 0x3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1
 ```
 
-We can see that the `checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -339,7 +339,7 @@ SlowKey Parameters:
 
 We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc --verify
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -368,7 +368,7 @@ The password, salt and internal data are correct
 
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
+> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
 
 ```sh
 
@@ -414,7 +414,7 @@ Total running time: 25s
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.1d63a329b6bd1ab1199ee8d72b65e38e30cb129001436cc8ec8645329b0176dc
+> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
