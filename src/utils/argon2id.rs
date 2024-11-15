@@ -95,14 +95,11 @@ impl<'a> Argon2id<'a> {
     }
 
     pub fn hash(&self, salt: &SaltString, password: &[u8]) -> Vec<u8> {
-        let res = self
-            .argon2
-            .hash_password_customized(password, None, None, self.argon2.params().clone(), salt)
-            .unwrap();
+        let res = self.argon2.hash_password(password, salt).unwrap();
 
         match res.hash {
             Some(output) => output.as_bytes().to_vec(),
-            None => panic!("Scrypt::hash_password_customized failed"),
+            None => panic!("hash_password failed"),
         }
     }
 }
