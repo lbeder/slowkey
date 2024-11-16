@@ -283,6 +283,7 @@ SlowKey Parameters:
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
+Current checkpoint: 1/2
 Created checkpoint #5 with data hash 0x3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1
 ```
 
