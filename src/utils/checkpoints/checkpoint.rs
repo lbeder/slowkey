@@ -136,13 +136,13 @@ impl CheckpointData {
 
         if display.options {
             output = format!(
-                "{}\n {}:\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
                 &self.data.slowkey.length.to_string().cyan(),
                 "Scrypt".green(),
-                &self.data.slowkey.scrypt.log_n.to_string().cyan(),
+                &self.data.slowkey.scrypt.n.to_string().cyan(),
                 &self.data.slowkey.scrypt.r.to_string().cyan(),
                 &self.data.slowkey.scrypt.p.to_string().cyan(),
                 "Argon2id".green(),
