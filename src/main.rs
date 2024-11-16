@@ -542,11 +542,12 @@ fn main() {
 
             pb.enable_steady_tick(Duration::from_secs(1));
 
-            let checkpoint_count = ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64;
+            let mut checkpoint_count = 0;
             let mut current_checkpoint = 0;
             let mut cpb: Option<ProgressBar> = None;
 
             if checkpoint.is_some() && checkpointing_interval != 0 {
+                checkpoint_count = ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64;
                 cpb = Some(
                     mb.add(ProgressBar::new(checkpoint_count))
                         .with_style(ProgressStyle::with_template("{msg}").unwrap()),
