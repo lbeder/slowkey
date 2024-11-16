@@ -3,7 +3,6 @@ use crate::utils::{
     scrypt::{Scrypt, ScryptOptions},
 };
 use crossterm::style::Stylize;
-use scrypt::password_hash::SaltString;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
@@ -21,8 +20,8 @@ impl SlowKeyOptions {
     pub const MAX_ITERATIONS: usize = u32::MAX as usize;
     pub const DEFAULT_ITERATIONS: usize = 100;
 
-    pub const MIN_KEY_SIZE: usize = 9;
-    pub const MAX_KEY_SIZE: usize = 64;
+    pub const MIN_KEY_SIZE: usize = 10;
+    pub const MAX_KEY_SIZE: usize = 128;
     pub const DEFAULT_KEY_SIZE: usize = 32;
 
     pub fn new(iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
@@ -60,21 +59,20 @@ impl SlowKeyOptions {
 
     pub fn print(&self) {
         println!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
             "Length".green(),
             &self.length.to_string().cyan(),
             "Scrypt".green(),
-            &self.scrypt.log_n.to_string().cyan(),
+            &self.scrypt.n.to_string().cyan(),
             &self.scrypt.r.to_string().cyan(),
             &self.scrypt.p.to_string().cyan(),
             "Argon2id".green(),
-            (Argon2id::VERSION as u8).to_string().cyan(),
+            Argon2id::VERSION.to_string().cyan(),
             &self.argon2id.m_cost.to_string().cyan(),
-            &self.argon2id.t_cost.to_string().cyan(),
-            &self.argon2id.p_cost.to_string().cyan()
+            &self.argon2id.t_cost.to_string().cyan()
         );
     }
 }
@@ -128,14 +126,14 @@ lazy_static! {
     ];
 }
 
-pub struct SlowKey<'a> {
+pub struct SlowKey {
     iterations: usize,
     length: usize,
     scrypt: Scrypt,
-    argon2id: Argon2id<'a>,
+    argon2id: Argon2id,
 }
 
-impl<'a> SlowKey<'a> {
+impl SlowKey {
     pub const SALT_SIZE: usize = 16;
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
@@ -160,8 +158,6 @@ impl<'a> SlowKey<'a> {
             _ => offset_data.to_vec(),
         };
 
-        let salt_string = SaltString::encode_b64(salt).unwrap();
-
         for i in offset..self.iterations {
             let iteration = i as u64;
 
@@ -169,13 +165,13 @@ impl<'a> SlowKey<'a> {
             self.double_hash(salt, password, iteration, &mut res);
 
             // Calculate the Scrypt hash of the result and the inputs
-            self.scrypt(salt, &salt_string, password, iteration, &mut res);
+            self.scrypt(salt, password, iteration, &mut res);
 
             // Calculate the SHA2 and SHA3 hashes of the result and the inputs again
             self.double_hash(salt, password, iteration, &mut res);
 
             // Calculate the Argon2 hash of the result and the inputs
-            self.argon2id(salt, &salt_string, password, iteration, &mut res);
+            self.argon2id(salt, password, iteration, &mut res);
 
             callback(i, &res);
         }
@@ -209,26 +205,27 @@ impl<'a> SlowKey<'a> {
         *res = keccack512.finalize().to_vec();
     }
 
-    fn scrypt(&self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn scrypt(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
 
-        *res = self.scrypt.hash(salt_string, res);
+        *res = self.scrypt.hash(salt, res);
     }
 
-    fn argon2id(&self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn argon2id(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
 
-        *res = self.argon2id.hash(salt_string, res);
+        *res = self.argon2id.hash(salt, res);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::sodium_init::initialize;
     use rstest::rstest;
 
     #[rstest]
@@ -244,7 +241,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions { log_n: 12, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "6fe4ad1ea824710e75b4a3914c6f3c617c70b3aeb0451639188c253b6f52880e")]
@@ -252,63 +249,79 @@ mod tests {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions::default(),
-        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2, p_cost: 1 }
+        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2 }
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "744cfcc54433dfb5f4027163cc94c81d4630a63a6e60799c44f2a5801ad2bc77")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: 64,
-        scrypt: ScryptOptions { log_n: 20, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "3ed36a2cb71a043a901cbe237df6976b7a724acadfbc12112c90402548876dd5e76be1da2a1cb57e924a858c36b51c68db13b986e70ddc23254d7fa7a15c2ee0")]
     #[case(&SlowKeyOptions {
         iterations: 4,
+        length: 128,
+        scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
+        argon2id: Argon2idOptions::default()
+    }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
+    "8e69eb21b3aa9cf0d5b42d18b5a80c8db50908c3baadd9c425d8dfc21ca0f37a503e37a18c5312cf040654f643cc1a5b1801e1f8e86fde355d05a5d2699725b088bf6bf02b0a5888e9198c1876ce82b2664185ff914c853b86b6ead34a351fcfd7124e75bfd643fbdb391025eee3483f30b1f765eae304547a1a1168d0ef448b")]
+    #[case(&SlowKeyOptions {
+        iterations: 4,
         length: 64,
-        scrypt: ScryptOptions { log_n: 15, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"", &Vec::new(), 0,
     "3af13ebf654ddf60014f4a7f37826f5f60e4defddefffdfc6bf5431e37420c1e308e823bef30a6adb3f862c4b4270aa55e9b0440af7e8ec8d52a3458c1cb3ff4")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
-        scrypt: ScryptOptions { log_n: 15, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "c2a74fca9621ca13f2ab1a1bdf7cb8e6abe231d7494c280ff40024b1e92f964579d7c77e4b5c32ec438f2932b612f8eae9eeedbba93b0708e1f1b497bcdaed5d")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
-        scrypt: ScryptOptions { log_n: 15, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsal2", b"test", &Vec::new(), 0,
     "016bbfa52b69c0fc366f9b93b5209d0c9783c018102101eb755f217627541778b13c5db624a105ed6470d7a916e8e5843f952f20bb9f0e9b6053e72176b6158b")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
-        scrypt: ScryptOptions { log_n: 15, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test2", &Vec::new(), 0,
     "f20e5bf61c9c0ab9208eb1b5a2f3a51a8276dbc5490862f17afbba5ffe539ee95765095aff000d86371ed6ca927efe736008fd048fbde77af56b20331ebde083")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions { log_n: 12, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 1,
     "dc4ca67e268ac2df2bbaa377afabafda82012b6188d562d67ef57f66f2f592e1")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 64,
-        scrypt: ScryptOptions { log_n: 15, r: 8, p: 1 },
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
     "488d73ed1e5c22edfe060d542dc1bc517cdc567aede68fbf87f344fc153b1febbfff6bb52f236a21fa6aaa16e39769248f7eb01c80a48988049a9faee7434f99")]
+    #[case(&SlowKeyOptions {
+        iterations: 10,
+        length: 128,
+        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
+        argon2id: Argon2idOptions::default()
+    }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
+    "0ff28531af487240b664d549ebc2a367df89a2b5d94baed94a53025601b2b2f5ced135415c7cf880b4cc1fe97ea5ba052838caebb8301719d268b7a2d795d75908712910839c8145a70b7ebdf49e2f61a4c1466e89e2e5bd8fb45eb076a72baa60bc803162ee20481b1b85a5985d768908b283e95e52df4466f116ab9014945a")]
 
     fn derive_test(
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],
         #[case] offset: usize, #[case] expected: &str,
     ) {
+        initialize();
+
         let kdf = SlowKey::new(options);
         let key = kdf.derive_key(salt, password, offset_data, offset);
         assert_eq!(hex::encode(key), expected);

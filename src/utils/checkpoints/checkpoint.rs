@@ -136,20 +136,19 @@ impl CheckpointData {
 
         if display.options {
             output = format!(
-                "{}\n {}:\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {}, p_cost: {})\n",
+                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
                 &self.data.slowkey.length.to_string().cyan(),
                 "Scrypt".green(),
-                &self.data.slowkey.scrypt.log_n.to_string().cyan(),
+                &self.data.slowkey.scrypt.n.to_string().cyan(),
                 &self.data.slowkey.scrypt.r.to_string().cyan(),
                 &self.data.slowkey.scrypt.p.to_string().cyan(),
                 "Argon2id".green(),
-                (Argon2id::VERSION as u8).to_string().cyan(),
+                Argon2id::VERSION.to_string().cyan(),
                 &self.data.slowkey.argon2id.m_cost.to_string().cyan(),
-                &self.data.slowkey.argon2id.t_cost.to_string().cyan(),
-                &self.data.slowkey.argon2id.p_cost.to_string().cyan()
+                &self.data.slowkey.argon2id.t_cost.to_string().cyan()
             );
         }
 
@@ -224,8 +223,8 @@ impl Checkpoint {
         }
     }
 
-    pub fn create_checkpoint(&mut self, iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
-        let hash = Self::hash_checkpoint(iteration, data, prev_data);
+    pub fn create_checkpoint(&mut self, salt: &[u8], iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
+        let hash = Self::hash_checkpoint(salt, iteration, data, prev_data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
@@ -249,16 +248,17 @@ impl Checkpoint {
         }
     }
 
-    pub fn hash_checkpoint(iteration: usize, data: &[u8], prev_data: Option<&[u8]>) -> Vec<u8> {
-        let mut hash_data = data.to_vec();
-        hash_data.extend_from_slice(&iteration.to_be_bytes());
+    pub fn hash_checkpoint(salt: &[u8], iteration: usize, data: &[u8], prev_data: Option<&[u8]>) -> Vec<u8> {
+        let mut salted_data = data.to_vec();
+        salted_data.extend_from_slice(salt);
+        salted_data.extend_from_slice(&iteration.to_be_bytes());
 
         if let Some(prev_data) = prev_data {
-            hash_data.extend_from_slice(prev_data);
+            salted_data.extend_from_slice(prev_data);
         }
 
         let mut sha256 = Sha256::new();
-        sha256.update(hash_data);
+        sha256.update(salted_data);
         sha256.finalize().to_vec()
     }
 

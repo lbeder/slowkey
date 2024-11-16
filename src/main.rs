@@ -3,6 +3,7 @@ mod utils;
 extern crate chacha20poly1305;
 extern crate hex;
 extern crate indicatif;
+extern crate libsodium_sys;
 extern crate serde;
 extern crate serde_json;
 
@@ -13,7 +14,7 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::scrypt::ScryptOptions,
+    utils::{scrypt::ScryptOptions, sodium_init::initialize},
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
@@ -91,10 +92,10 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.log_n.to_string(),
-            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_LOG_N)
+            default_value = SlowKeyOptions::default().scrypt.n.to_string(),
+            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
         )]
-        scrypt_log_n: u8,
+        scrypt_n: u64,
 
         #[arg(
             long,
@@ -121,12 +122,6 @@ enum Commands {
             default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
-
-        #[arg(
-            long,
-            default_value = SlowKeyOptions::default().argon2id.p_cost.to_string(),
-            help = format!("Argon2 Degree of parallelism (must be greater than {} and lesser than {})", Argon2idOptions::MIN_P_COST, Argon2idOptions::MAX_P_COST))]
-        argon2_p_cost: u32,
 
         #[arg(
             long,
@@ -399,6 +394,9 @@ fn main() {
     better_panic::install();
     color_backtrace::install();
 
+    // Initialize libsodium
+    initialize();
+
     println!("SlowKey v{VERSION}\n");
 
     let cli = Cli::parse();
@@ -410,12 +408,11 @@ fn main() {
             base64,
             base58,
             output,
-            scrypt_log_n,
+            scrypt_n,
             scrypt_r,
             scrypt_p,
             argon2_m_cost,
             argon2_t_cost,
-            argon2_p_cost,
             checkpoint_interval,
             checkpoint_dir,
             restore_from_checkpoint,
@@ -469,8 +466,8 @@ fn main() {
                 slowkey_opts = SlowKeyOptions::new(
                     iterations,
                     length,
-                    &ScryptOptions::new(scrypt_log_n, scrypt_r, scrypt_p),
-                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost, argon2_p_cost),
+                    &ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p),
+                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
                 );
             }
 
@@ -516,8 +513,6 @@ fn main() {
             let salt = get_salt();
             let password = get_password();
 
-            let mut prev_data = Vec::new();
-
             if let Some(checkpoint_data) = restore_from_checkpoint_data {
                 println!("Verifying the checkpoint...\n");
 
@@ -530,18 +525,16 @@ fn main() {
                 } else {
                     println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
                 }
-
-                // Since we are starting from this checkpoint, set the rolling previous data to its data
-                prev_data = checkpoint_data.data.data;
             }
 
             let mb = MultiProgress::new();
 
             let pb = mb
-                .add(ProgressBar::new((slowkey_opts.iterations - offset) as u64))
+                .add(ProgressBar::new(slowkey_opts.iterations as u64))
                 .with_style(
                     ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
-                );
+                )
+                .with_position(offset as u64);
 
             pb.enable_steady_tick(Duration::from_secs(1));
 
@@ -550,9 +543,10 @@ fn main() {
             if checkpoint.is_some() && checkpointing_interval != 0 {
                 cpb = Some(
                     mb.add(ProgressBar::new(
-                        ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64,
+                        (slowkey_opts.iterations / checkpointing_interval) as u64,
                     ))
-                    .with_style(ProgressStyle::with_template("{msg}").unwrap()),
+                    .with_style(ProgressStyle::with_template("{msg}").unwrap())
+                    .with_position((offset / checkpointing_interval) as u64),
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
@@ -563,9 +557,8 @@ fn main() {
             let start_time = SystemTime::now();
             let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
-
-            let prev_data_mutex = Arc::new(Mutex::new(prev_data));
-            let prev_data_thread = Arc::clone(&prev_data_mutex);
+            let prev_data = Arc::new(Mutex::new(Vec::new()));
+            let prev_data_thread = Arc::clone(&prev_data);
 
             let handle = thread::spawn(move || {
                 let key = slowkey.derive_key_with_callback(
@@ -581,21 +574,22 @@ fn main() {
                             let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
+                                checkpoint.create_checkpoint(&salt, current_iteration, current_data, prev_data);
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
+                                let hash =
+                                    Checkpoint::hash_checkpoint(&salt, current_iteration, current_data, prev_data);
 
                                 cpb.set_message(format!(
-                                    "\nCreated checkpoint #{} with data hash {}",
+                                    "\nCreated checkpoint #{} with data hash (salted) {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
                                 ));
                             }
                         }
 
-                        // Store the current  data in order to store it in the checkpoint for future verification of the
+                        // Store the current data in order to store it in the checkpoint for future verification of the
                         // parameters
                         if current_iteration < iterations - 1 {
                             prev_data.clone_from(current_data);
@@ -640,7 +634,7 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                let prev_data_guard = prev_data_mutex.lock().unwrap();
+                let prev_data_guard = prev_data.lock().unwrap();
                 let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
                     None
                 } else {
