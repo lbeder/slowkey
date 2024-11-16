@@ -226,13 +226,15 @@ Despite the text being invisible, it's important to note that the text remains p
 ```sh
 ✔ Enter your salt · ********
 
-Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated to 16 bytes. Do you want to continue? [y/n]
+Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated to 16 bytes.
+Do you want to continue? [y/n]
 ```
 
 ```sh
 ✔ Enter your salt · ********
 
-Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to 16 bytes. Do you want to continue? [y/n]
+Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to 16 bytes.
+Do you want to continue? [y/n]
 ```
 
 ### Checkpoints

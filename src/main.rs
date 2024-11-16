@@ -229,13 +229,13 @@ fn get_salt() -> Vec<u8> {
     let salt_len = salt.len();
     match salt_len {
         0 => {
-            println!();
+            println!(
+                "\nSalt is empty; a default {}-byte zero-filled salt will be used.",
+                SlowKey::SALT_SIZE
+            );
 
             let confirmation = Confirm::new()
-                .with_prompt(format!(
-                    "Salt is empty; a default {}-byte zero-filled salt will be used. Do you want to continue?",
-                    SlowKey::SALT_SIZE
-                ))
+                .with_prompt("Do you want to continue?")
                 .wait_for_newline(true)
                 .interact()
                 .unwrap();
@@ -248,14 +248,15 @@ fn get_salt() -> Vec<u8> {
         },
         _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
             Ordering::Less => {
-                println!();
+                println!(
+                    "\nSalt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                    salt_len,
+                    SlowKey::SALT_SIZE,
+                    SlowKey::SALT_SIZE
+                );
 
                 let confirmation = Confirm::new()
-                    .with_prompt(format!(
-                        "Salt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                        salt_len,
-                        SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
-                    ))
+                    .with_prompt("Do you want to continue?")
                     .wait_for_newline(true)
                     .interact()
                     .unwrap();
@@ -271,17 +272,18 @@ fn get_salt() -> Vec<u8> {
                 }
             },
             Ordering::Greater => {
-                println!();
+                println!(
+                    "\nSalt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                    salt_len,
+                    SlowKey::SALT_SIZE,
+                    SlowKey::SALT_SIZE
+                );
 
                 let confirmation = Confirm::new()
-                .with_prompt(format!(
-                    "Salt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                    salt_len,
-                    SlowKey::SALT_SIZE, SlowKey::SALT_SIZE
-                ))
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
+                    .with_prompt("Do you want to continue?")
+                    .wait_for_newline(true)
+                    .interact()
+                    .unwrap();
 
                 if confirmation {
                     let mut sha512 = Sha512::new();
@@ -337,17 +339,18 @@ fn get_output_key() -> Vec<u8> {
     let key_len = key.len();
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
-            println!();
+            println!(
+                "\nOutput encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                key_len,
+                ChaCha20Poly1305::KEY_SIZE,
+                ChaCha20Poly1305::KEY_SIZE
+            );
 
             let confirmation = Confirm::new()
-            .with_prompt(format!(
-                "Output encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                key_len,
-                ChaCha20Poly1305::KEY_SIZE, ChaCha20Poly1305::KEY_SIZE
-            ))
-            .wait_for_newline(true)
-            .interact()
-            .unwrap();
+                .with_prompt("Do you want to continue?")
+                .wait_for_newline(true)
+                .interact()
+                .unwrap();
 
             if confirmation {
                 let mut sha512 = Sha512::new();
@@ -360,14 +363,15 @@ fn get_output_key() -> Vec<u8> {
             }
         },
         Ordering::Greater => {
-            println!();
+            println!(
+                "\nOutput encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                key_len,
+                ChaCha20Poly1305::KEY_SIZE,
+                ChaCha20Poly1305::KEY_SIZE
+            );
 
             let confirmation = Confirm::new()
-                .with_prompt(format!(
-                    "Output encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes. Do you want to continue?",
-                    key_len,
-                    ChaCha20Poly1305::KEY_SIZE, ChaCha20Poly1305::KEY_SIZE
-                ))
+                .with_prompt("Do you want to continue?")
                 .wait_for_newline(true)
                 .interact()
                 .unwrap();
