@@ -85,15 +85,15 @@ Options:
   -i, --iterations <ITERATIONS>
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
   -l, --length <LENGTH>
-          Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
+          Length of the derived result (must be greater than 10 and lesser than or equal to 128) [default: 32]
       --base64
           Show the result in Base64 (in addition to hex)
       --base58
           Show the result in Base58 (in addition to hex)
       --output <OUTPUT>
           Optional path for storing the encrypted output
-      --scrypt-log-n <SCRYPT_LOG_N>
-          Scrypt CPU/memory cost parameter (must be lesser than 64) [default: 20]
+      --scrypt-n <SCRYPT_N>
+          Scrypt CPU/memory cost parameter (must be lesser than 18446744073709551615) [default: 1048576]
       --scrypt-r <SCRYPT_R>
           Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>
@@ -101,9 +101,7 @@ Options:
       --argon2-m-cost <ARGON2_M_COST>
           Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than 4294967295) [default: 2097152]
       --argon2-t-cost <ARGON2_T_COST>
-          Argon2 number of iterations (must be greater than 1 and lesser than 4294967295) [default: 2]
-      --argon2-p-cost <ARGON2_P_COST>
-          Argon2 Degree of parallelism (must be greater than 1 and lesser than 16777215) [default: 1]
+          Argon2 number of iterations (must be greater than 2 and lesser than 4294967295) [default: 2]
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
@@ -217,8 +215,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -302,8 +300,8 @@ Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" c
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -333,8 +331,8 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
 We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
@@ -354,8 +352,8 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -385,8 +383,8 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -430,8 +428,8 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 20
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -468,8 +466,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -502,8 +500,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
@@ -542,8 +540,8 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 ```
 
 The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
@@ -563,8 +561,8 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ✔ Enter your salt · ********
 
@@ -597,7 +595,6 @@ Test vectors:
   - version: 19
   - m_cost: 2097152
   - t_cost: 2
-  - p: 1
 
 ### #2
 
@@ -613,7 +610,6 @@ Test vectors:
   - version: 19
   - m_cost: 2097152
   - t_cost: 2
-  - p: 1
 
 Results should be:
 
@@ -623,8 +619,8 @@ Password: ""
 SlowKey Parameters:
   Iterations: 1
   Length: 64
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 Derived key: 0xb2c1bcd2674c0c96473e61b17d6e30d6e8a46ac258f730075b476a732284c64e36df041f7bd50260d68128b62e6cffac03e4ff585025d18b04d41dda4633b800
 
 Salt: "SlowKeySlowKey16"
@@ -632,8 +628,8 @@ Password: "Hello World"
 SlowKey Parameters:
   Iterations: 3
   Length: 64
-  Scrypt: (log_n: 20, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2, p_cost: 1)
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 Derived key: 0xe24c16e6912d2348e8be84977d22bd229382b72b65b501afe0066a32d6771df57f3557de0719070bbafb8faf1d0649562be693e3bf33c6e0a107d0af712030ef
 ```
 
