@@ -513,6 +513,8 @@ fn main() {
             let salt = get_salt();
             let password = get_password();
 
+            let mut prev_data = Vec::new();
+
             if let Some(checkpoint_data) = restore_from_checkpoint_data {
                 println!("Verifying the checkpoint...\n");
 
@@ -525,16 +527,18 @@ fn main() {
                 } else {
                     println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
                 }
+
+                // Since we are starting from this checkpoint, set the rolling previous data to its data
+                prev_data = checkpoint_data.data.data;
             }
 
             let mb = MultiProgress::new();
 
             let pb = mb
-                .add(ProgressBar::new(slowkey_opts.iterations as u64))
+                .add(ProgressBar::new((slowkey_opts.iterations - offset) as u64))
                 .with_style(
                     ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
-                )
-                .with_position(offset as u64);
+                );
 
             pb.enable_steady_tick(Duration::from_secs(1));
 
@@ -543,10 +547,9 @@ fn main() {
             if checkpoint.is_some() && checkpointing_interval != 0 {
                 cpb = Some(
                     mb.add(ProgressBar::new(
-                        (slowkey_opts.iterations / checkpointing_interval) as u64,
+                        ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64,
                     ))
-                    .with_style(ProgressStyle::with_template("{msg}").unwrap())
-                    .with_position((offset / checkpointing_interval) as u64),
+                    .with_style(ProgressStyle::with_template("{msg}").unwrap()),
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
@@ -557,8 +560,9 @@ fn main() {
             let start_time = SystemTime::now();
             let running_time = Instant::now();
             let slowkey = SlowKey::new(&slowkey_opts);
-            let prev_data = Arc::new(Mutex::new(Vec::new()));
-            let prev_data_thread = Arc::clone(&prev_data);
+
+            let prev_data_mutex = Arc::new(Mutex::new(prev_data));
+            let prev_data_thread = Arc::clone(&prev_data_mutex);
 
             let handle = thread::spawn(move || {
                 let key = slowkey.derive_key_with_callback(
@@ -574,22 +578,21 @@ fn main() {
                             let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                             if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(&salt, current_iteration, current_data, prev_data);
+                                checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
                             }
 
                             if let Some(ref mut cpb) = &mut cpb {
-                                let hash =
-                                    Checkpoint::hash_checkpoint(&salt, current_iteration, current_data, prev_data);
+                                let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
 
                                 cpb.set_message(format!(
-                                    "\nCreated checkpoint #{} with data hash (salted) {}",
+                                    "\nCreated checkpoint #{} with data hash {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
                                 ));
                             }
                         }
 
-                        // Store the current data in order to store it in the checkpoint for future verification of the
+                        // Store the current  data in order to store it in the checkpoint for future verification of the
                         // parameters
                         if current_iteration < iterations - 1 {
                             prev_data.clone_from(current_data);
@@ -634,7 +637,7 @@ fn main() {
             println!();
 
             if let Some(out) = out {
-                let prev_data_guard = prev_data.lock().unwrap();
+                let prev_data_guard = prev_data_mutex.lock().unwrap();
                 let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
                     None
                 } else {
