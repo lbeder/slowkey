@@ -539,22 +539,25 @@ fn main() {
             let mb = MultiProgress::new();
 
             let pb = mb
-                .add(ProgressBar::new((slowkey_opts.iterations - offset) as u64))
-                .with_style(
-                    ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
-                );
+                .add(ProgressBar::new((iterations - offset) as u64))
+                .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {msg}    ({eta})").unwrap())
+                .with_message(format!(
+                    "{:>7}/{:<7} {}%",
+                    offset,
+                    iterations,
+                    (offset * 100) as f32 / (iterations as f32),
+                ));
 
             pb.enable_steady_tick(Duration::from_secs(1));
 
-            let mut checkpoint_count = 0;
-            let mut current_checkpoint = 0;
             let mut cpb: Option<ProgressBar> = None;
 
             if checkpoint.is_some() && checkpointing_interval != 0 {
-                checkpoint_count = ((slowkey_opts.iterations - offset) / checkpointing_interval) as u64;
                 cpb = Some(
-                    mb.add(ProgressBar::new(checkpoint_count))
-                        .with_style(ProgressStyle::with_template("{msg}").unwrap()),
+                    mb.add(ProgressBar::new(
+                        ((iterations - offset) / checkpointing_interval) as u64,
+                    ))
+                    .with_style(ProgressStyle::with_template("{msg}").unwrap()),
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
@@ -580,8 +583,6 @@ fn main() {
 
                         // Create a checkpoint if we've reached the checkpoint interval
                         if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
-                            current_checkpoint += 1;
-
                             let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                             if let Some(checkpoint) = &mut checkpoint {
@@ -592,9 +593,7 @@ fn main() {
                                 let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
 
                                 cpb.set_message(format!(
-                                    "\nCurrent checkpoint: {}/{}\nCreated checkpoint #{} with data hash {}",
-                                    current_checkpoint,
-                                    checkpoint_count,
+                                    "\nCreated checkpoint #{} with data hash {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
                                 ));
@@ -608,6 +607,12 @@ fn main() {
                         }
 
                         pb.inc(1);
+                        pb.set_message(format!(
+                            "{:>7}/{:<7} {}%",
+                            current_iteration + 1,
+                            iterations,
+                            (((current_iteration + 1) * 100) as f32) / (iterations as f32)
+                        ));
                     },
                 );
 
