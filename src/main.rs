@@ -538,16 +538,12 @@ fn main() {
 
             let mb = MultiProgress::new();
 
-            let pb = mb
-                .add(ProgressBar::new((iterations - offset) as u64))
-                .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {msg}    ({eta})").unwrap())
-                .with_message(format!(
-                    "{:>7}/{:<7} {}%",
-                    offset,
-                    iterations,
-                    (offset * 100) as f32 / (iterations as f32),
-                ));
+            let pb = mb.add(ProgressBar::new(iterations as u64)).with_style(
+                ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
+            );
 
+            pb.set_position(offset as u64);
+            pb.reset_eta();
             pb.enable_steady_tick(Duration::from_secs(1));
 
             let mut cpb: Option<ProgressBar> = None;
@@ -561,6 +557,8 @@ fn main() {
                 );
 
                 if let Some(ref mut cpb) = &mut cpb {
+                    cpb.set_position((offset / checkpointing_interval) as u64);
+                    cpb.reset_eta();
                     cpb.enable_steady_tick(Duration::from_secs(1));
                 }
             }
@@ -607,12 +605,6 @@ fn main() {
                         }
 
                         pb.inc(1);
-                        pb.set_message(format!(
-                            "{:>7}/{:<7} {}%",
-                            current_iteration + 1,
-                            iterations,
-                            (((current_iteration + 1) * 100) as f32) / (iterations as f32)
-                        ));
                     },
                 );
 
