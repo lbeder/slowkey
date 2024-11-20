@@ -569,13 +569,18 @@ fn main() {
 
             let mb = MultiProgress::new();
 
+            // Please note that we are using a custom message, instead of percents, since we want a higher resolution
+            // that the default one
             let pb = mb.add(ProgressBar::new(iterations as u64)).with_style(
-                ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>7}/{len:7} {percent}%    ({eta})").unwrap(),
+                ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap(),
             );
 
             pb.set_position(offset as u64);
             pb.reset_eta();
             pb.enable_steady_tick(Duration::from_secs(1));
+
+            // Set the percent using a custom message
+            pb.set_message(format!("{}", (offset * 100) as f64 / iterations as f64));
 
             let mut cpb: Option<ProgressBar> = None;
 
@@ -636,6 +641,12 @@ fn main() {
                         }
 
                         pb.inc(1);
+
+                        // Set the percent using a custom message
+                        pb.set_message(format!(
+                            "{}",
+                            ((current_iteration + 1) * 100) as f64 / iterations as f64
+                        ));
                     },
                 );
 
