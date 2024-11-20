@@ -194,7 +194,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       1/10      10%    (54s)
 ```
@@ -204,7 +208,11 @@ Final result:
 ```sh
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
@@ -226,12 +234,16 @@ Despite the text being invisible, it's important to note that the text remains p
 ```sh
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated to 16 bytes.
 Do you want to continue? [y/n]
 ```
 
 ```sh
 ✔ Enter your salt · ********
+
+Salt is: s...t
 
 Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to 16 bytes.
 Do you want to continue? [y/n]
@@ -281,7 +293,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
@@ -333,7 +349,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 Verifying the checkpoint...
 
@@ -364,7 +384,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 Verifying the checkpoint...
 
@@ -409,7 +433,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 Verifying the checkpoint...
 
@@ -447,7 +475,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████      10/10      100%    (0s)
 
@@ -471,7 +503,11 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 SlowKey Parameters:
   Iterations: 10
@@ -542,7 +578,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
+Salt is: s...t
+
 ✔ Enter your password · ********
+
+Password is: p...d
 
 Verifying the output...
 

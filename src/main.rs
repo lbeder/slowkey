@@ -204,6 +204,7 @@ enum Commands {
 }
 
 const HEX_PREFIX: &str = "0x";
+const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub struct DisplayOptions {
@@ -213,18 +214,22 @@ pub struct DisplayOptions {
 }
 
 fn get_salt() -> Vec<u8> {
-    let input = Password::with_theme(&ColorfulTheme::default())
+    let input_salt = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
         .with_confirmation("Enter your salt again", "Error: salts don't match")
         .allow_empty_password(true)
         .interact()
         .unwrap();
 
-    let mut salt = if input.starts_with(HEX_PREFIX) {
-        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    let mut hex = false;
+    let mut salt = if input_salt.starts_with(HEX_PREFIX) {
+        hex = true;
+        hex::decode(input_salt.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
-        input.as_bytes().to_vec()
+        input_salt.as_bytes().to_vec()
     };
+
+    show_hint(&input_salt, "Salt", hex);
 
     let salt_len = salt.len();
     match salt_len {
@@ -305,23 +310,29 @@ fn get_salt() -> Vec<u8> {
 }
 
 fn get_password() -> Vec<u8> {
-    let password = Password::with_theme(&ColorfulTheme::default())
+    let input_password = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your password")
         .with_confirmation("Enter your password again", "Error: passwords don't match")
         .interact()
         .unwrap();
 
+    let mut hex = false;
+    let password = if input_password.starts_with(HEX_PREFIX) {
+        hex = true;
+        hex::decode(input_password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        input_password.as_bytes().to_vec()
+    };
+
+    show_hint(&input_password, "Password", hex);
+
     println!();
 
-    if password.starts_with(HEX_PREFIX) {
-        hex::decode(password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        password.as_bytes().to_vec()
-    }
+    password
 }
 
 fn get_output_key() -> Vec<u8> {
-    let key = Password::with_theme(&ColorfulTheme::default())
+    let input = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your checkpoint/output encryption key")
         .with_confirmation(
             "Enter your checkpoint/output encryption key again",
@@ -330,11 +341,15 @@ fn get_output_key() -> Vec<u8> {
         .interact()
         .unwrap();
 
-    let mut key = if key.starts_with(HEX_PREFIX) {
-        hex::decode(key.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    let mut hex = false;
+    let mut key = if input.starts_with(HEX_PREFIX) {
+        hex = true;
+        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
-        key.as_bytes().to_vec()
+        input.as_bytes().to_vec()
     };
+
+    show_hint(&input, "Output encryption key", hex);
 
     let key_len = key.len();
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
@@ -392,6 +407,22 @@ fn get_output_key() -> Vec<u8> {
     println!();
 
     key
+}
+
+fn show_hint(data: &str, description: &str, hex: bool) {
+    let len = data.len();
+
+    if len < MIN_SECRET_LENGTH_TO_REVEAL {
+        println!(
+            "\n{}: {} is too short, therefore hints won't be shown",
+            "Warning".dark_yellow(),
+            description,
+        );
+    } else {
+        let prefix_len = if hex { 3 } else { 1 };
+
+        println!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
+    }
 }
 
 fn main() {
