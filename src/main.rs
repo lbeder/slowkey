@@ -19,6 +19,7 @@ use crate::{
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
+use criterion::Criterion;
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Password};
 use humantime::format_duration;
@@ -201,8 +202,12 @@ enum Commands {
 
     #[command(about = "Print test vectors")]
     Test {},
+
+    #[command(about = "Run benchmarks")]
+    Bench {},
 }
 
+const BENCHMARKS_DIRECTORY: &str = "benchmarks";
 const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 
@@ -828,6 +833,19 @@ fn main() {
 
                 println!("Derived key: {}\n", format!("0x{}", hex::encode(&key)).cyan());
             }
+        },
+        Some(Commands::Bench {}) => {
+            let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
+
+            let mut criterion = Criterion::default()
+                .output_directory(&output_path)
+                .measurement_time(Duration::new(60, 0));
+
+            SlowKey::benchmark(&mut criterion);
+
+            criterion.final_summary();
+
+            println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
         None => {},
     }

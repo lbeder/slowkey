@@ -2,6 +2,7 @@ use crate::utils::{
     argon2id::{Argon2id, Argon2idOptions},
     scrypt::{Scrypt, ScryptOptions},
 };
+use criterion::{black_box, BenchmarkId, Criterion};
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
@@ -219,6 +220,88 @@ impl SlowKey {
         res.extend_from_slice(&iteration.to_le_bytes());
 
         *res = self.argon2id.hash(salt, res);
+    }
+
+    pub fn benchmark(c: &mut Criterion) {
+        // Just some random data
+        let input: [u8; 32] = [
+            0x8a, 0x40, 0xd0, 0xce, 0x8b, 0x69, 0x8c, 0x6b, 0xc5, 0xc3, 0xb5, 0x29, 0x80, 0xca, 0x29, 0x99, 0x91, 0xfb,
+            0xc5, 0x37, 0x98, 0xbd, 0x2e, 0x71, 0x10, 0x79, 0x8e, 0xef, 0x71, 0x04, 0xa4, 0x6c,
+        ];
+
+        c.bench_with_input(BenchmarkId::new("SHA2", 1), &input, |b, data| {
+            b.iter(|| {
+                let mut hasher = Sha512::new();
+                hasher.update(black_box(data));
+                let _result = hasher.finalize();
+            });
+        });
+
+        c.bench_with_input(BenchmarkId::new("SHA3", 1), &input, |b, data| {
+            b.iter(|| {
+                let mut hasher = Keccak512::new();
+                hasher.update(black_box(data));
+                let _result = hasher.finalize();
+            });
+        });
+
+        for options in [ScryptOptions::new(1 << 15, 8, 1), ScryptOptions::new(1 << 17, 8, 2)] {
+            c.bench_with_input(
+                BenchmarkId::new(
+                    "Scrypt",
+                    format!("n: {}, r: {}, p: {}", options.n, options.r, options.p),
+                ),
+                &input,
+                |b, data| {
+                    b.iter(|| {
+                        let _result = Scrypt::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                    });
+                },
+            );
+        }
+
+        for options in [Argon2idOptions::new(1 << 15, 2), Argon2idOptions::new(1 << 17, 4)] {
+            c.bench_with_input(
+                BenchmarkId::new(
+                    "Argon2id",
+                    format!("m_cost: {}, t_cost: {}", options.m_cost, options.t_cost),
+                ),
+                &input,
+                |b, data| {
+                    b.iter(|| {
+                        let _result = Argon2id::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                    });
+                },
+            );
+        }
+
+        let options = SlowKeyOptions {
+            iterations: 10,
+            length: 32,
+            scrypt: ScryptOptions::new(1 << 12, 8, 1),
+            argon2id: Argon2idOptions::new(1 << 12, 2),
+        };
+
+        c.bench_with_input(
+            BenchmarkId::new(
+                "SlowKey",
+                format!(
+                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {})",
+                    options.iterations,
+                    options.scrypt.n,
+                    options.scrypt.r,
+                    options.scrypt.p,
+                    options.argon2id.m_cost,
+                    options.argon2id.t_cost
+                ),
+            ),
+            &input,
+            |b, data| {
+                b.iter(|| {
+                    let _result = SlowKey::new(&options).derive_key(black_box(&[0u8; 16]), black_box(data), &[], 0);
+                });
+            },
+        );
     }
 }
 

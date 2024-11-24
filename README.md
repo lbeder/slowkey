@@ -68,6 +68,7 @@ Commands:
   show-checkpoint  Decrypt and print a checkpoint
   show-output      Decrypt and print an output file
   test             Print test vectors
+  bench            Run benchmarks
 
 Options:
   -h, --help     Print help
@@ -120,6 +121,17 @@ Options:
 Print test vectors
 
 Usage: slowkey test
+
+Options:
+  -h, --help  Print help
+```
+
+### Running Benchmarks
+
+```sh
+Run benchmarks
+
+Usage: slowkey bench
 
 Options:
   -h, --help  Print help
@@ -592,7 +604,7 @@ The password, salt and internal data are correct
 
 ## Test Vectors
 
-In order to verify the validity of the Scrypt calculation, you can run the `test` command:
+In order to verify the validity of SlowKey, you can run the `test` command:
 
 > slowkey test
 
@@ -649,6 +661,95 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 Derived key: 0xe24c16e6912d2348e8be84977d22bd229382b72b65b501afe0066a32d6771df57f3557de0719070bbafb8faf1d0649562be693e3bf33c6e0a107d0af712030ef
 ```
+
+## Run Benchmark
+
+In order to run the benchmark suite, you can run the `bench` command:
+
+> slowkey bench
+
+```sh
+Benchmarking SHA2/1
+Benchmarking SHA2/1: Warming up for 3.0000 s
+Benchmarking SHA2/1: Collecting 100 samples in estimated 60.001 s (270M iterations)
+Benchmarking SHA2/1: Analyzing
+SHA2/1                  time:   [221.73 ns 222.25 ns 223.15 ns]
+                        change: [-0.0452% +0.0857% +0.2462%] (p = 0.30 > 0.05)
+                        No change in performance detected.
+Found 8 outliers among 100 measurements (8.00%)
+  8 (8.00%) high severe
+
+Benchmarking SHA3/1
+Benchmarking SHA3/1: Warming up for 3.0000 s
+Benchmarking SHA3/1: Collecting 100 samples in estimated 60.001 s (263M iterations)
+Benchmarking SHA3/1: Analyzing
+SHA3/1                  time:   [227.93 ns 228.14 ns 228.40 ns]
+                        change: [-0.0865% +0.1692% +0.4892%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 10 outliers among 100 measurements (10.00%)
+  4 (4.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking Scrypt/n: 32768, r: 8, p: 1
+Benchmarking Scrypt/n: 32768, r: 8, p: 1: Warming up for 3.0000 s
+Benchmarking Scrypt/n: 32768, r: 8, p: 1: Collecting 100 samples in estimated 62.243 s (1100 iterations)
+Benchmarking Scrypt/n: 32768, r: 8, p: 1: Analyzing
+Scrypt/n: 32768, r: 8, p: 1
+                        time:   [56.394 ms 56.439 ms 56.488 ms]
+                        change: [-1.9890% -1.4193% -0.8941%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) low mild
+  5 (5.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking Scrypt/n: 131072, r: 8, p: 2
+Benchmarking Scrypt/n: 131072, r: 8, p: 2: Warming up for 3.0000 s
+Benchmarking Scrypt/n: 131072, r: 8, p: 2: Collecting 100 samples in estimated 93.388 s (200 iterations)
+Benchmarking Scrypt/n: 131072, r: 8, p: 2: Analyzing
+Scrypt/n: 131072, r: 8, p: 2
+                        time:   [464.76 ms 465.48 ms 466.35 ms]
+                        change: [-0.2292% +0.0272% +0.2847%] (p = 0.85 > 0.05)
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking Argon2id/m_cost: 32768, t_cost: 2
+Benchmarking Argon2id/m_cost: 32768, t_cost: 2: Warming up for 3.0000 s
+Benchmarking Argon2id/m_cost: 32768, t_cost: 2: Collecting 100 samples in estimated 60.180 s (2200 iterations)
+Benchmarking Argon2id/m_cost: 32768, t_cost: 2: Analyzing
+Argon2id/m_cost: 32768, t_cost: 2
+                        time:   [27.182 ms 27.213 ms 27.244 ms]
+Found 10 outliers among 100 measurements (10.00%)
+  5 (5.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking Argon2id/m_cost: 131072, t_cost: 4
+Benchmarking Argon2id/m_cost: 131072, t_cost: 4: Warming up for 3.0000 s
+Benchmarking Argon2id/m_cost: 131072, t_cost: 4: Collecting 100 samples in estimated 72.062 s (300 iterations)
+Benchmarking Argon2id/m_cost: 131072, t_cost: 4: Analyzing
+Argon2id/m_cost: 131072, t_cost: 4
+                        time:   [237.70 ms 238.34 ms 239.18 ms]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking SlowKey/iterations: 10, Scrypt: (n: 4096, r: 8, p: 1), Argon2id: (m_cost: 4096, t_cost: 2)
+Benchmarking SlowKey/iterations: 10, Scrypt: (n: 4096, r: 8, p: 1), Argon2id: (m_cost: 4096, t_cost: 2): Warming up for 3.0000 s
+Benchmarking SlowKey/iterations: 10, Scrypt: (n: 4096, r: 8, p: 1), Argon2id: (m_cost: 4096, t_cost: 2): Collecting 100 samples in estimated 61.199 s (600 iterations)
+Benchmarking SlowKey/iterations: 10, Scrypt: (n: 4096, r: 8, p: 1), Argon2id: (m_cost: 4096, t_cost: 2): Analyzing
+SlowKey/iterations: 10, Scrypt: (n: 4096, r: 8, p: 1), Argon2id: (m_cost: 4096, t_cost: 2)
+                        time:   [99.027 ms 99.378 ms 99.890 ms]
+Found 14 outliers among 100 measurements (14.00%)
+  4 (4.00%) high mild
+  10 (10.00%) high severe
+
+Saved benchmark reports to: "~/benchmarks"
+```
+
+An HTML report will be generated in the `benchmarks` directory, but please make sure to install `gnuplot` beforehand.
 
 ## License
 

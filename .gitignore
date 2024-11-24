@@ -1,5 +1,6 @@
 .vscode
 
 /target/
+/benchmarks
 
 **/*.rs.bk
