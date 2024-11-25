@@ -245,7 +245,7 @@ impl SlowKey {
             });
         });
 
-        for options in [ScryptOptions::new(1 << 15, 8, 1), ScryptOptions::new(1 << 17, 8, 2)] {
+        for options in [ScryptOptions::new(1 << 10, 8, 1), ScryptOptions::new(1 << 12, 8, 2)] {
             c.bench_with_input(
                 BenchmarkId::new(
                     "Scrypt",
@@ -260,7 +260,7 @@ impl SlowKey {
             );
         }
 
-        for options in [Argon2idOptions::new(1 << 15, 2), Argon2idOptions::new(1 << 17, 4)] {
+        for options in [Argon2idOptions::new(1 << 10, 2), Argon2idOptions::new(1 << 11, 4)] {
             c.bench_with_input(
                 BenchmarkId::new(
                     "Argon2id",
@@ -278,8 +278,8 @@ impl SlowKey {
         let options = SlowKeyOptions {
             iterations: 10,
             length: 32,
-            scrypt: ScryptOptions::new(1 << 12, 8, 1),
-            argon2id: Argon2idOptions::new(1 << 12, 2),
+            scrypt: ScryptOptions::new(1 << 10, 8, 1),
+            argon2id: Argon2idOptions::new(1 << 10, 2),
         };
 
         c.bench_with_input(

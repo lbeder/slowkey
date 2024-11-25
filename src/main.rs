@@ -837,9 +837,7 @@ fn main() {
         Some(Commands::Bench {}) => {
             let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 
-            let mut criterion = Criterion::default()
-                .output_directory(&output_path)
-                .measurement_time(Duration::new(60, 0));
+            let mut criterion = Criterion::default().output_directory(&output_path).sample_size(50);
 
             SlowKey::benchmark(&mut criterion);
 
