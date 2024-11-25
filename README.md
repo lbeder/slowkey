@@ -111,6 +111,8 @@ Options:
           Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
       --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
+      --iteration-moving-window <ITERATION_MOVING_WINDOW>
+          Iteration time sampling moving window size [default: 10]
   -h, --help
           Print help
 ```
@@ -213,6 +215,8 @@ Salt is: s...t
 Password is: p...d
 
 ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       1/10      10%    (54s)
+
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 ```
 
 Final result:
@@ -227,6 +231,8 @@ Salt is: s...t
 Password is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
+
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
 Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 
@@ -313,6 +319,7 @@ Password is: p...d
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 Created checkpoint #5 with data hash 0x3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1
 ```
 
@@ -408,13 +415,15 @@ The password, salt and internal data are correct
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        5/10        0%    (4s)
 
-
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 ```
 
 Final result:
 
 ```sh
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
+
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
 Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 
@@ -464,6 +473,8 @@ Final result:
 ```sh
 ████████████████████████████████████████████████████████████████████████████████       20/20      100%    (0s)
 
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+
 Key is (please highlight to see): 0x07eee820a3f92c5577dedd07e7d325dc58bb1064f9ae05af30be9863ec6e7354
 
 Start time: 2024-09-18 19:00:59
@@ -495,6 +506,8 @@ Salt is: s...t
 Password is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
+
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
 Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 Key (base64) is (please highlight to see): rZqgMSh7QvRcQKXK87PtR/eV2TFdIqtQolZSs/KmtxY+W4
@@ -529,6 +542,8 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
+
+Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
 Key is (please highlight to see): 0xad9aa031287b42f45c40a5caf3b3ed47f795d9315d22ab50a25652b3f2a6b716
 

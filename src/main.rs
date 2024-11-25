@@ -28,6 +28,7 @@ use mimalloc::MiMalloc;
 use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
+    collections::VecDeque,
     env,
     path::PathBuf,
     str::from_utf8,
@@ -152,6 +153,9 @@ enum Commands {
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
         restore_from_checkpoint: Option<PathBuf>,
+
+        #[arg(long, default_value = "10", help = "Iteration time sampling moving window size")]
+        iteration_moving_window: u32,
     },
 
     #[command(about = "Decrypt and print a checkpoint")]
@@ -457,6 +461,7 @@ fn main() {
             checkpoint_dir,
             restore_from_checkpoint,
             max_checkpoints_to_keep,
+            iteration_moving_window,
         }) => {
             println!(
                 "Please input all data either in raw or hex format starting with the {} prefix\n",
@@ -574,8 +579,8 @@ fn main() {
 
             let mb = MultiProgress::new();
 
-            // Please note that we are using a custom message, instead of percents, since we want a higher resolution
-            // that the default one
+            // Create the main progress bar. Please note that we are using a custom message, instead of percents, since
+            // we want a higher resolution that the default one
             let pb = mb.add(ProgressBar::new(iterations as u64)).with_style(
                 ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap(),
             );
@@ -587,26 +592,19 @@ fn main() {
             // Set the percent using a custom message
             pb.set_message(format!("{}", (offset * 100) as f64 / iterations as f64));
 
-            let mut cpb: Option<ProgressBar> = None;
-
-            if checkpoint.is_some() && checkpointing_interval != 0 {
-                cpb = Some(
-                    mb.add(ProgressBar::new(
-                        ((iterations - offset) / checkpointing_interval) as u64,
-                    ))
-                    .with_style(ProgressStyle::with_template("{msg}").unwrap()),
-                );
-
-                if let Some(ref mut cpb) = &mut cpb {
-                    cpb.set_position((offset / checkpointing_interval) as u64);
-                    cpb.reset_eta();
-                    cpb.enable_steady_tick(Duration::from_secs(1));
-                }
-            }
+            // Create a progress bar to track iteration times and checkpoints
+            let ipb = mb
+                .add(ProgressBar::new(iterations as u64))
+                .with_style(ProgressStyle::with_template("{msg}").unwrap());
 
             let start_time = SystemTime::now();
             let running_time = Instant::now();
+            let mut iteration_time = Instant::now();
+            let mut samples: VecDeque<u128> = VecDeque::new();
+
             let slowkey = SlowKey::new(&slowkey_opts);
+
+            let mut checkpoint_info = String::new();
 
             let prev_data_mutex = Arc::new(Mutex::new(prev_data));
             let prev_data_thread = Arc::clone(&prev_data_mutex);
@@ -618,6 +616,31 @@ fn main() {
                     &offset_data,
                     offset,
                     |current_iteration, current_data| {
+                        // Track iteration times
+                        let last_iteration_time = iteration_time.elapsed().as_millis();
+                        iteration_time = Instant::now();
+
+                        samples.push_back(last_iteration_time);
+
+                        // If we have more than the required samples, remove the oldest one
+                        if samples.len() > iteration_moving_window as usize {
+                            samples.pop_front();
+                        }
+
+                        // Calculate the moving average
+                        let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
+
+                        let iteration_info = format!(
+                            "\nIteration time moving average ({}): {}, last iteration time: {}",
+                            iteration_moving_window.to_string().cyan(),
+                            format_duration(Duration::from_millis(moving_average as u64))
+                                .to_string()
+                                .cyan(),
+                            format_duration(Duration::from_millis(last_iteration_time as u64))
+                                .to_string()
+                                .cyan(),
+                        );
+
                         let mut prev_data = prev_data_thread.lock().unwrap();
 
                         // Create a checkpoint if we've reached the checkpoint interval
@@ -626,16 +649,14 @@ fn main() {
 
                             if let Some(checkpoint) = &mut checkpoint {
                                 checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
-                            }
 
-                            if let Some(ref mut cpb) = &mut cpb {
                                 let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
 
-                                cpb.set_message(format!(
+                                checkpoint_info = format!(
                                     "\nCreated checkpoint #{} with data hash {}",
                                     (current_iteration + 1).to_string().cyan(),
                                     format!("0x{}", hex::encode(hash)).cyan()
-                                ));
+                                );
                             }
                         }
 
@@ -652,14 +673,13 @@ fn main() {
                             "{}",
                             ((current_iteration + 1) * 100) as f64 / iterations as f64
                         ));
+
+                        ipb.set_message(format!("{}{}", iteration_info, checkpoint_info));
                     },
                 );
 
                 pb.finish();
-
-                if let Some(ref mut cpb) = &mut cpb {
-                    cpb.finish();
-                }
+                ipb.finish();
 
                 key
             });
