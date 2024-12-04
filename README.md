@@ -136,6 +136,7 @@ Run benchmarks
 Usage: slowkey bench
 
 Options:
+  -f, --fast  Perform only fast benchmarks
   -h, --help  Print help
 ```
 

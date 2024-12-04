@@ -19,7 +19,6 @@ use crate::{
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
-use criterion::Criterion;
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Password};
 use humantime::format_duration;
@@ -208,7 +207,10 @@ enum Commands {
     Test {},
 
     #[command(about = "Run benchmarks")]
-    Bench {},
+    Bench {
+        #[arg(long, short, help = "Perform only fast benchmarks")]
+        fast: bool,
+    },
 }
 
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
@@ -738,7 +740,7 @@ fn main() {
             );
             println!(
                 "Total running time: {}\n",
-                format_duration(Duration::new(running_time.elapsed().as_secs(), 0))
+                format_duration(Duration::from_secs(running_time.elapsed().as_secs()))
                     .to_string()
                     .cyan()
             );
@@ -854,14 +856,14 @@ fn main() {
                 println!("Derived key: {}\n", format!("0x{}", hex::encode(&key)).cyan());
             }
         },
-        Some(Commands::Bench {}) => {
+        Some(Commands::Bench { fast }) => {
             let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 
-            let mut criterion = Criterion::default().output_directory(&output_path).sample_size(50);
-
-            SlowKey::benchmark(&mut criterion);
-
-            criterion.final_summary();
+            if fast {
+                SlowKey::fast_benchmark(&output_path);
+            } else {
+                SlowKey::benchmark(&output_path);
+            }
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
