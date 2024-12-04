@@ -141,6 +141,10 @@ impl SlowKey {
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
     pub fn new(opts: &SlowKeyOptions) -> Self {
+        if opts.iterations == 0 {
+            panic!("Invalid iterations number");
+        }
+
         Self {
             iterations: opts.iterations,
             length: opts.length,
@@ -153,7 +157,7 @@ impl SlowKey {
         &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, mut callback: F,
     ) -> Vec<u8> {
         if salt.len() != Self::SALT_SIZE {
-            panic!("salt must be {} long", Self::SALT_SIZE);
+            panic!("Salt must be {} long", Self::SALT_SIZE);
         }
 
         let mut res = match offset {

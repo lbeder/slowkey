@@ -21,7 +21,7 @@ impl ChaCha20Poly1305 {
 
     pub fn new(key: &[u8]) -> Self {
         if key.len() != Self::KEY_SIZE {
-            panic!("key must be {} long", Self::KEY_SIZE);
+            panic!("Key must be {} long", Self::KEY_SIZE);
         }
 
         ChaCha20Poly1305 {
@@ -34,7 +34,7 @@ impl ChaCha20Poly1305 {
             Nonce::Random => ChaCha20Poly1305Alg::generate_nonce(&mut OsRng),
             Nonce::Input(nonce) => {
                 if nonce.len() != Self::NONCE_SIZE {
-                    panic!("nonce must be {} long", Self::NONCE_SIZE);
+                    panic!("Nonce must be {} long", Self::NONCE_SIZE);
                 }
 
                 *ChaChaNonce::from_slice(nonce)
