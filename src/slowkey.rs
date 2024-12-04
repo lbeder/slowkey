@@ -1,14 +1,14 @@
-use std::{path::Path, time::Duration};
-
 use crate::utils::{
     argon2id::{Argon2id, Argon2idOptions},
     scrypt::{Scrypt, ScryptOptions},
 };
 use criterion::{black_box, BenchmarkId, Criterion};
 use crossterm::style::Stylize;
+use rayon::join;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
+use std::{path::Path, time::Duration};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlowKeyOptions {
@@ -160,30 +160,37 @@ impl SlowKey {
             panic!("Salt must be {} long", Self::SALT_SIZE);
         }
 
+        // If this is the first iteration, calculate the SHA2 and SHA3 hashes of the result and the inputs. Otherwise,
+        // continue from where it has stopped
         let mut res = match offset {
-            0 => Vec::new(),
+            0 => self.double_hash(salt, password, 0, &Vec::new()),
             _ => offset_data.to_vec(),
         };
 
         for i in offset..self.iterations {
             let iteration = i as u64;
 
+            // Run all hashing algorithms in parallel
+            let (scrypt_output, argon2_output) = join(
+                || self.scrypt(salt, password, iteration, &res),
+                || self.argon2id(salt, password, iteration, &res),
+            );
+
+            // Concatenate all the results and the inputs
+            res = [
+                scrypt_output,
+                argon2_output,
+                [salt, password, &iteration.to_le_bytes()].concat(),
+            ]
+            .concat();
+
             // Calculate the SHA2 and SHA3 hashes of the result and the inputs
-            self.double_hash(salt, password, iteration, &mut res);
+            res = self.double_hash(salt, password, iteration, &res);
 
-            // Calculate the Scrypt hash of the result and the inputs
-            self.scrypt(salt, password, iteration, &mut res);
-
-            // Calculate the SHA2 and SHA3 hashes of the result and the inputs again
-            self.double_hash(salt, password, iteration, &mut res);
-
-            // Calculate the Argon2 hash of the result and the inputs
-            self.argon2id(salt, password, iteration, &mut res);
+            res.truncate(self.length);
 
             callback(i, &res);
         }
-
-        res.truncate(self.length);
 
         res
     }
@@ -192,7 +199,9 @@ impl SlowKey {
         self.derive_key_with_callback(salt, password, offset_data, offset, |_, _| {})
     }
 
-    fn double_hash(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn double_hash(&self, salt: &[u8], password: &[u8], iteration: u64, input: &[u8]) -> Vec<u8> {
+        let mut res: Vec<u8> = input.to_vec();
+
         // Calculate the SHA2 hash of the result and the inputs
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
@@ -200,7 +209,7 @@ impl SlowKey {
 
         let mut sha512 = Sha512::new();
         sha512.update(&res);
-        *res = sha512.finalize().to_vec();
+        res = sha512.finalize().to_vec();
 
         // Calculate the SHA3 hash of the result and the inputs
         res.extend_from_slice(salt);
@@ -209,23 +218,28 @@ impl SlowKey {
 
         let mut keccack512 = Keccak512::new();
         keccack512.update(&res);
-        *res = keccack512.finalize().to_vec();
+
+        keccack512.finalize().to_vec()
     }
 
-    fn scrypt(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn scrypt(&self, salt: &[u8], password: &[u8], iteration: u64, input: &[u8]) -> Vec<u8> {
+        let mut res: Vec<u8> = input.to_vec();
+
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
 
-        *res = self.scrypt.hash(salt, res);
+        self.scrypt.hash(salt, &res)
     }
 
-    fn argon2id(&self, salt: &[u8], password: &[u8], iteration: u64, res: &mut Vec<u8>) {
+    fn argon2id(&self, salt: &[u8], password: &[u8], iteration: u64, input: &[u8]) -> Vec<u8> {
+        let mut res: Vec<u8> = input.to_vec();
+
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
 
-        *res = self.argon2id.hash(salt, res);
+        self.argon2id.hash(salt, &res)
     }
 
     pub fn benchmark(output_path: &Path) {

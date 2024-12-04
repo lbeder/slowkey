@@ -40,20 +40,25 @@ The SlowKey Key Derivation Scheme is defined as follows:
 
 ```pseudo
 function deriveKey(password, salt, iterations):
-    previousResult = ""
+    // Calculate the SHA2 and SHA3 hashes of the result and the inputs
+    step1 = SHA2(concatenate(salt, password, iteration))
+    result = SHA3(concatenate(step1, salt, password, iteration))
 
     for iteration from 1 to iterations:
-        step1 = SHA2(concatenate(previousResult, salt, password, iteration))
-        step2 = SHA3(concatenate(step1, salt, password, iteration))
-        step3 = Scrypt(concatenate(step2, salt, password, iteration), salt)
+        // Run all hashing algorithms in parallel
+        step2_1 = Scrypt(concatenate(result, salt, password, iteration), salt)
+        step2_2 = Argon2id(concatenate(result, salt, password, iteration), salt)
+
+        // Concatenate all the results and the inputs
+        step3 = concatenate(step2_1, step2_2, salt, password, iteration)
+
+        // Calculate the SHA2 and SHA3 hashes of the result and the inputs
         step4 = SHA2(concatenate(step3, salt, password, iteration))
         step5 = SHA3(concatenate(step4, salt, password, iteration))
-        step6 = Argon2id(concatenate(step5, salt, password, iteration), salt)
-        previousResult = step6
 
-    finalKey = truncate(previousResult, keySize)
+        result = truncate(step5, keySize)
 
-    return finalKey
+    return result
 ```
 
 ## Usage
