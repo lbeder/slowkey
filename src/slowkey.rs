@@ -434,7 +434,7 @@ mod tests {
     #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "e24c16e6912d2348e8be84977d22bd229382b72b65b501afe0066a32d6771df57f3557de0719070bbafb8faf1d0649562be693e3bf33c6e0a107d0af712030ef")]
     #[case(&SlowKeyOptions {
         iterations: 1,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions::default(),
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
@@ -455,35 +455,35 @@ mod tests {
     "744cfcc54433dfb5f4027163cc94c81d4630a63a6e60799c44f2a5801ad2bc77")]
     #[case(&SlowKeyOptions {
         iterations: 4,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "3ed36a2cb71a043a901cbe237df6976b7a724acadfbc12112c90402548876dd5e76be1da2a1cb57e924a858c36b51c68db13b986e70ddc23254d7fa7a15c2ee0")]
     #[case(&SlowKeyOptions {
         iterations: 4,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"", &Vec::new(), 0,
     "3af13ebf654ddf60014f4a7f37826f5f60e4defddefffdfc6bf5431e37420c1e308e823bef30a6adb3f862c4b4270aa55e9b0440af7e8ec8d52a3458c1cb3ff4")]
     #[case(&SlowKeyOptions {
         iterations: 10,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
     "c2a74fca9621ca13f2ab1a1bdf7cb8e6abe231d7494c280ff40024b1e92f964579d7c77e4b5c32ec438f2932b612f8eae9eeedbba93b0708e1f1b497bcdaed5d")]
     #[case(&SlowKeyOptions {
         iterations: 10,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsal2", b"test", &Vec::new(), 0,
     "016bbfa52b69c0fc366f9b93b5209d0c9783c018102101eb755f217627541778b13c5db624a105ed6470d7a916e8e5843f952f20bb9f0e9b6053e72176b6158b")]
     #[case(&SlowKeyOptions {
         iterations: 10,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test2", &Vec::new(), 0,
@@ -497,7 +497,7 @@ mod tests {
     "dc4ca67e268ac2df2bbaa377afabafda82012b6188d562d67ef57f66f2f592e1")]
     #[case(&SlowKeyOptions {
         iterations: 10,
-        length: 64,
+        length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
         argon2id: Argon2idOptions::default()
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
