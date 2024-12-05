@@ -268,7 +268,7 @@ impl SlowKey {
         });
 
         let mut group = c.benchmark_group("Algorithms");
-        group.sample_size(10).measurement_time(Duration::from_secs(200));
+        group.sample_size(10).measurement_time(Duration::from_secs(300));
 
         let options = ScryptOptions::default();
 
