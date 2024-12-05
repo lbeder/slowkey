@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-VERSION=$(cargo pkgid | cut -d# -f2 | cut -d: -f2)
+VERSION=$(cargo pkgid | sed -E 's/.*#([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
 
 ./build.sh
 
