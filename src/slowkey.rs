@@ -1,7 +1,3 @@
-use crate::utils::{
-    argon2id::{Argon2id, Argon2idOptions},
-    scrypt::{Scrypt, ScryptOptions},
-};
 use criterion::{black_box, BenchmarkId, Criterion};
 use crossterm::style::Stylize;
 use rayon::join;
@@ -9,6 +5,11 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
 use std::{path::Path, time::Duration};
+
+use crate::utils::algorithms::{
+    argon2id::{Argon2id, Argon2idOptions},
+    scrypt::{Scrypt, ScryptOptions},
+};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlowKeyOptions {

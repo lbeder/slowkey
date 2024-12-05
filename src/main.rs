@@ -14,7 +14,7 @@ mod slowkey;
 
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
-    utils::{scrypt::ScryptOptions, sodium_init::initialize},
+    utils::sodium_init::initialize,
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
@@ -36,7 +36,7 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 use utils::{
-    argon2id::Argon2idOptions,
+    algorithms::{argon2id::Argon2idOptions, scrypt::ScryptOptions},
     chacha20poly1305::ChaCha20Poly1305,
     checkpoints::checkpoint::{Checkpoint, CheckpointData, CheckpointOptions, OpenCheckpointOptions},
     outputs::output::{OpenOutputOptions, Output, OutputOptions},

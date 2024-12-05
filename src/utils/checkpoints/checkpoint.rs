@@ -1,9 +1,11 @@
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::{
-        argon2id::{Argon2id, Argon2idOptions},
+        algorithms::{
+            argon2id::{Argon2id, Argon2idOptions},
+            scrypt::ScryptOptions,
+        },
         chacha20poly1305::{ChaCha20Poly1305, Nonce},
-        scrypt::ScryptOptions,
     },
     DisplayOptions,
 };
