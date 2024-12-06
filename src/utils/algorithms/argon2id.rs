@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Argon2idOptions {
-    pub m_cost: u32,
-    pub t_cost: u32,
+    m_cost: u32,
+    t_cost: u32,
 }
 
 impl Argon2idOptions {
@@ -41,6 +41,14 @@ impl Argon2idOptions {
 
         Self { m_cost, t_cost }
     }
+
+    pub fn m_cost(&self) -> u32 {
+        self.m_cost
+    }
+
+    pub fn t_cost(&self) -> u32 {
+        self.t_cost
+    }
 }
 
 impl Default for Argon2idOptions {
@@ -59,7 +67,7 @@ pub struct Argon2id {
 
 impl Argon2id {
     pub const VERSION: u8 = 0x13;
-    const BYTES_IN_KIB: usize = 1024;
+    const BYTES_IN_KIB: usize = 1 << 10;
 
     pub fn new(length: usize, opts: &Argon2idOptions) -> Self {
         Self { length, opts: *opts }
@@ -100,12 +108,12 @@ mod tests {
     #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::default(), "b545c20926e06955c505deb14c01ca8126fb9e167470393797bc3627e46a232f9e16186a26e197eb58f6c4ec2e3897f366b32846040eb5715be6427a8f04233c")]
     #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::default(), "a9db18ddae667012b832af543436a77de985cd51de591e2b3916a73198ce5940")]
     #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::default(), "2b5ccde09d4c345912874cb0a4b15b54")]
-    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST }, "3aab062d5ba93d7da6573746f19d85c6abaa735aeac5c13c12358f1a9d16d9e87e984e245b41613079e76096062aefbccc5bc36fe6d9626b08ccbe545c7fa357")]
-    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST }, "9224d42695a83bb30ef48faf18751c5e53f5f97a084d0fe7409b19a954ccedbe")]
-    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST }, "844320f4c7cfce471b902a3d4848b79c")]
-    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2}, "57033d89807061a02b859b28fa7428ef4547db408ce4c73e7bc31a4bab3359f6413a87d861eb9a43015e141d9a88866d225035e04ea1fb771c64505b5fe8660c")]
-    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2}, "3e0d26c8b6f9c8c001e25595195d98c0e5658756dfc9c88fc5375c2295fb03bd")]
-    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions { m_cost: Argon2idOptions::DEFAULT_M_COST / 2, t_cost: Argon2idOptions::DEFAULT_T_COST * 2}, "c2f48dba626afcbfe5283c3a3cba9c60")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "3aab062d5ba93d7da6573746f19d85c6abaa735aeac5c13c12358f1a9d16d9e87e984e245b41613079e76096062aefbccc5bc36fe6d9626b08ccbe545c7fa357")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "9224d42695a83bb30ef48faf18751c5e53f5f97a084d0fe7409b19a954ccedbe")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "844320f4c7cfce471b902a3d4848b79c")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "57033d89807061a02b859b28fa7428ef4547db408ce4c73e7bc31a4bab3359f6413a87d861eb9a43015e141d9a88866d225035e04ea1fb771c64505b5fe8660c")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "3e0d26c8b6f9c8c001e25595195d98c0e5658756dfc9c88fc5375c2295fb03bd")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "c2f48dba626afcbfe5283c3a3cba9c60")]
 
     fn argon2_test(
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,

@@ -36,7 +36,7 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 use utils::{
-    algorithms::{argon2id::Argon2idOptions, scrypt::ScryptOptions},
+    algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
     chacha20poly1305::ChaCha20Poly1305,
     checkpoints::checkpoint::{Checkpoint, CheckpointData, CheckpointOptions, OpenCheckpointOptions},
     outputs::output::{OpenOutputOptions, Output, OutputOptions},
@@ -93,36 +93,48 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.n.to_string(),
+            default_value = SlowKeyOptions::default().scrypt.n().to_string(),
             help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
         )]
         scrypt_n: u64,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.r.to_string(),
+            default_value = SlowKeyOptions::default().scrypt.r().to_string(),
             help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R)
         )]
         scrypt_r: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.p.to_string(),
+            default_value = SlowKeyOptions::default().scrypt.p().to_string(),
             help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P)
         )]
         scrypt_p: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().argon2id.m_cost.to_string(),
+            default_value = SlowKeyOptions::default().argon2id.m_cost().to_string(),
             help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().argon2id.t_cost.to_string(),
+            default_value = SlowKeyOptions::default().argon2id.t_cost().to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
+
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().ballon_hash.s_cost().to_string(),
+            help = format!("Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_S_COST, BalloonHashOptions::MAX_S_COST))]
+        balloon_s_cost: u32,
+
+        #[arg(
+            long,
+            default_value = SlowKeyOptions::default().ballon_hash.t_cost().to_string(),
+            help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
+        balloon_t_cost: u32,
 
         #[arg(
             long,
@@ -459,6 +471,8 @@ fn main() {
             scrypt_p,
             argon2_m_cost,
             argon2_t_cost,
+            balloon_s_cost,
+            balloon_t_cost,
             checkpoint_interval,
             checkpoint_dir,
             restore_from_checkpoint,
@@ -498,11 +512,13 @@ fn main() {
 
                 checkpoint_data.print(DisplayOptions::default());
 
+                let opts = &checkpoint_data.data.slowkey;
                 slowkey_opts = SlowKeyOptions {
                     iterations,
-                    length: checkpoint_data.data.slowkey.length,
-                    scrypt: checkpoint_data.data.slowkey.scrypt,
-                    argon2id: checkpoint_data.data.slowkey.argon2id,
+                    length: opts.length,
+                    scrypt: opts.scrypt,
+                    argon2id: opts.argon2id,
+                    ballon_hash: opts.balloon_hash,
                 };
 
                 offset = checkpoint_data.data.iteration + 1;
@@ -515,6 +531,7 @@ fn main() {
                     length,
                     &ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p),
                     &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
+                    &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
                 );
             }
 

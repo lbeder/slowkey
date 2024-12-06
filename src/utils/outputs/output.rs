@@ -36,12 +36,15 @@ pub struct OutputData {
 
 impl OutputData {
     pub fn verify(&self, salt: &[u8], password: &[u8]) -> bool {
+        let opts = &self.data.slowkey;
+
         // Use the checkpoint's previous data to derive the current data and return if it matches
         let options = SlowKeyOptions {
             iterations: self.data.iteration,
-            length: self.data.slowkey.length,
-            scrypt: self.data.slowkey.scrypt,
-            argon2id: self.data.slowkey.argon2id,
+            length: opts.length,
+            scrypt: opts.scrypt,
+            argon2id: opts.argon2id,
+            ballon_hash: opts.ballon_hash,
         };
 
         let prev_data = match &self.data.prev_data {
@@ -148,17 +151,14 @@ impl Output {
 
         // Return the struct based on the version
         match version {
-            Version::V1 => {
+            Version::V2 => {
                 let mut encrypted_data = Vec::new();
                 reader.read_to_end(&mut encrypted_data).unwrap();
 
                 let cipher = ChaCha20Poly1305::new(&opts.key);
                 let data = cipher.decrypt(&hex::decode(encrypted_data).unwrap());
 
-                OutputData {
-                    version: Version::V1,
-                    data,
-                }
+                OutputData { version, data }
             },
         }
     }
@@ -168,7 +168,7 @@ impl Output {
         let mut writer = BufWriter::new(file);
 
         let output = OutputData {
-            version: Version::V1,
+            version: Version::V2,
             data: SlowKeyData {
                 iteration,
                 data: data.to_vec(),

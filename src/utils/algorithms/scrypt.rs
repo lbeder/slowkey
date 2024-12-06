@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ScryptOptions {
-    pub n: u64,
-    pub r: u32,
-    pub p: u32,
+    n: u64,
+    r: u32,
+    p: u32,
 }
 
 impl ScryptOptions {
@@ -25,6 +25,18 @@ impl ScryptOptions {
         // and the minimum values for this type
 
         Self { n, r, p }
+    }
+
+    pub fn n(&self) -> u64 {
+        self.n
+    }
+
+    pub fn r(&self) -> u32 {
+        self.r
+    }
+
+    pub fn p(&self) -> u32 {
+        self.p
     }
 }
 
@@ -85,12 +97,12 @@ mod tests {
     #[case(b"salt", b"test", 64, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775b64ff03b82391a33b655047a632391b6216b98b2595cd82e89eaa1d9c8c2ccf5")]
     #[case(b"salt", b"test", 32, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775")]
     #[case(b"salt", b"test", 16, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7f")]
-    #[case(b"salt", b"test", 64, &ScryptOptions { n: 1 << 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425693b2d5cbd463c3521c8132056fb801997b915a9f8d051948a430142c7aa5855")]
-    #[case(b"salt", b"test", 32, &ScryptOptions { n: 1 << 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425")]
-    #[case(b"salt", b"test", 16, &ScryptOptions { n: 1 << 12, r: 8, p: 2 }, "3ed57e6edeae5e46f2932b6d22e0a73e")]
-    #[case(b"salt", b"test", 64, &ScryptOptions { n: 1 << 12, r: 16, p: 1 }, "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354a0d56eaad6340f2c1e92dd25a6883b51f9806b6c7980c60c1b290b96dbceec45")]
-    #[case(b"salt", b"test", 32, &ScryptOptions { n: 1 << 12, r: 16, p: 1 }, "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354")]
-    #[case(b"salt", b"test", 16, &ScryptOptions { n: 1 << 12, r: 16, p: 1 }, "107a4e74f205207f82c8fd0f8a4a5fbe")]
+    #[case(b"salt", b"test", 64, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425693b2d5cbd463c3521c8132056fb801997b915a9f8d051948a430142c7aa5855")]
+    #[case(b"salt", b"test", 32, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425")]
+    #[case(b"salt", b"test", 16, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e")]
+    #[case(b"salt", b"test", 64, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354a0d56eaad6340f2c1e92dd25a6883b51f9806b6c7980c60c1b290b96dbceec45")]
+    #[case(b"salt", b"test", 32, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354")]
+    #[case(b"salt", b"test", 16, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe")]
 
     fn scrypt_test(
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,

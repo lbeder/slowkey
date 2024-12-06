@@ -5,6 +5,7 @@ name = "slowkey"
 version = "2.0.0"
 
 [dependencies]
+balloon-hash = "0.4.0"
 base64 = "0.21.7"
 better-panic = "0.3.0"
 bs58 = "0.5.1"

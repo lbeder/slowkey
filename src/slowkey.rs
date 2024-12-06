@@ -1,6 +1,6 @@
+use balloon_hash::password_hash::SaltString;
 use criterion::{black_box, BenchmarkId, Criterion};
 use crossterm::style::Stylize;
-use rayon::join;
 use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
@@ -8,6 +8,7 @@ use std::{path::Path, time::Duration};
 
 use crate::utils::algorithms::{
     argon2id::{Argon2id, Argon2idOptions},
+    balloon_hash::{BalloonHash, BalloonHashOptions},
     scrypt::{Scrypt, ScryptOptions},
 };
 
@@ -17,6 +18,7 @@ pub struct SlowKeyOptions {
     pub length: usize,
     pub scrypt: ScryptOptions,
     pub argon2id: Argon2idOptions,
+    pub ballon_hash: BalloonHashOptions,
 }
 
 impl SlowKeyOptions {
@@ -28,7 +30,10 @@ impl SlowKeyOptions {
     pub const MAX_KEY_SIZE: usize = 64;
     pub const DEFAULT_KEY_SIZE: usize = 32;
 
-    pub fn new(iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions) -> Self {
+    pub fn new(
+        iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions,
+        balloon_hash: &BalloonHashOptions,
+    ) -> Self {
         if iterations < Self::MIN_ITERATIONS {
             panic!(
                 "iterations {} is lesser than the min value of {}",
@@ -58,25 +63,30 @@ impl SlowKeyOptions {
             length,
             scrypt: *scrypt,
             argon2id: *argon2id,
+            ballon_hash: *balloon_hash,
         }
     }
 
     pub fn print(&self) {
         println!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n {}: (version: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
             "Length".green(),
             &self.length.to_string().cyan(),
             "Scrypt".green(),
-            &self.scrypt.n.to_string().cyan(),
-            &self.scrypt.r.to_string().cyan(),
-            &self.scrypt.p.to_string().cyan(),
+            &self.scrypt.n().to_string().cyan(),
+            &self.scrypt.r().to_string().cyan(),
+            &self.scrypt.p().to_string().cyan(),
             "Argon2id".green(),
             Argon2id::VERSION.to_string().cyan(),
-            &self.argon2id.m_cost.to_string().cyan(),
-            &self.argon2id.t_cost.to_string().cyan()
+            &self.argon2id.m_cost().to_string().cyan(),
+            &self.argon2id.t_cost().to_string().cyan(),
+            "BallonHash".green(),
+            BalloonHash::VERSION.cyan(),
+            &self.ballon_hash.s_cost().to_string().cyan(),
+            &self.ballon_hash.t_cost().to_string().cyan()
         );
     }
 }
@@ -88,6 +98,7 @@ impl Default for SlowKeyOptions {
             length: Self::DEFAULT_KEY_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
+            ballon_hash: BalloonHashOptions::default(),
         }
     }
 }
@@ -108,7 +119,8 @@ lazy_static! {
                 iterations: 1,
                 length: 64,
                 scrypt: ScryptOptions::default(),
-                argon2id: Argon2idOptions::default()
+                argon2id: Argon2idOptions::default(),
+                ballon_hash: BalloonHashOptions::default()
             },
             salt: b"SlowKeySlowKey16".to_vec(),
             password: Vec::new(),
@@ -120,7 +132,8 @@ lazy_static! {
                 iterations: 3,
                 length: 64,
                 scrypt: ScryptOptions::default(),
-                argon2id: Argon2idOptions::default()
+                argon2id: Argon2idOptions::default(),
+                ballon_hash: BalloonHashOptions::default()
             },
             salt: b"SlowKeySlowKey16".to_vec(),
             password: b"Hello World".to_vec(),
@@ -130,14 +143,15 @@ lazy_static! {
     ];
 }
 
-pub struct SlowKey {
+pub struct SlowKey<'a> {
     iterations: usize,
     length: usize,
     scrypt: Scrypt,
     argon2id: Argon2id,
+    balloon_hash: BalloonHash<'a>,
 }
 
-impl SlowKey {
+impl<'a> SlowKey<'a> {
     pub const SALT_SIZE: usize = 16;
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
@@ -151,6 +165,7 @@ impl SlowKey {
             length: opts.length,
             scrypt: Scrypt::new(opts.length, &opts.scrypt),
             argon2id: Argon2id::new(opts.length, &opts.argon2id),
+            balloon_hash: BalloonHash::new(opts.length, &opts.ballon_hash),
         }
     }
 
@@ -168,19 +183,27 @@ impl SlowKey {
             _ => offset_data.to_vec(),
         };
 
+        let salt_string = SaltString::encode_b64(salt).unwrap();
+
         for i in offset..self.iterations {
             let iteration = i as u64;
 
-            // Run all hashing algorithms in parallel
-            let (scrypt_output, argon2_output) = join(
-                || self.scrypt(salt, password, iteration, &res),
-                || self.argon2id(salt, password, iteration, &res),
-            );
+            let mut scrypt_output = Vec::new();
+            let mut argon2_output = Vec::new();
+            let mut balloon_hash_output = Vec::new();
+
+            // Run all KDF algorithms in parallel
+            rayon::scope(|s| {
+                s.spawn(|_| scrypt_output = self.scrypt(salt, password, iteration, &res));
+                s.spawn(|_| argon2_output = self.argon2id(salt, password, iteration, &res));
+                s.spawn(|_| balloon_hash_output = self.balloon_hash(salt, &salt_string, password, iteration, &res));
+            });
 
             // Concatenate all the results and the inputs
             res = [
                 scrypt_output,
                 argon2_output,
+                balloon_hash_output,
                 [salt, password, &iteration.to_le_bytes()].concat(),
             ]
             .concat();
@@ -243,6 +266,18 @@ impl SlowKey {
         self.argon2id.hash(salt, &res)
     }
 
+    fn balloon_hash(
+        &self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, input: &[u8],
+    ) -> Vec<u8> {
+        let mut res: Vec<u8> = input.to_vec();
+
+        res.extend_from_slice(salt);
+        res.extend_from_slice(password);
+        res.extend_from_slice(&iteration.to_le_bytes());
+
+        self.balloon_hash.hash(salt_string, &res)
+    }
+
     pub fn benchmark(output_path: &Path) {
         let mut c = Criterion::default().output_directory(output_path);
 
@@ -268,35 +303,50 @@ impl SlowKey {
             });
         });
 
+        let salt = [0u8; 32];
+        let salt_string = SaltString::encode_b64(&salt).unwrap();
+
         let mut group = c.benchmark_group("Algorithms");
         group.sample_size(10).measurement_time(Duration::from_secs(300));
 
         let options = ScryptOptions::default();
-
         group.bench_with_input(
             BenchmarkId::new(
                 "Scrypt (Default)",
-                format!("n: {}, r: {}, p: {}", options.n, options.r, options.p),
+                format!("n: {}, r: {}, p: {}", options.n(), options.r(), options.p()),
             ),
             &input,
             |b, data| {
                 b.iter(|| {
-                    let _result = Scrypt::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                    let _result = Scrypt::new(32, &options).hash(black_box(&salt), black_box(data));
                 });
             },
         );
 
         let options = Argon2idOptions::default();
-
         group.bench_with_input(
             BenchmarkId::new(
                 "Argon2id (Default)",
-                format!("m_cost: {}, t_cost: {}", options.m_cost, options.t_cost),
+                format!("m_cost: {}, t_cost: {}", options.m_cost(), options.t_cost()),
             ),
             &input,
             |b, data| {
                 b.iter(|| {
-                    let _result = Argon2id::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                    let _result = Argon2id::new(32, &options).hash(black_box(&salt), black_box(data));
+                });
+            },
+        );
+
+        let options = BalloonHashOptions::default();
+        group.bench_with_input(
+            BenchmarkId::new(
+                "BallonHash (Default)",
+                format!("s_cost: {}, t_cost: {}", options.s_cost(), options.t_cost()),
+            ),
+            &input,
+            |b, data| {
+                b.iter(|| {
+                    let _result = BalloonHash::new(32, &options).hash(black_box(&salt_string), black_box(data));
                 });
             },
         );
@@ -310,13 +360,15 @@ impl SlowKey {
             BenchmarkId::new(
                 "SlowKey (Default)",
                 format!(
-                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {})",
+                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
                     options.iterations,
-                    options.scrypt.n,
-                    options.scrypt.r,
-                    options.scrypt.p,
-                    options.argon2id.m_cost,
-                    options.argon2id.t_cost
+                    options.scrypt.n(),
+                    options.scrypt.r(),
+                    options.scrypt.p(),
+                    options.argon2id.m_cost(),
+                    options.argon2id.t_cost(),
+                    options.ballon_hash.s_cost(),
+                    options.ballon_hash.t_cost()
                 ),
             ),
             &input,
@@ -357,6 +409,9 @@ impl SlowKey {
             });
         });
 
+        let salt = [0u8; 32];
+        let salt_string = SaltString::encode_b64(&salt).unwrap();
+
         let mut group = c.benchmark_group("Algorithms");
         group.sample_size(50);
 
@@ -364,12 +419,12 @@ impl SlowKey {
             group.bench_with_input(
                 BenchmarkId::new(
                     "Scrypt",
-                    format!("n: {}, r: {}, p: {}", options.n, options.r, options.p),
+                    format!("n: {}, r: {}, p: {}", options.n(), options.r(), options.p()),
                 ),
                 &input,
                 |b, data| {
                     b.iter(|| {
-                        let _result = Scrypt::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                        let _result = Scrypt::new(32, &options).hash(black_box(&salt), black_box(data));
                     });
                 },
             );
@@ -379,12 +434,27 @@ impl SlowKey {
             group.bench_with_input(
                 BenchmarkId::new(
                     "Argon2id",
-                    format!("m_cost: {}, t_cost: {}", options.m_cost, options.t_cost),
+                    format!("m_cost: {}, t_cost: {}", options.m_cost(), options.t_cost()),
                 ),
                 &input,
                 |b, data| {
                     b.iter(|| {
-                        let _result = Argon2id::new(32, &options).hash(black_box(&[0u8; 32]), black_box(data));
+                        let _result = Argon2id::new(32, &options).hash(black_box(&salt), black_box(data));
+                    });
+                },
+            );
+        }
+
+        for options in [BalloonHashOptions::new(1 << 5, 3), BalloonHashOptions::new(1 << 6, 6)] {
+            group.bench_with_input(
+                BenchmarkId::new(
+                    "BallonHash",
+                    format!("s_cost: {}, t_cost: {}", options.s_cost(), options.t_cost()),
+                ),
+                &input,
+                |b, data| {
+                    b.iter(|| {
+                        let _result = BalloonHash::new(32, &options).hash(black_box(&salt_string), black_box(data));
                     });
                 },
             );
@@ -395,19 +465,22 @@ impl SlowKey {
             length: 32,
             scrypt: ScryptOptions::new(1 << 10, 8, 1),
             argon2id: Argon2idOptions::new(1 << 10, 2),
+            ballon_hash: BalloonHashOptions::new(1 << 5, 3),
         };
 
         group.bench_with_input(
             BenchmarkId::new(
                 "SlowKey",
                 format!(
-                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {})",
+                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
                     options.iterations,
-                    options.scrypt.n,
-                    options.scrypt.r,
-                    options.scrypt.p,
-                    options.argon2id.m_cost,
-                    options.argon2id.t_cost
+                    options.scrypt.n(),
+                    options.scrypt.r(),
+                    options.scrypt.p(),
+                    options.argon2id.m_cost(),
+                    options.argon2id.t_cost(),
+                    options.ballon_hash.t_cost(),
+                    options.ballon_hash.s_cost()
                 ),
             ),
             &input,
@@ -431,78 +504,88 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "b2c1bcd2674c0c96473e61b17d6e30d6e8a46ac258f730075b476a732284c64e36df041f7bd50260d68128b62e6cffac03e4ff585025d18b04d41dda4633b800")]
-    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "e24c16e6912d2348e8be84977d22bd229382b72b65b501afe0066a32d6771df57f3557de0719070bbafb8faf1d0649562be693e3bf33c6e0a107d0af712030ef")]
+    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "e30eb9608393fe87f5947bb15d78545f183b8c2b68b1122d18e8fccf643c0018d517fd1b07a2de16ec9b86b195f535330b0406bc1ac8b59549cae823842da415")]
+    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "0bd43af1d71da862864bfa0d1e1246efe9246228e4c2ba5d5c8162f97998939cf926d671f718f43b08efe7c4ad045022590b6fc5123ac908bd62ccb182456249")]
     #[case(&SlowKeyOptions {
         iterations: 1,
         length: SlowKeyOptions::MAX_KEY_SIZE,
         scrypt: ScryptOptions::default(),
-        argon2id: Argon2idOptions::default()
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "b143409d7030a3a2d1099de2071452406e0a94d7ccae6ef9fc570f724bfe15358b3b530d90b93e47b742f5883330f9742f1ca367b9a4c519daf66be30af100b6")]
+    "b78f9be249176f0876e2a410eacb76c7948f138aa6b262e22fb511e597bbec9364cc29712639faa88144bbd61dc843542c1ad9a14514cf7b859c534f78c87e8d")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 12, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "6fe4ad1ea824710e75b4a3914c6f3c617c70b3aeb0451639188c253b6f52880e")]
+    "0544c2195e196ccddac50d88f90288ab90a5037622fe6a296e6f71c397f0dc95")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
         scrypt: ScryptOptions::default(),
-        argon2id: Argon2idOptions { m_cost: 16, t_cost: 2 }
+        argon2id: Argon2idOptions::new(1 << 4, 2),
+        ballon_hash: BalloonHashOptions::new(1 << 5, 3),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "744cfcc54433dfb5f4027163cc94c81d4630a63a6e60799c44f2a5801ad2bc77")]
+    "a485803cd0c5fc80cec047d3872f36bf1fbb08f2e9cefdcd88f34f60dd41d74d")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 20, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 20, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "3ed36a2cb71a043a901cbe237df6976b7a724acadfbc12112c90402548876dd5e76be1da2a1cb57e924a858c36b51c68db13b986e70ddc23254d7fa7a15c2ee0")]
+    "fbb9672c3191a51e3efb966cdde1ab18ef762544d3372ba6ded39e9226ebffe6a1ed97f1591d2fdbdcf6f61f26cd1432ac2519e219363ea7871f752eb3ba22de")]
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"", &Vec::new(), 0,
-    "3af13ebf654ddf60014f4a7f37826f5f60e4defddefffdfc6bf5431e37420c1e308e823bef30a6adb3f862c4b4270aa55e9b0440af7e8ec8d52a3458c1cb3ff4")]
+    "bcd8c72981421e8f695e4cb1e0beafce9ac60beafb970a5824381a1716beda47614a170b7c8ea82fb435f836352fdabf0b3d47615c04f714928d963557f996d3")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
-    "c2a74fca9621ca13f2ab1a1bdf7cb8e6abe231d7494c280ff40024b1e92f964579d7c77e4b5c32ec438f2932b612f8eae9eeedbba93b0708e1f1b497bcdaed5d")]
+    "5113c07f49fe6d342e369a3f281fa596241cae9acfb15686404b2b3f0c77f1340fe7638755ea7a8a1e1b2205c4c3fd84da373377cfedde0382fc932d10f5e687")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsal2", b"test", &Vec::new(), 0,
-    "016bbfa52b69c0fc366f9b93b5209d0c9783c018102101eb755f217627541778b13c5db624a105ed6470d7a916e8e5843f952f20bb9f0e9b6053e72176b6158b")]
+    "49a5593ad6437a362137d2f35099133e7f68e96fd5d4b234859282158307971362a1f785cc2981f5a15e9f391eea61d042fa3be41cb478f8516fed0fbbb6f6ea")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test2", &Vec::new(), 0,
-    "f20e5bf61c9c0ab9208eb1b5a2f3a51a8276dbc5490862f17afbba5ffe539ee95765095aff000d86371ed6ca927efe736008fd048fbde77af56b20331ebde083")]
+    "e73278c6d6178cdb6ab0035f77d91288ff198cd3594fc2ba8ee5c83f7213f3f7cd45784bf91f6135975e92b68af703ce6707cb2501b7426bdf3c71f35e4b41d3")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions { n: 1 << 12, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 12, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 1,
-    "dc4ca67e268ac2df2bbaa377afabafda82012b6188d562d67ef57f66f2f592e1")]
+    "df88794d493027643559641176ee44acdd263a56e9144c3724926f350179ca95")]
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions { n: 1 << 15, r: 8, p: 1 },
-        argon2id: Argon2idOptions::default()
+        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        argon2id: Argon2idOptions::default(),
+        ballon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,
-    "488d73ed1e5c22edfe060d542dc1bc517cdc567aede68fbf87f344fc153b1febbfff6bb52f236a21fa6aaa16e39769248f7eb01c80a48988049a9faee7434f99")]
+    "881460654568cc80a8b53de0d49aa3fd665cc27c830b751d7738d14f3e2baf246171d591e8e1b20ca7e5d01dc04d65148f8b2c65505cfb03c114044e2946fde0")]
 
     fn derive_test(
         #[case] options: &SlowKeyOptions, #[case] salt: &[u8], #[case] password: &[u8], #[case] offset_data: &[u8],

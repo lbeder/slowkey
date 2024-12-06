@@ -3,6 +3,7 @@ use crate::{
     utils::{
         algorithms::{
             argon2id::{Argon2id, Argon2idOptions},
+            balloon_hash::{BalloonHash, BalloonHashOptions},
             scrypt::ScryptOptions,
         },
         chacha20poly1305::{ChaCha20Poly1305, Nonce},
@@ -48,6 +49,7 @@ pub struct CheckpointSlowKeyOptions {
     pub length: usize,
     pub scrypt: ScryptOptions,
     pub argon2id: Argon2idOptions,
+    pub balloon_hash: BalloonHashOptions,
 }
 
 impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
@@ -56,6 +58,7 @@ impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
             length: options.length,
             scrypt: options.scrypt,
             argon2id: options.argon2id,
+            balloon_hash: options.ballon_hash,
         }
     }
 }
@@ -76,12 +79,15 @@ pub struct CheckpointData {
 
 impl CheckpointData {
     pub fn verify(&self, salt: &[u8], password: &[u8]) -> bool {
+        let opts = &self.data.slowkey;
+
         // Use the checkpoint's previous data to derive the current data and return if it matches
         let options = SlowKeyOptions {
             iterations: self.data.iteration + 1,
-            length: self.data.slowkey.length,
-            scrypt: self.data.slowkey.scrypt,
-            argon2id: self.data.slowkey.argon2id,
+            length: opts.length,
+            scrypt: opts.scrypt,
+            argon2id: opts.argon2id,
+            ballon_hash: opts.balloon_hash,
         };
 
         let prev_data = match &self.data.prev_data {
@@ -137,20 +143,26 @@ impl CheckpointData {
         }
 
         if display.options {
+            let opts = &self.data.slowkey;
+
             output = format!(
-                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})  {}: (version: {}, m_cost: {}, t_cost: {})\n",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
-                &self.data.slowkey.length.to_string().cyan(),
+                &opts.length.to_string().cyan(),
                 "Scrypt".green(),
-                &self.data.slowkey.scrypt.n.to_string().cyan(),
-                &self.data.slowkey.scrypt.r.to_string().cyan(),
-                &self.data.slowkey.scrypt.p.to_string().cyan(),
+                &opts.scrypt.n().to_string().cyan(),
+                &opts.scrypt.r().to_string().cyan(),
+                &opts.scrypt.p().to_string().cyan(),
                 "Argon2id".green(),
                 Argon2id::VERSION.to_string().cyan(),
-                &self.data.slowkey.argon2id.m_cost.to_string().cyan(),
-                &self.data.slowkey.argon2id.t_cost.to_string().cyan()
+                &opts.argon2id.m_cost().to_string().cyan(),
+                &opts.argon2id.t_cost().to_string().cyan(),
+                "BallonHash".green(),
+                BalloonHash::VERSION.cyan(),
+                &opts.balloon_hash.s_cost().to_string().cyan(),
+                &opts.balloon_hash.t_cost().to_string().cyan()
             );
         }
 
@@ -211,7 +223,7 @@ impl Checkpoint {
         Self {
             dir: opts.dir.clone(),
             data: CheckpointData {
-                version: Version::V1,
+                version: Version::V2,
                 data: SlowKeyData {
                     iteration: 0,
                     data: Vec::new(),
@@ -233,7 +245,7 @@ impl Checkpoint {
             .with_extension(format!("{:0padding$}.{}", iteration + 1, hex::encode(hash)));
 
         let checkpoint = CheckpointData {
-            version: Version::V1,
+            version: Version::V2,
             data: SlowKeyData {
                 iteration,
                 data: data.to_vec(),
@@ -245,7 +257,7 @@ impl Checkpoint {
         self.store_checkpoint(&checkpoint_path, &checkpoint);
 
         self.data = CheckpointData {
-            version: Version::V1,
+            version: Version::V2,
             data: checkpoint.data,
         }
     }
@@ -282,17 +294,14 @@ impl Checkpoint {
 
         // Return the struct based on the version
         match version {
-            Version::V1 => {
+            Version::V2 => {
                 let mut encrypted_data = Vec::new();
                 reader.read_to_end(&mut encrypted_data).unwrap();
 
                 let cipher = ChaCha20Poly1305::new(&opts.key);
                 let data = cipher.decrypt(&hex::decode(encrypted_data).unwrap());
 
-                CheckpointData {
-                    version: Version::V1,
-                    data,
-                }
+                CheckpointData { version, data }
             },
         }
     }
