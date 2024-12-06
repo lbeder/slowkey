@@ -756,10 +756,18 @@ fn main() {
                     .cyan()
             );
             println!(
-                "Total running time: {}\n",
+                "Total running time: {}",
                 format_duration(Duration::from_secs(running_time.elapsed().as_secs()))
                     .to_string()
                     .cyan()
+            );
+            println!(
+                "Average iteration time: {}\n",
+                format_duration(Duration::from_millis(
+                    (running_time.elapsed().as_millis() as f64 / iterations as f64).round() as u64
+                ))
+                .to_string()
+                .cyan()
             );
         },
 
