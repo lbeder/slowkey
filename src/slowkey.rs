@@ -69,7 +69,7 @@ impl SlowKeyOptions {
 
     pub fn print(&self) {
         println!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n {}: (version: {}, s_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
@@ -83,8 +83,8 @@ impl SlowKeyOptions {
             Argon2id::VERSION.to_string().cyan(),
             &self.argon2id.m_cost().to_string().cyan(),
             &self.argon2id.t_cost().to_string().cyan(),
-            "BallonHash".green(),
-            BalloonHash::VERSION.cyan(),
+            "Balloon Hash".green(),
+            BalloonHash::HASH.cyan(),
             &self.ballon_hash.s_cost().to_string().cyan(),
             &self.ballon_hash.t_cost().to_string().cyan()
         );
@@ -340,7 +340,7 @@ impl<'a> SlowKey<'a> {
         let options = BalloonHashOptions::default();
         group.bench_with_input(
             BenchmarkId::new(
-                "BallonHash (Default)",
+                "Balloon Hash (Default)",
                 format!("s_cost: {}, t_cost: {}", options.s_cost(), options.t_cost()),
             ),
             &input,
@@ -448,7 +448,7 @@ impl<'a> SlowKey<'a> {
         for options in [BalloonHashOptions::new(1 << 5, 3), BalloonHashOptions::new(1 << 6, 6)] {
             group.bench_with_input(
                 BenchmarkId::new(
-                    "BallonHash",
+                    "Balloon Hash",
                     format!("s_cost: {}, t_cost: {}", options.s_cost(), options.t_cost()),
                 ),
                 &input,

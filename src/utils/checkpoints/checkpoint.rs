@@ -146,7 +146,7 @@ impl CheckpointData {
             let opts = &self.data.slowkey;
 
             output = format!(
-                "{}\n {}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})  {}: (version: {}, m_cost: {}, t_cost: {})\n",
+                "{}\n\n{}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
@@ -159,8 +159,8 @@ impl CheckpointData {
                 Argon2id::VERSION.to_string().cyan(),
                 &opts.argon2id.m_cost().to_string().cyan(),
                 &opts.argon2id.t_cost().to_string().cyan(),
-                "BallonHash".green(),
-                BalloonHash::VERSION.cyan(),
+                "Balloon Hash".green(),
+                BalloonHash::HASH.cyan(),
                 &opts.balloon_hash.s_cost().to_string().cyan(),
                 &opts.balloon_hash.t_cost().to_string().cyan()
             );

@@ -65,7 +65,7 @@ pub struct BalloonHash<'a> {
 }
 
 impl<'a> BalloonHash<'a> {
-    pub const VERSION: &'static str = "SHA512";
+    pub const HASH: &'static str = "SHA512";
 
     pub fn new(length: usize, opts: &BalloonHashOptions) -> Self {
         Self {

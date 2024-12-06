@@ -834,7 +834,7 @@ fn main() {
             output_data.print(DisplayOptions {
                 base64,
                 base58,
-                options: false,
+                options: true,
             });
 
             if verify {
