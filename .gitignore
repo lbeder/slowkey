@@ -2,5 +2,6 @@
 
 /target/
 /benchmarks
+/fast_benchmarks
 
 **/*.rs.bk

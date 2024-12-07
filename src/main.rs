@@ -226,6 +226,7 @@ enum Commands {
 }
 
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
+const FAST_BENCHMARKS_DIRECTORY: &str = "fast_benchmarks";
 const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 
@@ -882,11 +883,15 @@ fn main() {
             }
         },
         Some(Commands::Bench { fast }) => {
-            let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
+            let output_path: PathBuf;
 
             if fast {
+                output_path = env::current_dir().unwrap().join(FAST_BENCHMARKS_DIRECTORY);
+
                 SlowKey::fast_benchmark(&output_path);
             } else {
+                output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
+
                 SlowKey::benchmark(&output_path);
             }
 
