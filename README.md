@@ -44,8 +44,8 @@ The SlowKey Key Derivation Scheme is defined as follows:
 ```pseudo
 function deriveKey(password, salt, iterations):
     // Calculate the SHA2 and SHA3 hashes of the result and the inputs
-    step1 = SHA2(concatenate(salt, password, iteration))
-    result = SHA3(concatenate(step1, salt, password, iteration))
+    step1 = SHA2(concatenate(salt, password))
+    result = SHA3(concatenate(step1, salt, password))
 
     for iteration from 1 to iterations:
         // Run all KDF algorithms in parallel
@@ -60,7 +60,7 @@ function deriveKey(password, salt, iterations):
         step4 = SHA2(concatenate(step3, salt, password, iteration))
         step5 = SHA3(concatenate(step4, salt, password, iteration))
 
-        result = truncate(step5, keySize)
+        result = truncate(step5, key_size)
 
     return result
 ```
@@ -248,7 +248,7 @@ Password is: p...d
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
+Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Start time: 2024-12-06 21:56:34
 End time: 2024-12-06 21:57:01
@@ -336,14 +336,14 @@ Password is: p...d
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
-Created checkpoint #5 with data hash 0x2853073c9cf1b5fe6ec8bd63d1a2bcaeeea6eb23dc33eb616b18d4acb4b7e6d8
+Created checkpoint #5 with data hash 0xc33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 ```
 
-We can see that the `checkpoint.05.2853073c9cf1b5fe6ec8bd63d1a2bcaeeea6eb23dc33eb616b18d4acb4b7e6d8` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
+We can see that the `checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
 Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -353,8 +353,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Checkpoint:
   Version: 2:
   Iterations: 5:
-  Data (please highlight to see): 0xd2b371251fb9eab71227d2066e1fc96024b727482bc2b162acec9cd10359b9cb
-  Previous Iteration's Data (please highlight to see): 0xe8525440959c43a2ea383fcb6e138ad288aba2641699841d9d17490226864558
+  Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+  Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
 SlowKey Parameters:
   Length: 32
@@ -365,7 +365,7 @@ SlowKey Parameters:
 
 We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c --verify
+> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0 --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -375,8 +375,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Checkpoint:
   Version: 2:
   Iterations: 5:
-  Data (please highlight to see): 0xd2b371251fb9eab71227d2066e1fc96024b727482bc2b162acec9cd10359b9cb
-  Previous Iteration's Data (please highlight to see): 0xe8525440959c43a2ea383fcb6e138ad288aba2641699841d9d17490226864558
+  Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+  Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
 SlowKey Parameters:
   Length: 32
@@ -399,7 +399,7 @@ The password, salt and internal data are correct
 
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
+> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 
@@ -410,8 +410,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Checkpoint:
   Version: 1:
   Iterations: 5:
-  Data (please highlight to see): 0xd2b371251fb9eab71227d2066e1fc96024b727482bc2b162acec9cd10359b9cb
-  Previous Iteration's Data (please highlight to see): 0xe8525440959c43a2ea383fcb6e138ad288aba2641699841d9d17490226864558
+  Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+  Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
 SlowKey Parameters:
   Iterations: 10
@@ -444,7 +444,7 @@ Final result:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
+Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Start time: 2024-12-06 22:10:30
 End time: 2024-12-06 22:11:09
@@ -454,7 +454,7 @@ Average iteration time: 1s 993ms
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.3c0c7ab8bb2001c1efd67ce049a437c760cf95d4cc2967160b708fb7216d74d1c
+> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -464,8 +464,8 @@ Please input all data either in raw or hex format starting with the 0x prefix
 Checkpoint:
   Version: 1:
   Iterations: 5:
-  Data (please highlight to see): 0xd2b371251fb9eab71227d2066e1fc96024b727482bc2b162acec9cd10359b9cb
-  Previous Iteration's Data (please highlight to see): 0xe8525440959c43a2ea383fcb6e138ad288aba2641699841d9d17490226864558
+  Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+  Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
 SlowKey Parameters:
   Iterations: 20
@@ -496,7 +496,7 @@ Final result:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0x94cafacdd446a913b4b2002f15fa25c0a3b55b10decd75ff6a8b78ba286bf91e
+Key is (please highlight to see): 0x9e1a4e794f9c4f62a753f12b8c6971629579822c326c7ffcfdb8605a6146f94b
 
 Start time: 2024-12-06 22:10:30
 End time: 2024-12-06 22:11:09
@@ -532,9 +532,9 @@ Password is: p...d
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
-Key (base64) is (please highlight to see): 7oEcgQRGxWL4AwZlWKzuBcBpbzimkXC5ikG7/nfJjKY
-Key (base58) is (please highlight to see): H42Dh2LVMu5yXn9ydBxQnvL1p1tubYQpM3izkAD1f2Ff
+Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Key (base64) is (please highlight to see): 2hWL7fAOWrupAODAJ8JJkS461c5UME/bVPGTndsUIyo
+Key (base58) is (please highlight to see): FgJwB6BRc5wYjbeQnWh2q8egP3WVxK9hRqLsojvELRiR
 
 Start time: 2024-12-06 21:56:34
 End time: 2024-12-06 21:57:01
@@ -570,7 +570,7 @@ SlowKey Parameters:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
+Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Saved encrypted output to "~/output.enc"
 
@@ -600,7 +600,7 @@ Options:
 ```sh
 Output:
   Iterations: 10
-  Data (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
+  Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
   Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
 
 SlowKey Parameters:
@@ -622,7 +622,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Output:
   Iterations: 10
-  Data (please highlight to see): 0xee811c810446c562f803066558acee05c0696f38a69170b98a41bbfe77c98ca6
+  Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
   Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
 
 SlowKey Parameters:
@@ -701,7 +701,7 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
-Derived key: 0xe30eb9608393fe87f5947bb15d78545f183b8c2b68b1122d18e8fccf643c0018d517fd1b07a2de16ec9b86b195f535330b0406bc1ac8b59549cae823842da415
+Derived key: 0x367b02d6b56805cff382222e1a6a50c80e3b118d6147a64cb1c8b75777bc9a44266f43075fe3c05d8a37cfd19c6f7b5f268bdb88b43a1e0deba0d8f06f3c5597
 
 Salt: "SlowKeySlowKey16"
 Password: "Hello World"
@@ -713,7 +713,7 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
-Derived key: 0x0bd43af1d71da862864bfa0d1e1246efe9246228e4c2ba5d5c8162f97998939cf926d671f718f43b08efe7c4ad045022590b6fc5123ac908bd62ccb182456249
+Derived key: 0x6693eed526503206e6c27d5317b4fe2b26e0b03b9afa5dc3ec1b95628e69db4b862e82f7488062d73b8ae528d2b5590669e46b1c188e40f8919241c7f87e5eb6
 ```
 
 ## Run Benchmark
@@ -725,62 +725,57 @@ In order to run the benchmark suite, you can run the `bench` command:
 ```sh
 Benchmarking SHA2/1
 Benchmarking SHA2/1: Warming up for 3.0000 s
-Benchmarking SHA2/1: Collecting 100 samples in estimated 5.0006 s (22M iterations)
+Benchmarking SHA2/1: Collecting 100 samples in estimated 5.0008 s (22M iterations)
 Benchmarking SHA2/1: Analyzing
-SHA2/1                  time:   [221.70 ns 221.86 ns 222.03 ns]
-                        change: [-4.8386% -3.2438% -2.1463%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 5 outliers among 100 measurements (5.00%)
-  1 (1.00%) high mild
-  4 (4.00%) high severe
+SHA2/1                  time:   [224.03 ns 224.52 ns 225.05 ns]
+                        change: [+0.1348% +0.7772% +1.2479%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
 
 Benchmarking SHA3/1
 Benchmarking SHA3/1: Warming up for 3.0000 s
-Benchmarking SHA3/1: Collecting 100 samples in estimated 5.0009 s (21M iterations)
+Benchmarking SHA3/1: Collecting 100 samples in estimated 5.0006 s (22M iterations)
 Benchmarking SHA3/1: Analyzing
-SHA3/1                  time:   [229.01 ns 229.39 ns 229.84 ns]
-                        change: [-1.6765% -1.3559% -1.0465%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 10 outliers among 100 measurements (10.00%)
-  4 (4.00%) high mild
-  6 (6.00%) high severe
+SHA3/1                  time:   [228.68 ns 228.91 ns 229.17 ns]
+                        change: [-2.3990% -1.4834% -0.8176%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
 
 Benchmarking Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1
 Benchmarking Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1: Warming up for 3.0000 s
-Benchmarking Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1: Collecting 10 samples in estimated 327.08 s (165 iterations)
+Benchmarking Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1: Collecting 10 samples in estimated 40.363 s (20 iterations)
 Benchmarking Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1: Analyzing
 Algorithms/Scrypt (Default)/n: 1048576, r: 8, p: 1
-                        time:   [1.9573 s 1.9632 s 1.9712 s]
-                        change: [-4.6369% -3.3610% -2.2139%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 1 outliers among 10 measurements (10.00%)
-  1 (10.00%) high mild
+                        time:   [2.0214 s 2.0439 s 2.0689 s]
+                        change: [+2.6760% +4.1539% +5.5774%] (p = 0.00 < 0.05)
+                        Performance has regressed.
 Benchmarking Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2
 Benchmarking Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2: Warming up for 3.0000 s
-Benchmarking Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2: Collecting 10 samples in estimated 395.59 s (165 iterations)
+Benchmarking Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2: Collecting 10 samples in estimated 48.981 s (20 iterations)
 Benchmarking Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2: Analyzing
 Algorithms/Argon2id (Default)/m_cost: 2097152, t_cost: 2
-                        time:   [2.3500 s 2.3572 s 2.3725 s]
-                        change: [-4.0438% -2.1606% -0.3296%] (p = 0.05 < 0.05)
-                        Change within noise threshold.
+                        time:   [2.4135 s 2.4707 s 2.5275 s]
+                        change: [+2.4967% +5.0294% +7.5737%] (p = 0.00 < 0.05)
+                        Performance has regressed.
 Benchmarking Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1
 Benchmarking Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1: Warming up for 3.0000 s
-Benchmarking Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1: Collecting 10 samples in estimated 360.49 s (165 iterations)
+Benchmarking Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1: Collecting 10 samples in estimated 43.529 s (20 iterations)
 Benchmarking Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1: Analyzing
 Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1
-                        time:   [2.1788 s 2.1805 s 2.1837 s]
-                        change: [-1.6669% -0.8311% -0.0921%] (p = 0.06 > 0.05)
+                        time:   [2.1706 s 2.1747 s 2.1788 s]
+                        change: [-1.0131% -0.4052% +0.1218%] (p = 0.21 > 0.05)
                         No change in performance detected.
-Benchmarking Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
-Benchmarking Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Warming up for 3.0000 s
-
-Warning: Unable to complete 10 samples in 300.0s. You may wish to increase target time to 322.5s or enable flat sampling.
-Benchmarking Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Collecting 10 samples in estimated 322.53 s (55 iterations)
-Benchmarking Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Analyzing
-Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
-                        time:   [5.5593 s 5.5833 s 5.6227 s]
-                        change: [+8.8290% +10.275% +11.704%] (p = 0.00 < 0.05)
-                        Performance has regressed.
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Warming up for 3.0000 s
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Collecting 10 samples in estimated 51.109 s (20 iterations)
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Analyzing
+Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
+                        time:   [2.5249 s 2.5369 s 2.5501 s]
+                        change: [-1.1563% +0.0329% +1.1232%] (p = 0.95 > 0.05)
+                        No change in performance detected.
 
 Saved benchmark reports to: "~/benchmarks"
 ```
