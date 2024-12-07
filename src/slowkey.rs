@@ -310,7 +310,7 @@ impl<'a> SlowKey<'a> {
         group
             .sample_size(10)
             .measurement_time(Duration::from_secs(30))
-            .sampling_mode(SamplingMode::Linear);
+            .sampling_mode(SamplingMode::Flat);
 
         let options = ScryptOptions::default();
         group.bench_with_input(

@@ -149,7 +149,6 @@ Run benchmarks
 Usage: slowkey bench
 
 Options:
-  -f, --fast  Perform only fast benchmarks
   -h, --help  Print help
 ```
 
@@ -782,110 +781,6 @@ Algorithms/SlowKey (Default)/iterations: 2, Scrypt: (n: 1048576, r: 8, p: 1), Ar
                         time:   [5.5593 s 5.5833 s 5.6227 s]
                         change: [+8.8290% +10.275% +11.704%] (p = 0.00 < 0.05)
                         Performance has regressed.
-
-Saved benchmark reports to: "~/benchmarks"
-```
-
-You can also run much faster benchmarks during development:
-
-> slowkey bench --fast
-
-```sh
-Benchmarking SHA2/1
-Benchmarking SHA2/1: Warming up for 3.0000 s
-Benchmarking SHA2/1: Collecting 100 samples in estimated 5.0004 s (22M iterations)
-Benchmarking SHA2/1: Analyzing
-SHA2/1                  time:   [226.48 ns 226.93 ns 227.39 ns]
-                        change: [+1.5947% +1.8416% +2.0926%] (p = 0.00 < 0.05)
-                        Performance has regressed.
-
-Benchmarking SHA3/1
-Benchmarking SHA3/1: Warming up for 3.0000 s
-Benchmarking SHA3/1: Collecting 100 samples in estimated 5.0004 s (22M iterations)
-Benchmarking SHA3/1: Analyzing
-SHA3/1                  time:   [229.99 ns 230.39 ns 230.87 ns]
-                        change: [+0.4832% +0.8566% +1.3570%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
-Found 5 outliers among 100 measurements (5.00%)
-  4 (4.00%) high mild
-  1 (1.00%) high severe
-
-Benchmarking Algorithms/Scrypt/n: 1024, r: 8, p: 1
-Benchmarking Algorithms/Scrypt/n: 1024, r: 8, p: 1: Warming up for 3.0000 s
-Benchmarking Algorithms/Scrypt/n: 1024, r: 8, p: 1: Collecting 50 samples in estimated 6.5960 s (3825 iterations)
-Benchmarking Algorithms/Scrypt/n: 1024, r: 8, p: 1: Analyzing
-Algorithms/Scrypt/n: 1024, r: 8, p: 1
-                        time:   [1.7275 ms 1.7326 ms 1.7383 ms]
-                        change: [+0.1280% +0.7892% +1.3335%] (p = 0.01 < 0.05)
-                        Change within noise threshold.
-Found 4 outliers among 50 measurements (8.00%)
-  3 (6.00%) high mild
-  1 (2.00%) high severe
-Benchmarking Algorithms/Scrypt/n: 4096, r: 8, p: 2
-Benchmarking Algorithms/Scrypt/n: 4096, r: 8, p: 2: Warming up for 3.0000 s
-Benchmarking Algorithms/Scrypt/n: 4096, r: 8, p: 2: Collecting 50 samples in estimated 5.3926 s (400 iterations)
-Benchmarking Algorithms/Scrypt/n: 4096, r: 8, p: 2: Analyzing
-Algorithms/Scrypt/n: 4096, r: 8, p: 2
-                        time:   [13.457 ms 13.497 ms 13.542 ms]
-                        change: [-5.6534% -3.9100% -2.4143%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 5 outliers among 50 measurements (10.00%)
-  4 (8.00%) high mild
-  1 (2.00%) high severe
-Benchmarking Algorithms/Argon2id/m_cost: 1024, t_cost: 2
-Benchmarking Algorithms/Argon2id/m_cost: 1024, t_cost: 2: Warming up for 3.0000 s
-Benchmarking Algorithms/Argon2id/m_cost: 1024, t_cost: 2: Collecting 50 samples in estimated 5.0261 s (6375 iterations)
-Benchmarking Algorithms/Argon2id/m_cost: 1024, t_cost: 2: Analyzing
-Algorithms/Argon2id/m_cost: 1024, t_cost: 2
-                        time:   [786.47 µs 787.81 µs 789.28 µs]
-                        change: [-4.6432% -3.1447% -1.8310%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 2 outliers among 50 measurements (4.00%)
-  2 (4.00%) high severe
-Benchmarking Algorithms/Argon2id/m_cost: 2048, t_cost: 4
-Benchmarking Algorithms/Argon2id/m_cost: 2048, t_cost: 4: Warming up for 3.0000 s
-Benchmarking Algorithms/Argon2id/m_cost: 2048, t_cost: 4: Collecting 50 samples in estimated 7.7213 s (2550 iterations)
-Benchmarking Algorithms/Argon2id/m_cost: 2048, t_cost: 4: Analyzing
-Algorithms/Argon2id/m_cost: 2048, t_cost: 4
-                        time:   [2.9945 ms 3.0054 ms 3.0242 ms]
-                        change: [-3.9028% -3.1279% -2.3206%] (p = 0.00 < 0.05)
-                        Performance has improved.
-Found 5 outliers among 50 measurements (10.00%)
-  1 (2.00%) low mild
-  3 (6.00%) high mild
-  1 (2.00%) high severe
-Benchmarking Algorithms/Balloon Hash/s_cost: 32, t_cost: 3
-Benchmarking Algorithms/Balloon Hash/s_cost: 32, t_cost: 3: Warming up for 3.0000 s
-Benchmarking Algorithms/Balloon Hash/s_cost: 32, t_cost: 3: Collecting 50 samples in estimated 6.1476 s (3825 iterations)
-Benchmarking Algorithms/Balloon Hash/s_cost: 32, t_cost: 3: Analyzing
-Algorithms/Balloon Hash/s_cost: 32, t_cost: 3
-                        time:   [1.6086 ms 1.6101 ms 1.6116 ms]
-Found 3 outliers among 50 measurements (6.00%)
-  1 (2.00%) low mild
-  2 (4.00%) high mild
-Benchmarking Algorithms/Balloon Hash/s_cost: 64, t_cost: 6
-Benchmarking Algorithms/Balloon Hash/s_cost: 64, t_cost: 6: Warming up for 3.0000 s
-
-Warning: Unable to complete 50 samples in 5.0s. You may wish to increase target time to 8.2s, enable flat sampling, or reduce sample count to 20.
-Benchmarking Algorithms/Balloon Hash/s_cost: 64, t_cost: 6: Collecting 50 samples in estimated 8.1960 s (1275 iterations)
-Benchmarking Algorithms/Balloon Hash/s_cost: 64, t_cost: 6: Analyzing
-Algorithms/Balloon Hash/s_cost: 64, t_cost: 6
-                        time:   [6.4028 ms 6.4087 ms 6.4156 ms]
-Found 4 outliers among 50 measurements (8.00%)
-  1 (2.00%) low mild
-  2 (4.00%) high mild
-  1 (2.00%) high severe
-Benchmarking Algorithms/SlowKey/iterations: 10, Scrypt: (n: 1024, r: 8, p: 1), Argon2id: (m_cost: 1024, t_cost: 2...
-Benchmarking Algorithms/SlowKey/iterations: 10, Scrypt: (n: 1024, r: 8, p: 1), Argon2id: (m_cost: 1024, t_cost: 2...: Warming up for 3.0000 s
-Benchmarking Algorithms/SlowKey/iterations: 10, Scrypt: (n: 1024, r: 8, p: 1), Argon2id: (m_cost: 1024, t_cost: 2...: Collecting 50 samples in estimated 5.4523 s (300 iterations)
-Benchmarking Algorithms/SlowKey/iterations: 10, Scrypt: (n: 1024, r: 8, p: 1), Argon2id: (m_cost: 1024, t_cost: 2...: Analyzing
-Algorithms/SlowKey/iterations: 10, Scrypt: (n: 1024, r: 8, p: 1), Argon2id: (m_cost: 1024, t_cost: 2...
-                        time:   [18.237 ms 18.551 ms 19.054 ms]
-                        change: [+0.9399% +3.1547% +6.3382%] (p = 0.01 < 0.05)
-                        Change within noise threshold.
-Found 5 outliers among 50 measurements (10.00%)
-  1 (2.00%) high mild
-  4 (8.00%) high severe
 
 Saved benchmark reports to: "~/benchmarks"
 ```
