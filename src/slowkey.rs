@@ -278,9 +278,7 @@ impl<'a> SlowKey<'a> {
         self.balloon_hash.hash(salt_string, &res)
     }
 
-    fn perform_benchmark(
-        sample_size: usize, measurement_time: Duration, sampling_mode: SamplingMode, output_path: &Path,
-    ) {
+    pub fn benchmark(output_path: &Path) {
         let mut c = Criterion::default().output_directory(output_path);
 
         // Just some random data
@@ -310,9 +308,9 @@ impl<'a> SlowKey<'a> {
 
         let mut group = c.benchmark_group("Algorithms");
         group
-            .sample_size(sample_size)
-            .measurement_time(measurement_time)
-            .sampling_mode(sampling_mode);
+            .sample_size(10)
+            .measurement_time(Duration::from_secs(30))
+            .sampling_mode(SamplingMode::Linear);
 
         let options = ScryptOptions::default();
         group.bench_with_input(
@@ -386,14 +384,6 @@ impl<'a> SlowKey<'a> {
         group.finish();
 
         c.final_summary();
-    }
-
-    pub fn benchmark(output_path: &Path) {
-        Self::perform_benchmark(10, Duration::from_secs(300), SamplingMode::Auto, output_path);
-    }
-
-    pub fn fast_benchmark(output_path: &Path) {
-        Self::perform_benchmark(10, Duration::from_secs(30), SamplingMode::Flat, output_path);
     }
 }
 

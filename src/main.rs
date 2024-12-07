@@ -219,14 +219,10 @@ enum Commands {
     Test {},
 
     #[command(about = "Run benchmarks")]
-    Bench {
-        #[arg(long, short, help = "Perform only fast benchmarks")]
-        fast: bool,
-    },
+    Bench {},
 }
 
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
-const FAST_BENCHMARKS_DIRECTORY: &str = "fast_benchmarks";
 const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 
@@ -882,18 +878,10 @@ fn main() {
                 println!("Derived key: {}\n", format!("0x{}", hex::encode(&key)).cyan());
             }
         },
-        Some(Commands::Bench { fast }) => {
-            let output_path: PathBuf;
+        Some(Commands::Bench {}) => {
+            let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 
-            if fast {
-                output_path = env::current_dir().unwrap().join(FAST_BENCHMARKS_DIRECTORY);
-
-                SlowKey::fast_benchmark(&output_path);
-            } else {
-                output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
-
-                SlowKey::benchmark(&output_path);
-            }
+            SlowKey::benchmark(&output_path);
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
