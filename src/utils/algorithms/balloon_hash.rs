@@ -64,7 +64,7 @@ pub struct BalloonHash<'a> {
     balloon: Balloon<'a, Sha512>,
 }
 
-impl<'a> BalloonHash<'a> {
+impl BalloonHash<'_> {
     pub const HASH: &'static str = "SHA512";
 
     pub fn new(length: usize, opts: &BalloonHashOptions) -> Self {

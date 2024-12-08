@@ -151,7 +151,7 @@ pub struct SlowKey<'a> {
     balloon_hash: BalloonHash<'a>,
 }
 
-impl<'a> SlowKey<'a> {
+impl SlowKey<'_> {
     pub const SALT_SIZE: usize = 16;
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
