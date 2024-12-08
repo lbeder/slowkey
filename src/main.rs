@@ -74,20 +74,6 @@ enum Commands {
         )]
         length: usize,
 
-        #[arg(
-            long,
-            action = clap::ArgAction::SetTrue,
-            help = "Show the result in Base64 (in addition to hex)"
-        )]
-        base64: bool,
-
-        #[arg(
-            long,
-            action = clap::ArgAction::SetTrue,
-            help = "Show the result in Base58 (in addition to hex)"
-        )]
-        base58: bool,
-
         #[arg(long, help = "Optional path for storing the encrypted output")]
         output: Option<PathBuf>,
 
@@ -138,21 +124,18 @@ enum Commands {
 
         #[arg(
             long,
-            requires = "checkpoint_interval",
             help = "Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named \"checkpoint.i\", indicating the iteration number at which the checkpoint was created"
         )]
         checkpoint_dir: Option<PathBuf>,
 
         #[arg(
             long,
-            requires = "checkpoint_path",
             help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save"
         )]
         checkpoint_interval: Option<usize>,
 
         #[arg(
             long,
-            requires = "checkpoint_path",
             default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
             help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
         )]
@@ -160,10 +143,73 @@ enum Commands {
 
         #[arg(
             long,
-            requires = "checkpoint_path",
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base64 (in addition to hex)"
+        )]
+        base64: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base58 (in addition to hex)"
+        )]
+        base58: bool,
+
+        #[arg(long, default_value = "10", help = "Iteration time sampling moving window size")]
+        iteration_moving_window: u32,
+    },
+
+    #[command(about = "Continue derivation process from an existing checkpoint")]
+    RestoreFromCheckpoint {
+        #[arg(
+            short,
+            long,
+            default_value = SlowKeyOptions::default().iterations.to_string(),
+            help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS)
+        )]
+        iterations: usize,
+
+        #[arg(long, help = "Optional path for storing the encrypted output")]
+        output: Option<PathBuf>,
+
+        #[arg(
+            long,
+            help = "Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named \"checkpoint.i\", indicating the iteration number at which the checkpoint was created"
+        )]
+        checkpoint_dir: Option<PathBuf>,
+
+        #[arg(
+            long,
+            help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save"
+        )]
+        checkpoint_interval: Option<usize>,
+
+        #[arg(
+            long,
+            default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
+            help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
+        )]
+        max_checkpoints_to_keep: usize,
+
+        #[arg(
+            long,
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
-        restore_from_checkpoint: Option<PathBuf>,
+        checkpoint: PathBuf,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base64 (in addition to hex)"
+        )]
+        base64: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base58 (in addition to hex)"
+        )]
+        base58: bool,
 
         #[arg(long, default_value = "10", help = "Iteration time sampling moving window size")]
         iteration_moving_window: u32,
@@ -445,6 +491,276 @@ fn show_hint(data: &str, description: &str, hex: bool) {
     }
 }
 
+struct DeriveOptions {
+    options: SlowKeyOptions,
+    checkpoint_data: Option<CheckpointData>,
+    output_key: Option<Vec<u8>>,
+    checkpoint_dir: Option<PathBuf>,
+    checkpoint_interval: Option<usize>,
+    max_checkpoints_to_keep: usize,
+    output: Option<PathBuf>,
+    base64: bool,
+    base58: bool,
+    iteration_moving_window: u32,
+}
+
+fn derive(derive_options: DeriveOptions) {
+    let options = derive_options.options;
+    let mut output_key = derive_options.output_key;
+    let mut checkpoint: Option<Checkpoint> = None;
+
+    let mut out: Option<Output> = None;
+    if let Some(path) = derive_options.output {
+        if output_key.is_none() {
+            output_key = Some(get_output_key());
+        }
+
+        out = Some(Output::new(&OutputOptions {
+            path,
+            key: output_key.clone().unwrap(),
+            slowkey: options.clone(),
+        }))
+    }
+
+    let mut checkpointing_interval: usize = 0;
+
+    if let Some(dir) = derive_options.checkpoint_dir {
+        checkpointing_interval = derive_options.checkpoint_interval.unwrap();
+
+        if output_key.is_none() {
+            output_key = Some(get_output_key());
+        }
+
+        checkpoint = Some(Checkpoint::new(&CheckpointOptions {
+            iterations: options.iterations,
+            dir: dir.to_owned(),
+            key: output_key.clone().unwrap(),
+            max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
+            slowkey: options.clone(),
+        }));
+
+        println!(
+            "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
+            checkpointing_interval.to_string().cyan(),
+            &dir.to_string_lossy().cyan()
+        );
+    }
+
+    if let Some(checkpoint_data) = &derive_options.checkpoint_data {
+        checkpoint_data.print(DisplayOptions::default());
+    }
+
+    options.print();
+
+    let salt = get_salt();
+    let password = get_password();
+
+    let mut offset: usize = 0;
+    let mut offset_data = Vec::new();
+    let mut prev_data = Vec::new();
+
+    if let Some(checkpoint_data) = &derive_options.checkpoint_data {
+        println!("Verifying the checkpoint...\n");
+
+        if checkpoint_data.data.iteration > 0 {
+            if !checkpoint_data.verify(&salt, &password) {
+                panic!("The password, salt, or internal data is incorrect!");
+            }
+
+            println!("The password, salt and internal data are correct\n");
+        } else {
+            println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
+        }
+
+        offset = checkpoint_data.data.iteration + 1;
+        offset_data.clone_from(&checkpoint_data.data.data);
+
+        // Since we are starting from this checkpoint, set the rolling previous data to its data
+        prev_data = checkpoint_data.data.data.clone();
+    }
+
+    let mb = MultiProgress::new();
+
+    // Create the main progress bar. Please note that we are using a custom message, instead of percents, since
+    // we want a higher resolution that the default one
+    let pb = mb
+        .add(ProgressBar::new(options.iterations as u64))
+        .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap());
+
+    pb.set_position(offset as u64);
+    pb.reset_eta();
+    pb.enable_steady_tick(Duration::from_secs(1));
+
+    // Set the percent using a custom message
+    pb.set_message(format!("{}", (offset * 100) as f64 / options.iterations as f64));
+
+    // Create a progress bar to track iteration times and checkpoints
+    let ipb = mb
+        .add(ProgressBar::new(options.iterations as u64))
+        .with_style(ProgressStyle::with_template("{msg}").unwrap());
+
+    let start_time = SystemTime::now();
+    let running_time = Instant::now();
+    let mut iteration_time = Instant::now();
+    let mut samples: VecDeque<u128> = VecDeque::new();
+
+    let slowkey = SlowKey::new(&options);
+
+    let mut checkpoint_info = String::new();
+
+    let prev_data_mutex = Arc::new(Mutex::new(prev_data));
+    let prev_data_thread = Arc::clone(&prev_data_mutex);
+
+    let handle = thread::spawn(move || {
+        let key = slowkey.derive_key_with_callback(
+            &salt,
+            &password,
+            &offset_data,
+            offset,
+            |current_iteration, current_data| {
+                // Track iteration times
+                let last_iteration_time = iteration_time.elapsed().as_millis();
+                iteration_time = Instant::now();
+
+                samples.push_back(last_iteration_time);
+
+                // If we have more than the required samples, remove the oldest one
+                if samples.len() > derive_options.iteration_moving_window as usize {
+                    samples.pop_front();
+                }
+
+                // Calculate the moving average
+                let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
+
+                let iteration_info = format!(
+                    "\nIteration time moving average ({}): {}, last iteration time: {}",
+                    derive_options.iteration_moving_window.to_string().cyan(),
+                    format_duration(Duration::from_millis(moving_average as u64))
+                        .to_string()
+                        .cyan(),
+                    format_duration(Duration::from_millis(last_iteration_time as u64))
+                        .to_string()
+                        .cyan(),
+                );
+
+                let mut prev_data = prev_data_thread.lock().unwrap();
+
+                // Create a checkpoint if we've reached the checkpoint interval
+                if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
+                    let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
+
+                    if let Some(checkpoint) = &mut checkpoint {
+                        checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
+
+                        let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
+
+                        checkpoint_info = format!(
+                            "\nCreated checkpoint #{} with data hash {}",
+                            (current_iteration + 1).to_string().cyan(),
+                            format!("0x{}", hex::encode(hash)).cyan()
+                        );
+                    }
+                }
+
+                // Store the current  data in order to store it in the checkpoint for future verification of the
+                // parameters
+                if current_iteration < options.iterations - 1 {
+                    prev_data.clone_from(current_data);
+                }
+
+                pb.inc(1);
+
+                // Set the percent using a custom message
+                pb.set_message(format!(
+                    "{}",
+                    ((current_iteration + 1) * 100) as f64 / options.iterations as f64
+                ));
+
+                ipb.set_message(format!("{}{}", iteration_info, checkpoint_info));
+            },
+        );
+
+        pb.finish();
+        ipb.finish();
+
+        key
+    });
+
+    mb.clear().unwrap();
+
+    let key = handle.join().unwrap();
+
+    println!(
+        "\n\nKey is (please highlight to see): {}",
+        format!("0x{}", hex::encode(&key)).black().on_black()
+    );
+
+    if derive_options.base64 {
+        println!(
+            "Key (base64) is (please highlight to see): {}",
+            general_purpose::STANDARD.encode(&key).black().on_black()
+        );
+    }
+
+    if derive_options.base58 {
+        println!(
+            "Key (base58) is (please highlight to see): {}",
+            bs58::encode(&key).into_string().black().on_black()
+        );
+    }
+
+    println!();
+
+    if let Some(out) = out {
+        let prev_data_guard = prev_data_mutex.lock().unwrap();
+        let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
+            None
+        } else {
+            Some(&prev_data_guard[..])
+        };
+
+        out.save(options.iterations, &key, prev_data_option);
+
+        println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
+    }
+
+    println!(
+        "Start time: {}",
+        DateTime::<Utc>::from(start_time)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "End time: {}",
+        DateTime::<Utc>::from(SystemTime::now())
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "Total running time: {}",
+        format_duration(Duration::from_secs(running_time.elapsed().as_secs()))
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "Average iteration time: {}\n",
+        format_duration(Duration::from_millis(
+            (running_time.elapsed().as_millis() as f64 / options.iterations as f64).round() as u64
+        ))
+        .to_string()
+        .cyan()
+    );
+}
+
+fn print_input_instructions() {
+    println!(
+        "Please input all data either in raw or hex format starting with the {} prefix\n",
+        HEX_PREFIX
+    );
+}
+
 fn main() {
     better_panic::install();
     color_backtrace::install();
@@ -460,8 +776,6 @@ fn main() {
         Some(Commands::Derive {
             iterations,
             length,
-            base64,
-            base58,
             output,
             scrypt_n,
             scrypt_r,
@@ -470,302 +784,82 @@ fn main() {
             argon2_t_cost,
             balloon_s_cost,
             balloon_t_cost,
-            checkpoint_interval,
             checkpoint_dir,
-            restore_from_checkpoint,
+            checkpoint_interval,
             max_checkpoints_to_keep,
+            base64,
+            base58,
             iteration_moving_window,
         }) => {
-            println!(
-                "Please input all data either in raw or hex format starting with the {} prefix\n",
-                HEX_PREFIX
-            );
+            print_input_instructions();
 
-            let slowkey_opts: SlowKeyOptions;
-
-            let mut output_key: Option<Vec<u8>> = None;
-            let mut checkpoint: Option<Checkpoint> = None;
-            let mut restore_from_checkpoint_data: Option<CheckpointData> = None;
-
-            let mut offset: usize = 0;
-            let mut offset_data = Vec::new();
-
-            if let Some(path) = restore_from_checkpoint {
-                if output_key.is_none() {
-                    output_key = Some(get_output_key());
-                }
-
-                let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
-                    key: output_key.clone().unwrap(),
-                    path: path.clone(),
-                });
-
-                if iterations <= checkpoint_data.data.iteration {
-                    panic!(
-                        "Invalid iterations number {} for checkpoint {}",
-                        iterations, checkpoint_data.data.iteration
-                    );
-                }
-
-                checkpoint_data.print(DisplayOptions::default());
-
-                let opts = &checkpoint_data.data.slowkey;
-                slowkey_opts = SlowKeyOptions {
-                    iterations,
-                    length: opts.length,
-                    scrypt: opts.scrypt,
-                    argon2id: opts.argon2id,
-                    ballon_hash: opts.balloon_hash,
-                };
-
-                offset = checkpoint_data.data.iteration + 1;
-                offset_data.clone_from(&checkpoint_data.data.data);
-
-                restore_from_checkpoint_data = Some(checkpoint_data)
-            } else {
-                slowkey_opts = SlowKeyOptions::new(
+            derive(DeriveOptions {
+                options: SlowKeyOptions::new(
                     iterations,
                     length,
                     &ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p),
                     &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
                     &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
-                );
-            }
+                ),
+                checkpoint_data: None,
+                output_key: None,
+                checkpoint_dir,
+                checkpoint_interval,
+                max_checkpoints_to_keep,
+                output,
+                base64,
+                base58,
+                iteration_moving_window,
+            });
+        },
 
-            let mut out: Option<Output> = None;
-            if let Some(path) = output {
-                if output_key.is_none() {
-                    output_key = Some(get_output_key());
-                }
+        Some(Commands::RestoreFromCheckpoint {
+            iterations,
+            output,
+            checkpoint_dir,
+            checkpoint_interval,
+            max_checkpoints_to_keep,
+            checkpoint,
+            base64,
+            base58,
+            iteration_moving_window,
+        }) => {
+            print_input_instructions();
 
-                out = Some(Output::new(&OutputOptions {
-                    path,
-                    key: output_key.clone().unwrap(),
-                    slowkey: slowkey_opts.clone(),
-                }))
-            }
-
-            let mut checkpointing_interval: usize = 0;
-
-            if let Some(dir) = checkpoint_dir {
-                checkpointing_interval = checkpoint_interval.unwrap();
-
-                if output_key.is_none() {
-                    output_key = Some(get_output_key());
-                }
-
-                checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-                    iterations: slowkey_opts.iterations,
-                    dir: dir.to_owned(),
-                    key: output_key.clone().unwrap(),
-                    max_checkpoints_to_keep,
-                    slowkey: slowkey_opts.clone(),
-                }));
-
-                println!(
-                    "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
-                    checkpointing_interval.to_string().cyan(),
-                    &dir.to_string_lossy().cyan()
-                );
-            }
-
-            slowkey_opts.print();
-
-            let salt = get_salt();
-            let password = get_password();
-
-            let mut prev_data = Vec::new();
-
-            if let Some(checkpoint_data) = restore_from_checkpoint_data {
-                println!("Verifying the checkpoint...\n");
-
-                if checkpoint_data.data.iteration > 0 {
-                    if !checkpoint_data.verify(&salt, &password) {
-                        panic!("The password, salt, or internal data is incorrect!");
-                    }
-
-                    println!("The password, salt and internal data are correct\n");
-                } else {
-                    println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
-                }
-
-                // Since we are starting from this checkpoint, set the rolling previous data to its data
-                prev_data = checkpoint_data.data.data;
-            }
-
-            let mb = MultiProgress::new();
-
-            // Create the main progress bar. Please note that we are using a custom message, instead of percents, since
-            // we want a higher resolution that the default one
-            let pb = mb.add(ProgressBar::new(iterations as u64)).with_style(
-                ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap(),
-            );
-
-            pb.set_position(offset as u64);
-            pb.reset_eta();
-            pb.enable_steady_tick(Duration::from_secs(1));
-
-            // Set the percent using a custom message
-            pb.set_message(format!("{}", (offset * 100) as f64 / iterations as f64));
-
-            // Create a progress bar to track iteration times and checkpoints
-            let ipb = mb
-                .add(ProgressBar::new(iterations as u64))
-                .with_style(ProgressStyle::with_template("{msg}").unwrap());
-
-            let start_time = SystemTime::now();
-            let running_time = Instant::now();
-            let mut iteration_time = Instant::now();
-            let mut samples: VecDeque<u128> = VecDeque::new();
-
-            let slowkey = SlowKey::new(&slowkey_opts);
-
-            let mut checkpoint_info = String::new();
-
-            let prev_data_mutex = Arc::new(Mutex::new(prev_data));
-            let prev_data_thread = Arc::clone(&prev_data_mutex);
-
-            let handle = thread::spawn(move || {
-                let key = slowkey.derive_key_with_callback(
-                    &salt,
-                    &password,
-                    &offset_data,
-                    offset,
-                    |current_iteration, current_data| {
-                        // Track iteration times
-                        let last_iteration_time = iteration_time.elapsed().as_millis();
-                        iteration_time = Instant::now();
-
-                        samples.push_back(last_iteration_time);
-
-                        // If we have more than the required samples, remove the oldest one
-                        if samples.len() > iteration_moving_window as usize {
-                            samples.pop_front();
-                        }
-
-                        // Calculate the moving average
-                        let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
-
-                        let iteration_info = format!(
-                            "\nIteration time moving average ({}): {}, last iteration time: {}",
-                            iteration_moving_window.to_string().cyan(),
-                            format_duration(Duration::from_millis(moving_average as u64))
-                                .to_string()
-                                .cyan(),
-                            format_duration(Duration::from_millis(last_iteration_time as u64))
-                                .to_string()
-                                .cyan(),
-                        );
-
-                        let mut prev_data = prev_data_thread.lock().unwrap();
-
-                        // Create a checkpoint if we've reached the checkpoint interval
-                        if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
-                            let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
-
-                            if let Some(checkpoint) = &mut checkpoint {
-                                checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
-
-                                let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
-
-                                checkpoint_info = format!(
-                                    "\nCreated checkpoint #{} with data hash {}",
-                                    (current_iteration + 1).to_string().cyan(),
-                                    format!("0x{}", hex::encode(hash)).cyan()
-                                );
-                            }
-                        }
-
-                        // Store the current  data in order to store it in the checkpoint for future verification of the
-                        // parameters
-                        if current_iteration < iterations - 1 {
-                            prev_data.clone_from(current_data);
-                        }
-
-                        pb.inc(1);
-
-                        // Set the percent using a custom message
-                        pb.set_message(format!(
-                            "{}",
-                            ((current_iteration + 1) * 100) as f64 / iterations as f64
-                        ));
-
-                        ipb.set_message(format!("{}{}", iteration_info, checkpoint_info));
-                    },
-                );
-
-                pb.finish();
-                ipb.finish();
-
-                key
+            let output_key = get_output_key();
+            let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
+                key: output_key.clone(),
+                path: checkpoint,
             });
 
-            mb.clear().unwrap();
-
-            let key = handle.join().unwrap();
-
-            println!(
-                "\n\nKey is (please highlight to see): {}",
-                format!("0x{}", hex::encode(&key)).black().on_black()
-            );
-
-            if base64 {
-                println!(
-                    "Key (base64) is (please highlight to see): {}",
-                    general_purpose::STANDARD.encode(&key).black().on_black()
+            if iterations <= checkpoint_data.data.iteration {
+                panic!(
+                    "Invalid iterations number {} for checkpoint {}",
+                    iterations, checkpoint_data.data.iteration
                 );
             }
 
-            if base58 {
-                println!(
-                    "Key (base58) is (please highlight to see): {}",
-                    bs58::encode(&key).into_string().black().on_black()
-                );
-            }
+            let opts = &checkpoint_data.data.slowkey;
+            let options = SlowKeyOptions {
+                iterations,
+                length: opts.length,
+                scrypt: opts.scrypt,
+                argon2id: opts.argon2id,
+                ballon_hash: opts.balloon_hash,
+            };
 
-            println!();
-
-            if let Some(out) = out {
-                let prev_data_guard = prev_data_mutex.lock().unwrap();
-                let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
-                    None
-                } else {
-                    Some(&prev_data_guard[..])
-                };
-
-                out.save(iterations, &key, prev_data_option);
-
-                println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
-            }
-
-            println!(
-                "Start time: {}",
-                DateTime::<Utc>::from(start_time)
-                    .format("%Y-%m-%d %H:%M:%S")
-                    .to_string()
-                    .cyan()
-            );
-            println!(
-                "End time: {}",
-                DateTime::<Utc>::from(SystemTime::now())
-                    .format("%Y-%m-%d %H:%M:%S")
-                    .to_string()
-                    .cyan()
-            );
-            println!(
-                "Total running time: {}",
-                format_duration(Duration::from_secs(running_time.elapsed().as_secs()))
-                    .to_string()
-                    .cyan()
-            );
-            println!(
-                "Average iteration time: {}\n",
-                format_duration(Duration::from_millis(
-                    (running_time.elapsed().as_millis() as f64 / iterations as f64).round() as u64
-                ))
-                .to_string()
-                .cyan()
-            );
+            derive(DeriveOptions {
+                options,
+                checkpoint_data: Some(checkpoint_data),
+                output_key: Some(output_key),
+                checkpoint_dir,
+                checkpoint_interval,
+                max_checkpoints_to_keep,
+                output,
+                base64,
+                base58,
+                iteration_moving_window,
+            });
         },
 
         Some(Commands::ShowCheckpoint {
@@ -774,13 +868,9 @@ fn main() {
             base64,
             base58,
         }) => {
-            println!(
-                "Please input all data either in raw or hex format starting with the {} prefix\n",
-                HEX_PREFIX
-            );
+            print_input_instructions();
 
             let output_key = get_output_key();
-
             let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
                 key: output_key,
                 path: checkpoint,
@@ -816,13 +906,9 @@ fn main() {
             base64,
             base58,
         }) => {
-            println!(
-                "Please input all data either in raw or hex format starting with the {} prefix\n",
-                HEX_PREFIX
-            );
+            print_input_instructions();
 
             let output_key = get_output_key();
-
             let output_data = Output::get(&OpenOutputOptions {
                 key: output_key,
                 path: output,

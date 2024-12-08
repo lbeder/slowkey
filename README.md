@@ -73,11 +73,12 @@ function deriveKey(password, salt, iterations):
 Usage: slowkey [COMMAND]
 
 Commands:
-  derive           Derive a key using using Scrypt, Argon2, SHA2, and SHA3
-  show-checkpoint  Decrypt and print a checkpoint
-  show-output      Decrypt and print an output file
-  test             Print test vectors
-  bench            Run benchmarks
+  derive                   Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
+  restore-from-checkpoint  Continue derivation process from an existing checkpoint
+  show-checkpoint          Decrypt and print a checkpoint
+  show-output              Decrypt and print an output file
+  test                     Print test vectors
+  bench                    Run benchmarks
 
 Options:
   -h, --help     Print help
@@ -87,19 +88,11 @@ Options:
 ### Deriving
 
 ```sh
-Derive a key using using Scrypt, Argon2, SHA2, and SHA3
-
-Usage: slowkey derive [OPTIONS]
-
 Options:
   -i, --iterations <ITERATIONS>
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
   -l, --length <LENGTH>
           Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
-      --base64
-          Show the result in Base64 (in addition to hex)
-      --base58
-          Show the result in Base58 (in addition to hex)
       --output <OUTPUT>
           Optional path for storing the encrypted output
       --scrypt-n <SCRYPT_N>
@@ -122,8 +115,40 @@ Options:
           Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
           Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
-      --restore-from-checkpoint <RESTORE_FROM_CHECKPOINT>
+      --base64
+          Show the result in Base64 (in addition to hex)
+      --base58
+          Show the result in Base58 (in addition to hex)
+      --iteration-moving-window <ITERATION_MOVING_WINDOW>
+          Iteration time sampling moving window size [default: 10]
+  -h, --help
+          Print help
+```
+
+### Restoring from a checkpoint
+
+```sh
+Continue derivation process from an existing checkpoint
+
+Usage: slowkey restore-from-checkpoint [OPTIONS] --checkpoint <CHECKPOINT>
+
+Options:
+  -i, --iterations <ITERATIONS>
+          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
+      --output <OUTPUT>
+          Optional path for storing the encrypted output
+      --checkpoint-dir <CHECKPOINT_DIR>
+          Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
+      --checkpoint-interval <CHECKPOINT_INTERVAL>
+          Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save
+      --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
+          Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
+      --checkpoint <CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
+      --base64
+          Show the result in Base64 (in addition to hex)
+      --base58
+          Show the result in Base58 (in addition to hex)
       --iteration-moving-window <ITERATION_MOVING_WINDOW>
           Iteration time sampling moving window size [default: 10]
   -h, --help
@@ -399,7 +424,7 @@ The password, salt and internal data are correct
 
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey derive -i 10 --restore-from-checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey restore-from-checkpoint -i 10 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 
@@ -454,7 +479,7 @@ Average iteration time: 1s 993ms
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey derive -i 20 --restore-from-checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey restore-from-checkpoint -i 20 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -646,8 +671,6 @@ The password, salt and internal data are correct
 ```
 
 ## Test Vectors
-
-TODO:
 
 In order to verify the validity of SlowKey, you can run the `test` command:
 
