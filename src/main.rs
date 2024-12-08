@@ -56,7 +56,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Derive a key using using Scrypt, Argon2, SHA2, and SHA3")]
+    #[command(about = "Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3")]
     Derive {
         #[arg(
             short,
