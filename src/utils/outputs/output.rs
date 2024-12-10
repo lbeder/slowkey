@@ -65,8 +65,10 @@ impl OutputData {
         };
 
         let mut output = format!(
-            "{}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+            "{}:\n  {}: {}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
             "Output".yellow(),
+            "Version".green(),
+            u8::from(self.version.clone()),
             "Iterations".green(),
             self.data.iteration,
             "Data".green(),
