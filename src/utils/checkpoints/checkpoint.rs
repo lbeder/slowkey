@@ -112,7 +112,7 @@ impl CheckpointData {
             "Checkpoint".yellow(),
             "Version".green(),
             u8::from(self.version.clone()),
-            "Iterations".green(),
+            "Iteration".green(),
             (self.data.iteration + 1).to_string().cyan(),
             "Data".green(),
             format!("0x{}", hex::encode(&self.data.data)).black().on_black(),

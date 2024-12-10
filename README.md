@@ -367,7 +367,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 2:
-  Iterations: 5:
+  Iteration: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
@@ -389,7 +389,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 2:
-  Iterations: 5:
+  Iteration: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
@@ -424,7 +424,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 2:
-  Iterations: 5:
+  Iteration: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
@@ -478,7 +478,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 
 Checkpoint:
   Version: 2:
-  Iterations: 5:
+  Iteration: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
@@ -549,7 +549,7 @@ Balloon Hash t_cost: 1
 
 Checkpoint:
   Version: 2:
-  Iterations: 5:
+  Iteration: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
 
