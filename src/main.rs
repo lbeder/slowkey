@@ -27,7 +27,6 @@ use std::{
     collections::VecDeque,
     env,
     path::PathBuf,
-    str::from_utf8,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant, SystemTime},
@@ -820,7 +819,7 @@ fn derive(derive_options: DeriveOptions) {
             Some(&prev_data_guard[..])
         };
 
-        out.save(options.iterations, &key, prev_data_option);
+        out.save(&key, prev_data_option);
 
         println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
     }

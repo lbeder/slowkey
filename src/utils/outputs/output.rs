@@ -40,7 +40,7 @@ impl OutputData {
 
         // Use the checkpoint's previous data to derive the current data and return if it matches
         let options = SlowKeyOptions {
-            iterations: self.data.iteration,
+            iterations: opts.iterations,
             length: opts.length,
             scrypt: opts.scrypt,
             argon2id: opts.argon2id,
@@ -52,7 +52,7 @@ impl OutputData {
             salt,
             password,
             &self.data.prev_data.clone().unwrap_or_default(),
-            self.data.iteration - 1,
+            opts.iterations - 1,
         );
 
         key == self.data.data
@@ -65,12 +65,10 @@ impl OutputData {
         };
 
         let mut output = format!(
-            "{}:\n  {}: {}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+            "{}:\n  {}: {}:\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
             "Output".yellow(),
             "Version".green(),
             u8::from(self.version.clone()),
-            "Iterations".green(),
-            self.data.iteration,
             "Data".green(),
             format!("0x{}", hex::encode(&self.data.data)).black().on_black(),
             "Previous Iteration's Data".green(),
@@ -109,7 +107,6 @@ impl OutputData {
 
 #[derive(Serialize, Deserialize)]
 pub struct SlowKeyData {
-    pub iteration: usize,
     pub data: Vec<u8>,
     pub prev_data: Option<Vec<u8>>,
     pub slowkey: SlowKeyOptions,
@@ -165,14 +162,13 @@ impl Output {
         }
     }
 
-    pub fn save(&self, iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
+    pub fn save(&self, data: &[u8], prev_data: Option<&[u8]>) {
         let file = File::create(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
         let output = OutputData {
             version: Version::V2,
             data: SlowKeyData {
-                iteration,
                 data: data.to_vec(),
                 prev_data: prev_data.map(|slice| slice.to_vec()),
                 slowkey: self.slowkey.clone(),
