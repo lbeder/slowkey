@@ -9,6 +9,7 @@ balloon-hash = "0.4.0"
 base64 = "0.21.7"
 better-panic = "0.3.0"
 bs58 = "0.5.1"
+byteorder = "1.5.0"
 chacha20poly1305 = "0.10.1"
 chrono = "0.4.38"
 clap = { version = "4.5.22", features = ["derive", "string"] }

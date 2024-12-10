@@ -21,7 +21,7 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use sha2::{Digest, Sha512};
+use sha2::{Digest, Sha256, Sha512};
 use std::{
     cmp::Ordering,
     collections::VecDeque,
@@ -40,6 +40,7 @@ use utils::{
         },
         version::Version,
     },
+    color_hash::color_hash,
     outputs::output::{OpenOutputOptions, Output, OutputOptions},
 };
 
@@ -595,6 +596,21 @@ fn show_hint(data: &str, description: &str, hex: bool) {
     }
 }
 
+fn print_fingerprint(options: &SlowKeyOptions, salt: &[u8], password: &[u8]) {
+    let mut data = serde_json::to_string(&options).unwrap().as_bytes().to_vec();
+    data.extend_from_slice(salt);
+    data.extend_from_slice(password);
+
+    let mut sha256 = Sha256::new();
+    sha256.update(data);
+    let hash = sha256.finalize();
+
+    println!(
+        "Fingerprint: {}\n",
+        hex::encode(&hash[0..8]).to_uppercase().with(color_hash(hash.as_ref()))
+    );
+}
+
 struct DeriveOptions {
     options: SlowKeyOptions,
     checkpoint_data: Option<CheckpointData>,
@@ -678,6 +694,9 @@ fn derive(derive_options: DeriveOptions) {
         // Since we are starting from this checkpoint, set the rolling previous data to its data
         prev_data = checkpoint_data.data.data.clone();
     }
+
+    // Print the colored hash fingerprint of the parameters
+    print_fingerprint(&options, &salt, &password);
 
     let mb = MultiProgress::new();
 
