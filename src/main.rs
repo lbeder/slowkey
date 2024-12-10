@@ -21,7 +21,7 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
     collections::VecDeque,
@@ -41,7 +41,10 @@ use utils::{
         version::Version,
     },
     color_hash::color_hash,
-    outputs::output::{OpenOutputOptions, Output, OutputOptions},
+    outputs::{
+        fingerprint::Fingerprint,
+        output::{OpenOutputOptions, Output, OutputOptions},
+    },
 };
 
 #[global_allocator]
@@ -599,21 +602,6 @@ fn show_hint(data: &str, description: &str, hex: bool) {
     }
 }
 
-fn print_fingerprint(options: &SlowKeyOptions, salt: &[u8], password: &[u8]) {
-    let mut data = serde_json::to_string(&options).unwrap().as_bytes().to_vec();
-    data.extend_from_slice(salt);
-    data.extend_from_slice(password);
-
-    let mut sha256 = Sha256::new();
-    sha256.update(data);
-    let hash = sha256.finalize();
-
-    println!(
-        "Fingerprint: {}\n",
-        hex::encode(&hash[0..8]).to_uppercase().with(color_hash(hash.as_ref()))
-    );
-}
-
 struct DeriveOptions {
     options: SlowKeyOptions,
     checkpoint_data: Option<CheckpointData>,
@@ -647,28 +635,6 @@ fn derive(derive_options: DeriveOptions) {
 
     let mut checkpointing_interval: usize = 0;
 
-    if let Some(dir) = derive_options.checkpoint_dir {
-        checkpointing_interval = derive_options.checkpoint_interval.unwrap();
-
-        if output_key.is_none() {
-            output_key = Some(get_output_key());
-        }
-
-        checkpoint = Some(Checkpoint::new(&CheckpointOptions {
-            iterations: options.iterations,
-            dir: dir.to_owned(),
-            key: output_key.clone().unwrap(),
-            max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
-            slowkey: options.clone(),
-        }));
-
-        println!(
-            "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
-            checkpointing_interval.to_string().cyan(),
-            &dir.to_string_lossy().cyan()
-        );
-    }
-
     if let Some(checkpoint_data) = &derive_options.checkpoint_data {
         checkpoint_data.print(DisplayOptions::default());
     }
@@ -699,7 +665,30 @@ fn derive(derive_options: DeriveOptions) {
     }
 
     // Print the colored hash fingerprint of the parameters
-    print_fingerprint(&options, &salt, &password);
+    let fingerprint = Fingerprint::from_data(&options, &salt, &password);
+    fingerprint.print();
+
+    if let Some(dir) = derive_options.checkpoint_dir {
+        checkpointing_interval = derive_options.checkpoint_interval.unwrap();
+
+        if output_key.is_none() {
+            output_key = Some(get_output_key());
+        }
+
+        checkpoint = Some(Checkpoint::new(&CheckpointOptions {
+            iterations: options.iterations,
+            dir: dir.to_owned(),
+            key: output_key.clone().unwrap(),
+            max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
+            slowkey: options.clone(),
+        }));
+
+        println!(
+            "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
+            checkpointing_interval.to_string().cyan(),
+            &dir.to_string_lossy().cyan()
+        );
+    }
 
     let mb = MultiProgress::new();
 
@@ -841,7 +830,7 @@ fn derive(derive_options: DeriveOptions) {
             Some(&prev_data_guard[..])
         };
 
-        out.save(&key, prev_data_option);
+        out.save(&key, prev_data_option, &fingerprint);
 
         println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
     }

@@ -1,3 +1,9 @@
+use super::{fingerprint::Fingerprint, version::Version};
+use crate::{
+    slowkey::{SlowKey, SlowKeyOptions},
+    utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
+    DisplayOptions,
+};
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
@@ -6,14 +12,6 @@ use std::{
     io::{BufReader, BufWriter, Read, Write},
     path::PathBuf,
 };
-
-use crate::{
-    slowkey::{SlowKey, SlowKeyOptions},
-    utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
-    DisplayOptions,
-};
-
-use super::version::Version;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct OutputOptions {
@@ -102,6 +100,8 @@ impl OutputData {
         if display.options {
             self.data.slowkey.print();
         }
+
+        self.data.fingerprint.print();
     }
 }
 
@@ -109,6 +109,7 @@ impl OutputData {
 pub struct SlowKeyData {
     pub data: Vec<u8>,
     pub prev_data: Option<Vec<u8>>,
+    pub fingerprint: Fingerprint,
     pub slowkey: SlowKeyOptions,
 }
 
@@ -162,7 +163,7 @@ impl Output {
         }
     }
 
-    pub fn save(&self, data: &[u8], prev_data: Option<&[u8]>) {
+    pub fn save(&self, data: &[u8], prev_data: Option<&[u8]>, fingerprint: &Fingerprint) {
         let file = File::create(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
@@ -171,6 +172,7 @@ impl Output {
             data: SlowKeyData {
                 data: data.to_vec(),
                 prev_data: prev_data.map(|slice| slice.to_vec()),
+                fingerprint: fingerprint.clone(),
                 slowkey: self.slowkey.clone(),
             },
         };

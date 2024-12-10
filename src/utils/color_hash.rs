@@ -4,7 +4,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use crossterm::style::Color;
 
 pub fn color_hash(data: &[u8; 32]) -> Color {
-    let v = Cursor::new(data).read_u32::<BigEndian>().expect("Hash is too small") as usize;
+    let v = Cursor::new(data).read_u32::<BigEndian>().unwrap();
 
     let b = (v & 0xFF) as u8;
     let g = ((v >> 8) & 0xFF) as u8;
