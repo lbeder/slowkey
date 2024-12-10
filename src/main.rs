@@ -20,7 +20,7 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
-use dialoguer::{theme::ColorfulTheme, Confirm, Password};
+use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
@@ -38,7 +38,12 @@ use std::{
 use utils::{
     algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
     chacha20poly1305::ChaCha20Poly1305,
-    checkpoints::checkpoint::{Checkpoint, CheckpointData, CheckpointOptions, OpenCheckpointOptions},
+    checkpoints::{
+        checkpoint::{
+            Checkpoint, CheckpointData, CheckpointOptions, CheckpointSlowKeyOptions, OpenCheckpointOptions, SlowKeyData,
+        },
+        version::Version,
+    },
     outputs::output::{OpenOutputOptions, Output, OutputOptions},
 };
 
@@ -195,7 +200,14 @@ enum Commands {
             long,
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
-        checkpoint: PathBuf,
+        checkpoint: Option<PathBuf>,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Input checkpoint data interactively (instead of providing the path to an existing checkpoint)"
+        )]
+        interactive: bool,
 
         #[arg(
             long,
@@ -473,6 +485,102 @@ fn get_output_key() -> Vec<u8> {
     println!();
 
     key
+}
+
+fn get_checkpoint_data() -> CheckpointData {
+    println!("Please enter the checkpoint data manually:\n");
+
+    let version: u8 = Input::new().with_prompt("Version").interact_text().unwrap();
+    let version = Version::from(version);
+
+    println!();
+
+    let length: usize = Input::new().with_prompt("Length").interact_text().unwrap();
+    if length < SlowKeyOptions::MIN_KEY_SIZE {
+        panic!(
+            "length {} is shorter than the min value of {}",
+            SlowKeyOptions::MIN_KEY_SIZE,
+            length
+        );
+    } else if length > SlowKeyOptions::MAX_KEY_SIZE {
+        panic!(
+            "length {} is greater than the max value of {}",
+            SlowKeyOptions::MAX_KEY_SIZE,
+            length
+        );
+    }
+
+    let iteration: usize = Input::new().with_prompt("Iteration").interact_text().unwrap();
+    let iteration = iteration - 1;
+    if iteration < SlowKeyOptions::MIN_ITERATIONS {
+        panic!(
+            "iteration {} is shorter than the min value of {}",
+            SlowKeyOptions::MIN_ITERATIONS,
+            iteration
+        );
+    } else if iteration > SlowKeyOptions::MAX_ITERATIONS {
+        panic!(
+            "iteration {} is greater than the max value of {}",
+            SlowKeyOptions::MAX_ITERATIONS,
+            iteration
+        );
+    }
+
+    let data: String = Input::new().with_prompt("Data").interact_text().unwrap();
+    let data = if data.starts_with(HEX_PREFIX) {
+        hex::decode(data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        data.as_bytes().to_vec()
+    };
+
+    let prev_data = if iteration > 1 {
+        let prev_data: String = Input::new().with_prompt("Previous data").interact_text().unwrap();
+        let prev_data = if prev_data.starts_with(HEX_PREFIX) {
+            hex::decode(prev_data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+        } else {
+            prev_data.as_bytes().to_vec()
+        };
+
+        Some(prev_data)
+    } else {
+        None
+    };
+
+    println!();
+
+    let scrypt_n: u64 = Input::new().with_prompt("Scrypt n").interact_text().unwrap();
+    let scrypt_r: u32 = Input::new().with_prompt("Scrypt r").interact_text().unwrap();
+    let scrypt_p: u32 = Input::new().with_prompt("Scrypt p").interact_text().unwrap();
+    let scrypt = ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p);
+
+    println!();
+
+    let argon2id_m_cost: u32 = Input::new().with_prompt("Argon2id m_cost").interact_text().unwrap();
+    let argon2id_t_cost: u32 = Input::new().with_prompt("Argon2id t_cost").interact_text().unwrap();
+    let argon2id = Argon2idOptions::new(argon2id_m_cost, argon2id_t_cost);
+
+    println!();
+
+    let balloon_s_cost: u32 = Input::new().with_prompt("Balloon Hash s_cost").interact_text().unwrap();
+    let balloon_t_cost: u32 = Input::new().with_prompt("Balloon Hash t_cost").interact_text().unwrap();
+    let balloon_hash = BalloonHashOptions::new(balloon_s_cost, balloon_t_cost);
+
+    println!();
+
+    CheckpointData {
+        version,
+        data: SlowKeyData {
+            iteration,
+            data,
+            prev_data,
+            slowkey: CheckpointSlowKeyOptions {
+                length,
+                scrypt,
+                argon2id,
+                balloon_hash,
+            },
+        },
+    }
 }
 
 fn show_hint(data: &str, description: &str, hex: bool) {
@@ -820,6 +928,7 @@ fn main() {
             checkpoint_interval,
             max_checkpoints_to_keep,
             checkpoint,
+            interactive,
             base64,
             base58,
             iteration_moving_window,
@@ -827,10 +936,17 @@ fn main() {
             print_input_instructions();
 
             let output_key = get_output_key();
-            let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
-                key: output_key.clone(),
-                path: checkpoint,
-            });
+
+            let checkpoint_data = match checkpoint {
+                Some(path) => Checkpoint::get_checkpoint(&OpenCheckpointOptions {
+                    key: output_key.clone(),
+                    path,
+                }),
+                None => match interactive {
+                    true => get_checkpoint_data(),
+                    false => panic!("Missing checkpoint path"),
+                },
+            };
 
             if iterations <= checkpoint_data.data.iteration {
                 panic!(

@@ -130,7 +130,7 @@ Options:
 ```sh
 Continue derivation process from an existing checkpoint
 
-Usage: slowkey restore-from-checkpoint [OPTIONS] --checkpoint <CHECKPOINT>
+Usage: slowkey restore-from-checkpoint [OPTIONS]
 
 Options:
   -i, --iterations <ITERATIONS>
@@ -145,6 +145,8 @@ Options:
           Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
       --checkpoint <CHECKPOINT>
           Path to an existing checkpoint from which to resume the derivation process
+      --interactive
+          Input checkpoint data interactively (instead of providing the path to an existing checkpoint)
       --base64
           Show the result in Base64 (in addition to hex)
       --base58
@@ -433,7 +435,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 ✔ Enter your checkpoint/output encryption key · ********
 
 Checkpoint:
-  Version: 1:
+  Version: 2:
   Iterations: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
@@ -487,7 +489,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 ✔ Enter your checkpoint/output encryption key · ********
 
 Checkpoint:
-  Version: 1:
+  Version: 2:
   Iterations: 5:
   Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
   Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
@@ -527,6 +529,71 @@ Start time: 2024-12-06 22:10:30
 End time: 2024-12-06 22:11:09
 Total running time: 39s
 Average iteration time: 1s 993ms
+```
+
+You can also provide checkpoint data in an interactive way by specifying the `--interactive` flag:
+
+> slowkey restore-from-checkpoint -i 10 --interactive
+
+```sh
+Please input all data either in raw or hex format starting with the 0x prefix
+
+✔ Enter your checkpoint/output encryption key · ********
+
+Please enter the checkpoint data manually:
+
+Version: 2
+
+Length: 32
+Iteration: 5
+Data: 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+Previous data: 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
+
+Scrypt n: 1048576
+Scrypt r: 8
+Scrypt p: 1
+
+Argon2id m_cost: 2097152
+Argon2id t_cost: 2
+
+Balloon Hash s_cost: 131072
+Balloon Hash t_cost: 1
+
+Checkpoint:
+  Version: 2:
+  Iterations: 5:
+  Data (please highlight to see): 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
+  Previous Iteration's Data (please highlight to see): 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
+
+✔ Enter your salt · ********
+
+Salt is: s...t
+
+✔ Enter your password · ********
+
+Password is: p...d
+
+Verifying the checkpoint...
+
+The password, salt and internal data are correct
+
+████████████████████████████████████████████████████████████████████████████████       10/10       100%    (0s)
+
+Iteration time moving average (10): 2s 610ms, last iteration time: 2s 625ms
+
+Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+
+Start time: 2024-12-10 08:47:27
+End time: 2024-12-10 08:47:40
+Total running time: 13s
+Average iteration time: 1s 305ms
 ```
 
 ### Outputs

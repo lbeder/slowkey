@@ -21,7 +21,11 @@ impl ScryptOptions {
     pub const DEFAULT_P: u32 = 1;
 
     pub fn new(n: u64, r: u32, p: u32) -> Self {
-        // Note that there is no need to check if either n, r or p are in bounds, since both are bound by the maximum
+        if n == 0 || (n & (n - 1)) != 0 {
+            panic!("Invalid n");
+        }
+
+        // Note that there is no need to check if either r or p are in bounds, since both are bound by the maximum
         // and the minimum values for this type
 
         Self { n, r, p }
