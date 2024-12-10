@@ -946,13 +946,15 @@ fn main() {
         }) => {
             print_input_instructions();
 
-            let output_key = get_output_key();
+            let mut output_key: Option<Vec<u8>> = None;
 
             let checkpoint_data = match checkpoint {
-                Some(path) => Checkpoint::get_checkpoint(&OpenCheckpointOptions {
-                    key: output_key.clone(),
-                    path,
-                }),
+                Some(path) => {
+                    let key = get_output_key();
+                    output_key = Some(key.clone());
+
+                    Checkpoint::get_checkpoint(&OpenCheckpointOptions { key: key.clone(), path })
+                },
                 None => match interactive {
                     true => get_checkpoint_data(),
                     false => panic!("Missing checkpoint path"),
@@ -978,7 +980,7 @@ fn main() {
             derive(DeriveOptions {
                 options,
                 checkpoint_data: Some(checkpoint_data),
-                output_key: Some(output_key),
+                output_key,
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
