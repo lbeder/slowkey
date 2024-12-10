@@ -1007,15 +1007,11 @@ fn main() {
 
                 println!("Verifying the checkpoint...\n");
 
-                if checkpoint_data.data.iteration > 0 {
-                    if !checkpoint_data.verify(&salt, &password) {
-                        panic!("The password, salt, or internal data is incorrect!");
-                    }
-
-                    println!("The password, salt and internal data are correct\n");
-                } else {
-                    println!("{}: Unable to verify the first checkpoint\n", "Warning".dark_yellow());
+                if !checkpoint_data.verify(&salt, &password) {
+                    panic!("The password, salt, or internal data is incorrect!");
                 }
+
+                println!("The password, salt and internal data are correct\n");
             }
         },
 
@@ -1045,18 +1041,11 @@ fn main() {
 
                 println!("Verifying the output...\n");
 
-                if output_data.data.iteration > 0 {
-                    if !output_data.verify(&salt, &password) {
-                        panic!("The password, salt, or internal data is incorrect!");
-                    }
-
-                    println!("The password, salt and internal data are correct\n");
-                } else {
-                    println!(
-                        "{}: Unable to verify the output of the first iteration checkpoint\n",
-                        "Warning".dark_yellow()
-                    );
+                if !output_data.verify(&salt, &password) {
+                    panic!("The password, salt, or internal data is incorrect!");
                 }
+
+                println!("The password, salt and internal data are correct\n");
             }
         },
 

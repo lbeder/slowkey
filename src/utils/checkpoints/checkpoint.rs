@@ -92,7 +92,9 @@ impl CheckpointData {
 
         let prev_data = match &self.data.prev_data {
             Some(data) => data,
-            None => panic!("Unable to verify the checkpoint!"),
+            None => {
+                panic!("Unable to verify the checkpoint! Previous data doesn't exist. Is this the first iteration?")
+            },
         };
 
         let slowkey = SlowKey::new(&options);

@@ -49,7 +49,7 @@ impl OutputData {
 
         let prev_data = match &self.data.prev_data {
             Some(data) => data,
-            None => panic!("Unable to verify the output!"),
+            None => panic!("Unable to verify the output! Previous data doesn't exist. Is this the first iteration?"),
         };
 
         let slowkey = SlowKey::new(&options);
