@@ -679,7 +679,6 @@ Options:
 
 ```sh
 Output:
-  Iterations: 10
   Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
   Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
 
@@ -701,7 +700,6 @@ Please input all data either in raw or hex format starting with the 0x prefix
 ✔ Enter your checkpoint/output encryption key · ********
 
 Output:
-  Iterations: 10
   Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
   Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
 
