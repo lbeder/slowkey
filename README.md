@@ -32,7 +32,7 @@ The SlowKey Key Derivation Scheme is defined as follows:
 ### Inputs
 
 - `password`: User's password.
-- `salt`: Unique salt for hashing. Please note that the salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated to `16` bytes.
+- `salt`: Unique salt for hashing. Please note that the salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated into `16` bytes.
 - `iterations`: Number of iterations the process should be repeated.
 
 ### Output
@@ -271,7 +271,7 @@ Total running time: 27s
 Average iteration time: 2s 717ms
 ```
 
-Please note that salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated to `16` bytes:
+Please note that salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated into `16` bytes:
 
 In order to hide the output from prying eyes, we set both the background and foreground colors of text to black in a terminal, so that text becomes "hidden" because it blends into the background. However, in some terminals, highlighting this text with the cursor won't reveal it because the highlight color itself might be configured in a way that doesn't provide sufficient contrast against the black text. This occurs because terminals use default color sets for text, background, and highlights, which can vary based on the terminal and its settings.
 
@@ -284,7 +284,7 @@ Despite the text being invisible, it's important to note that the text remains p
 
 Salt is: s...t
 
-Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated to 16 bytes.
+Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated into 16 bytes.
 Do you want to continue? [y/n]
 ```
 
@@ -293,7 +293,7 @@ Do you want to continue? [y/n]
 
 Salt is: s...t
 
-Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated to 16 bytes.
+Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated into 16 bytes.
 Do you want to continue? [y/n]
 ```
 
@@ -320,7 +320,7 @@ Each checkpoint, except for the one that coincides with the first iteration, als
 
 Please exercise caution when using this feature. Resuming computation from a compromised checkpoint may undermine your expectations regarding the duration of the key stretching process.
 
-Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated to `32` bytes:
+Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated into `32` bytes:
 
 For instance, to elaborate on the previous example, suppose we want to create a checkpoint every `5` iterations forcefully terminate the execution at the `8th` iteration:
 

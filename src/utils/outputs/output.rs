@@ -42,7 +42,7 @@ impl OutputData {
             length: opts.length,
             scrypt: opts.scrypt,
             argon2id: opts.argon2id,
-            ballon_hash: opts.ballon_hash,
+            balloon_hash: opts.balloon_hash,
         };
 
         let slowkey = SlowKey::new(&options);

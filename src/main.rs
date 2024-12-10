@@ -117,13 +117,13 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().ballon_hash.s_cost().to_string(),
+            default_value = SlowKeyOptions::default().balloon_hash.s_cost().to_string(),
             help = format!("Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_S_COST, BalloonHashOptions::MAX_S_COST))]
         balloon_s_cost: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().ballon_hash.t_cost().to_string(),
+            default_value = SlowKeyOptions::default().balloon_hash.t_cost().to_string(),
             help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
 
@@ -332,7 +332,7 @@ fn get_salt() -> Vec<u8> {
         _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
             Ordering::Less => {
                 println!(
-                    "\nSalt's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                    "\nSalt's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
@@ -356,7 +356,7 @@ fn get_salt() -> Vec<u8> {
             },
             Ordering::Greater => {
                 println!(
-                    "\nSalt's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                    "\nSalt's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
@@ -433,7 +433,7 @@ fn get_output_key() -> Vec<u8> {
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
             println!(
-                "\nOutput encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                "\nOutput encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -457,7 +457,7 @@ fn get_output_key() -> Vec<u8> {
         },
         Ordering::Greater => {
             println!(
-                "\nOutput encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated to {} bytes.",
+                "\nOutput encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -856,7 +856,7 @@ fn derive(derive_options: DeriveOptions) {
             .cyan()
     );
     println!(
-        "Average iteration time: {}\n",
+        "Average iteration time: {}",
         format_duration(Duration::from_millis(
             (running_time.elapsed().as_millis() as f64 / options.iterations as f64).round() as u64
         ))
@@ -966,7 +966,7 @@ fn main() {
                 length: opts.length,
                 scrypt: opts.scrypt,
                 argon2id: opts.argon2id,
-                ballon_hash: opts.balloon_hash,
+                balloon_hash: opts.balloon_hash,
             };
 
             derive(DeriveOptions {

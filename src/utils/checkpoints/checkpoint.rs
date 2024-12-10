@@ -1,3 +1,4 @@
+use super::version::Version;
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::{
@@ -10,7 +11,6 @@ use crate::{
     },
     DisplayOptions,
 };
-
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
 use glob::{glob_with, MatchOptions};
@@ -23,9 +23,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::version::Version;
-
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct CheckpointOptions {
     pub iterations: usize,
     pub dir: PathBuf,
@@ -58,7 +56,7 @@ impl From<SlowKeyOptions> for CheckpointSlowKeyOptions {
             length: options.length,
             scrypt: options.scrypt,
             argon2id: options.argon2id,
-            balloon_hash: options.ballon_hash,
+            balloon_hash: options.balloon_hash,
         }
     }
 }
@@ -87,7 +85,7 @@ impl CheckpointData {
             length: opts.length,
             scrypt: opts.scrypt,
             argon2id: opts.argon2id,
-            ballon_hash: opts.balloon_hash,
+            balloon_hash: opts.balloon_hash,
         };
 
         let slowkey = SlowKey::new(&options);
