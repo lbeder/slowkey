@@ -90,15 +90,13 @@ impl CheckpointData {
             ballon_hash: opts.balloon_hash,
         };
 
-        let prev_data = match &self.data.prev_data {
-            Some(data) => data,
-            None => {
-                panic!("Unable to verify the checkpoint! Previous data doesn't exist. Is this the first iteration?")
-            },
-        };
-
         let slowkey = SlowKey::new(&options);
-        let key = slowkey.derive_key(salt, password, prev_data, self.data.iteration);
+        let key = slowkey.derive_key(
+            salt,
+            password,
+            &self.data.prev_data.clone().unwrap_or_default(),
+            self.data.iteration,
+        );
 
         key == self.data.data
     }

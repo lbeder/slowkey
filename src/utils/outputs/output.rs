@@ -47,13 +47,13 @@ impl OutputData {
             ballon_hash: opts.ballon_hash,
         };
 
-        let prev_data = match &self.data.prev_data {
-            Some(data) => data,
-            None => panic!("Unable to verify the output! Previous data doesn't exist. Is this the first iteration?"),
-        };
-
         let slowkey = SlowKey::new(&options);
-        let key = slowkey.derive_key(salt, password, prev_data, self.data.iteration - 1);
+        let key = slowkey.derive_key(
+            salt,
+            password,
+            &self.data.prev_data.clone().unwrap_or_default(),
+            self.data.iteration - 1,
+        );
 
         key == self.data.data
     }
