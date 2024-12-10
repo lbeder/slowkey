@@ -164,7 +164,10 @@ enum Commands {
         iteration_moving_window: u32,
     },
 
-    #[command(about = "Continue derivation process from an existing checkpoint")]
+    #[command(
+        about = "Continue derivation process from an existing checkpoint",
+        arg_required_else_help = true
+    )]
     RestoreFromCheckpoint {
         #[arg(
             short,
@@ -227,7 +230,7 @@ enum Commands {
         iteration_moving_window: u32,
     },
 
-    #[command(about = "Decrypt and print a checkpoint")]
+    #[command(about = "Decrypt and print a checkpoint", arg_required_else_help = true)]
     ShowCheckpoint {
         #[arg(long, help = "Path to an existing checkpoint")]
         checkpoint: PathBuf,
@@ -250,7 +253,7 @@ enum Commands {
         base58: bool,
     },
 
-    #[command(about = "Decrypt and print an output file")]
+    #[command(about = "Decrypt and print an output file", arg_required_else_help = true)]
     ShowOutput {
         #[arg(long, help = "Path to an existing output")]
         output: PathBuf,
