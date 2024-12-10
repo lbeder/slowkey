@@ -496,30 +496,29 @@ fn get_checkpoint_data() -> CheckpointData {
     if length < SlowKeyOptions::MIN_KEY_SIZE {
         panic!(
             "length {} is shorter than the min value of {}",
-            SlowKeyOptions::MIN_KEY_SIZE,
-            length
+            length,
+            SlowKeyOptions::MIN_KEY_SIZE
         );
     } else if length > SlowKeyOptions::MAX_KEY_SIZE {
         panic!(
             "length {} is greater than the max value of {}",
-            SlowKeyOptions::MAX_KEY_SIZE,
-            length
+            length,
+            SlowKeyOptions::MAX_KEY_SIZE
         );
     }
 
     let iteration: usize = Input::new().with_prompt("Iteration").interact_text().unwrap();
-    let iteration = iteration - 1;
     if iteration < SlowKeyOptions::MIN_ITERATIONS {
         panic!(
             "iteration {} is shorter than the min value of {}",
+            iteration,
             SlowKeyOptions::MIN_ITERATIONS,
-            iteration
         );
     } else if iteration > SlowKeyOptions::MAX_ITERATIONS {
         panic!(
             "iteration {} is greater than the max value of {}",
+            iteration,
             SlowKeyOptions::MAX_ITERATIONS,
-            iteration
         );
     }
 
@@ -531,7 +530,11 @@ fn get_checkpoint_data() -> CheckpointData {
     };
 
     let prev_data = if iteration > 1 {
-        let prev_data: String = Input::new().with_prompt("Previous data").interact_text().unwrap();
+        let prev_data: String = Input::new()
+            .with_prompt("Previous data")
+            .allow_empty(true)
+            .interact_text()
+            .unwrap();
         let prev_data = if prev_data.starts_with(HEX_PREFIX) {
             hex::decode(prev_data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
         } else {
@@ -567,7 +570,7 @@ fn get_checkpoint_data() -> CheckpointData {
     CheckpointData {
         version,
         data: SlowKeyData {
-            iteration,
+            iteration: iteration - 1,
             data,
             prev_data,
             slowkey: CheckpointSlowKeyOptions {
