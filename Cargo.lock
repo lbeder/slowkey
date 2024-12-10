@@ -1668,7 +1668,7 @@ dependencies = [
 
 [[package]]
 name = "slowkey"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "balloon-hash",
  "base64 0.21.7",
@@ -1685,7 +1685,6 @@ dependencies = [
  "hex",
  "humantime",
  "indicatif",
- "lazy_static",
  "libsodium-sys-stable",
  "mimalloc",
  "rayon",

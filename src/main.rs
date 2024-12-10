@@ -7,13 +7,10 @@ extern crate libsodium_sys;
 extern crate serde;
 extern crate serde_json;
 
-#[macro_use]
-extern crate lazy_static;
-
 mod slowkey;
 
 use crate::{
-    slowkey::{SlowKey, SlowKeyOptions, TEST_VECTORS},
+    slowkey::{SlowKey, SlowKeyOptions},
     utils::sodium_init::initialize,
 };
 use base64::{engine::general_purpose, Engine as _};
@@ -275,9 +272,6 @@ enum Commands {
         )]
         base58: bool,
     },
-
-    #[command(about = "Print test vectors")]
-    Test {},
 
     #[command(about = "Run benchmarks")]
     Bench {},
@@ -1045,29 +1039,6 @@ fn main() {
             }
         },
 
-        Some(Commands::Test {}) => {
-            for test_vector in TEST_VECTORS.iter() {
-                println!(
-                    "{}: \"{}\"\n{}: \"{}\"\n",
-                    "Salt".yellow(),
-                    from_utf8(&test_vector.salt).unwrap().cyan(),
-                    "Password".yellow(),
-                    from_utf8(&test_vector.password).unwrap().cyan(),
-                );
-
-                test_vector.opts.print();
-
-                let slowkey = SlowKey::new(&test_vector.opts);
-                let key = slowkey.derive_key(
-                    &test_vector.salt,
-                    &test_vector.password,
-                    &test_vector.offset_data,
-                    test_vector.offset,
-                );
-
-                println!("Derived key: {}\n", format!("0x{}", hex::encode(&key)).cyan());
-            }
-        },
         Some(Commands::Bench {}) => {
             let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 

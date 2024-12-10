@@ -77,7 +77,6 @@ Commands:
   restore-from-checkpoint  Continue derivation process from an existing checkpoint
   show-checkpoint          Decrypt and print a checkpoint
   show-output              Decrypt and print an output file
-  test                     Print test vectors
   bench                    Run benchmarks
 
 Options:
@@ -155,17 +154,6 @@ Options:
           Iteration time sampling moving window size [default: 10]
   -h, --help
           Print help
-```
-
-### Printing Test Vectors
-
-```sh
-Print test vectors
-
-Usage: slowkey test
-
-Options:
-  -h, --help  Print help
 ```
 
 ### Running Benchmarks
@@ -735,75 +723,6 @@ Password is: p...d
 Verifying the output...
 
 The password, salt and internal data are correct
-```
-
-## Test Vectors
-
-In order to verify the validity of SlowKey, you can run the `test` command:
-
-> slowkey test
-
-Test vectors:
-
-### #1
-
-- Password: "" (the empty string)
-- Salt: "SlowKeySlowKey16"
-- Iterations: 1
-- Length: 64
-- Scrypt Parameters:
-  - n: 1048576
-  - r: 8
-  - p: 1
-- Argon2id Parameters:
-  - version: 19
-  - m_cost: 2097152
-  - t_cost: 2
-- Balloon Hash Parameters:
-  - s_cost: 131072
-  - t_cost: 1
-
-### #2
-
-- Password: "Hello World"
-- Salt: "SlowKeySlowKey16"
-- Iterations: 3
-- Length: 64
-- Scrypt Parameters:
-  - n: 1048576
-  - r: 8
-  - p: 1
-- Argon2id Parameters:
-  - version: 19
-  - m_cost: 2097152
-  - t_cost: 2
-- Balloon Hash Parameters:
-  - s_cost: 131072
-  - t_cost: 1
-
-Results should be:
-
-```sh
-SlowKey Parameters:
-  Iterations: 1
-  Length: 64
-  Scrypt: (n: 1048576, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
-
-Derived key: 0x367b02d6b56805cff382222e1a6a50c80e3b118d6147a64cb1c8b75777bc9a44266f43075fe3c05d8a37cfd19c6f7b5f268bdb88b43a1e0deba0d8f06f3c5597
-
-Salt: "SlowKeySlowKey16"
-Password: "Hello World"
-
-SlowKey Parameters:
-  Iterations: 3
-  Length: 64
-  Scrypt: (n: 1048576, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
-
-Derived key: 0x6693eed526503206e6c27d5317b4fe2b26e0b03b9afa5dc3ec1b95628e69db4b862e82f7488062d73b8ae528d2b5590669e46b1c188e40f8919241c7f87e5eb6
 ```
 
 ## Run Benchmark

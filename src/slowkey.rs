@@ -103,46 +103,6 @@ impl Default for SlowKeyOptions {
     }
 }
 
-#[derive(PartialEq, Debug)]
-pub struct TestSlowKeyOptions {
-    pub opts: SlowKeyOptions,
-    pub salt: Vec<u8>,
-    pub password: Vec<u8>,
-    pub offset_data: Vec<u8>,
-    pub offset: usize,
-}
-
-lazy_static! {
-    pub static ref TEST_VECTORS: Vec<TestSlowKeyOptions> = vec![
-        TestSlowKeyOptions {
-            opts: SlowKeyOptions {
-                iterations: 1,
-                length: 64,
-                scrypt: ScryptOptions::default(),
-                argon2id: Argon2idOptions::default(),
-                ballon_hash: BalloonHashOptions::default()
-            },
-            salt: b"SlowKeySlowKey16".to_vec(),
-            password: Vec::new(),
-            offset_data: Vec::new(),
-            offset: 0,
-        },
-        TestSlowKeyOptions {
-            opts: SlowKeyOptions {
-                iterations: 3,
-                length: 64,
-                scrypt: ScryptOptions::default(),
-                argon2id: Argon2idOptions::default(),
-                ballon_hash: BalloonHashOptions::default()
-            },
-            salt: b"SlowKeySlowKey16".to_vec(),
-            password: b"Hello World".to_vec(),
-            offset_data: Vec::new(),
-            offset: 0,
-        },
-    ];
-}
-
 pub struct SlowKey<'a> {
     iterations: usize,
     length: usize,
@@ -400,8 +360,6 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(&TEST_VECTORS[0].opts, &TEST_VECTORS[0].salt, &TEST_VECTORS[0].password, &TEST_VECTORS[0].offset_data, TEST_VECTORS[0].offset, "367b02d6b56805cff382222e1a6a50c80e3b118d6147a64cb1c8b75777bc9a44266f43075fe3c05d8a37cfd19c6f7b5f268bdb88b43a1e0deba0d8f06f3c5597")]
-    #[case(&TEST_VECTORS[1].opts, &TEST_VECTORS[1].salt, &TEST_VECTORS[1].password, &TEST_VECTORS[1].offset_data, TEST_VECTORS[1].offset, "6693eed526503206e6c27d5317b4fe2b26e0b03b9afa5dc3ec1b95628e69db4b862e82f7488062d73b8ae528d2b5590669e46b1c188e40f8919241c7f87e5eb6")]
     #[case(&SlowKeyOptions {
         iterations: 1,
         length: SlowKeyOptions::MAX_KEY_SIZE,
