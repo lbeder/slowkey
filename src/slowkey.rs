@@ -24,7 +24,6 @@ pub struct SlowKeyOptions {
 impl SlowKeyOptions {
     pub const MIN_ITERATIONS: usize = 1;
     pub const MAX_ITERATIONS: usize = u32::MAX as usize;
-    pub const DEFAULT_ITERATIONS: usize = 100;
 
     pub const MIN_KEY_SIZE: usize = 9;
     pub const MAX_KEY_SIZE: usize = 64;
@@ -88,18 +87,6 @@ impl SlowKeyOptions {
             &self.balloon_hash.s_cost().to_string().cyan(),
             &self.balloon_hash.t_cost().to_string().cyan()
         );
-    }
-}
-
-impl Default for SlowKeyOptions {
-    fn default() -> Self {
-        Self {
-            iterations: Self::DEFAULT_ITERATIONS,
-            length: Self::DEFAULT_KEY_SIZE,
-            scrypt: ScryptOptions::default(),
-            argon2id: Argon2idOptions::default(),
-            balloon_hash: BalloonHashOptions::default(),
-        }
     }
 }
 
@@ -322,7 +309,10 @@ impl SlowKey<'_> {
 
         let options = SlowKeyOptions {
             iterations: 1,
-            ..SlowKeyOptions::default()
+            length: SlowKeyOptions::DEFAULT_KEY_SIZE,
+            scrypt: ScryptOptions::default(),
+            argon2id: Argon2idOptions::default(),
+            balloon_hash: BalloonHashOptions::default(),
         };
         group.bench_with_input(
             BenchmarkId::new(

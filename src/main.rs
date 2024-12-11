@@ -66,7 +66,6 @@ enum Commands {
         #[arg(
             short,
             long,
-            default_value = SlowKeyOptions::default().iterations.to_string(),
             help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS)
         )]
         iterations: usize,
@@ -74,7 +73,7 @@ enum Commands {
         #[arg(
             short,
             long,
-            default_value = SlowKeyOptions::default().length.to_string(),
+            default_value = SlowKeyOptions::DEFAULT_KEY_SIZE.to_string(),
             help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE)
         )]
         length: usize,
@@ -84,46 +83,46 @@ enum Commands {
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.n().to_string(),
+            default_value = ScryptOptions::DEFAULT_N.to_string(),
             help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
         )]
         scrypt_n: u64,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.r().to_string(),
+            default_value = ScryptOptions::DEFAULT_R.to_string(),
             help = format!("Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than {} and lesser than or equal to {})", ScryptOptions::MIN_R, ScryptOptions::MAX_R)
         )]
         scrypt_r: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().scrypt.p().to_string(),
+            default_value = ScryptOptions::DEFAULT_P.to_string(),
             help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P)
         )]
         scrypt_p: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().argon2id.m_cost().to_string(),
+            default_value = Argon2idOptions::DEFAULT_M_COST.to_string(),
             help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().argon2id.t_cost().to_string(),
+            default_value = Argon2idOptions::DEFAULT_T_COST.to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().balloon_hash.s_cost().to_string(),
+            default_value = BalloonHashOptions::DEFAULT_S_COST.to_string(),
             help = format!("Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_S_COST, BalloonHashOptions::MAX_S_COST))]
         balloon_s_cost: u32,
 
         #[arg(
             long,
-            default_value = SlowKeyOptions::default().balloon_hash.t_cost().to_string(),
+            default_value = BalloonHashOptions::DEFAULT_T_COST.to_string(),
             help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
 
@@ -172,7 +171,6 @@ enum Commands {
         #[arg(
             short,
             long,
-            default_value = SlowKeyOptions::default().iterations.to_string(),
             help = format!("Number of iterations (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_ITERATIONS, SlowKeyOptions::MAX_ITERATIONS)
         )]
         iterations: usize,

@@ -87,9 +87,13 @@ Options:
 ### Deriving
 
 ```sh
+Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
+
+Usage: slowkey derive [OPTIONS] --iterations <ITERATIONS>
+
 Options:
   -i, --iterations <ITERATIONS>
-          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
+          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
   -l, --length <LENGTH>
           Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
       --output <OUTPUT>
@@ -129,11 +133,11 @@ Options:
 ```sh
 Continue derivation process from an existing checkpoint
 
-Usage: slowkey restore-from-checkpoint [OPTIONS]
+Usage: slowkey restore-from-checkpoint [OPTIONS] --iterations <ITERATIONS>
 
 Options:
   -i, --iterations <ITERATIONS>
-          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295) [default: 100]
+          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
       --output <OUTPUT>
           Optional path for storing the encrypted output
       --checkpoint-dir <CHECKPOINT_DIR>
