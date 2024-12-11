@@ -121,10 +121,6 @@ pub struct Output {
 
 impl Output {
     pub fn new(opts: &OutputOptions) -> Self {
-        if opts.path.exists() {
-            panic!("Output file \"{}\" already exists", opts.path.to_str().unwrap());
-        }
-
         Self {
             path: opts.path.clone(),
             cipher: ChaCha20Poly1305::new(&opts.key),

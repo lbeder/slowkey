@@ -41,6 +41,7 @@ use utils::{
         version::Version,
     },
     color_hash::color_hash,
+    file_lock::FileLock,
     outputs::{
         fingerprint::Fingerprint,
         output::{OpenOutputOptions, Output, OutputOptions},
@@ -668,8 +669,18 @@ fn derive(derive_options: DeriveOptions) {
     let mut output_key = derive_options.output_key;
     let mut checkpoint: Option<Checkpoint> = None;
 
+    let mut _output_lock: Option<FileLock> = None;
     let mut out: Option<Output> = None;
     if let Some(path) = derive_options.output {
+        if path.exists() {
+            panic!("Output file \"{}\" already exists", path.to_string_lossy());
+        }
+
+        _output_lock = match FileLock::try_lock(&path) {
+            Ok(lock) => Some(lock),
+            Err(_) => panic!("Unable to lock {}", path.to_string_lossy()),
+        };
+
         if output_key.is_none() {
             output_key = Some(get_output_key());
         }
