@@ -490,19 +490,23 @@ fn get_output_key() -> Vec<u8> {
 fn get_checkpoint_data() -> CheckpointData {
     println!("Please enter the checkpoint data manually:\n");
 
-    let version: u8 = Input::new().with_prompt("Version").interact_text().unwrap();
+    let version: u8 = Input::new()
+        .with_prompt("Version")
+        .default(Version::V2 as u8)
+        .interact_text()
+        .unwrap();
     let version = Version::from(version);
 
     let iteration: usize = Input::new().with_prompt("Iteration").interact_text().unwrap();
     if iteration < SlowKeyOptions::MIN_ITERATIONS {
         panic!(
-            "iteration {} is shorter than the min value of {}",
+            "Iteration {} is shorter than the min value of {}",
             iteration,
             SlowKeyOptions::MIN_ITERATIONS,
         );
     } else if iteration > SlowKeyOptions::MAX_ITERATIONS {
         panic!(
-            "iteration {} is greater than the max value of {}",
+            "Iteration {} is greater than the max value of {}",
             iteration,
             SlowKeyOptions::MAX_ITERATIONS,
         );
@@ -514,6 +518,10 @@ fn get_checkpoint_data() -> CheckpointData {
     } else {
         data.as_bytes().to_vec()
     };
+
+    if data.is_empty() {
+        panic!("Invalid data");
+    }
 
     let prev_data = if iteration > 1 {
         let prev_data: String = Input::new()
@@ -527,6 +535,10 @@ fn get_checkpoint_data() -> CheckpointData {
             prev_data.as_bytes().to_vec()
         };
 
+        if prev_data.len() != data.len() {
+            panic!("Invalid previous data's length");
+        }
+
         Some(prev_data)
     } else {
         None
@@ -534,16 +546,20 @@ fn get_checkpoint_data() -> CheckpointData {
 
     println!();
 
-    let length: usize = Input::new().with_prompt("Length").interact_text().unwrap();
+    let length: usize = Input::new()
+        .with_prompt("Length")
+        .default(SlowKeyOptions::DEFAULT_KEY_SIZE)
+        .interact_text()
+        .unwrap();
     if length < SlowKeyOptions::MIN_KEY_SIZE {
         panic!(
-            "length {} is shorter than the min value of {}",
+            "Length {} is shorter than the min value of {}",
             length,
             SlowKeyOptions::MIN_KEY_SIZE
         );
     } else if length > SlowKeyOptions::MAX_KEY_SIZE {
         panic!(
-            "length {} is greater than the max value of {}",
+            ":ength {} is greater than the max value of {}",
             length,
             SlowKeyOptions::MAX_KEY_SIZE
         );
@@ -551,21 +567,49 @@ fn get_checkpoint_data() -> CheckpointData {
 
     println!();
 
-    let scrypt_n: u64 = Input::new().with_prompt("Scrypt n").interact_text().unwrap();
-    let scrypt_r: u32 = Input::new().with_prompt("Scrypt r").interact_text().unwrap();
-    let scrypt_p: u32 = Input::new().with_prompt("Scrypt p").interact_text().unwrap();
+    let scrypt_n: u64 = Input::new()
+        .with_prompt("Scrypt n")
+        .default(ScryptOptions::DEFAULT_N)
+        .interact_text()
+        .unwrap();
+    let scrypt_r: u32 = Input::new()
+        .with_prompt("Scrypt r")
+        .default(ScryptOptions::DEFAULT_R)
+        .interact_text()
+        .unwrap();
+    let scrypt_p: u32 = Input::new()
+        .with_prompt("Scrypt p")
+        .default(ScryptOptions::DEFAULT_P)
+        .interact_text()
+        .unwrap();
     let scrypt = ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p);
 
     println!();
 
-    let argon2id_m_cost: u32 = Input::new().with_prompt("Argon2id m_cost").interact_text().unwrap();
-    let argon2id_t_cost: u32 = Input::new().with_prompt("Argon2id t_cost").interact_text().unwrap();
+    let argon2id_m_cost: u32 = Input::new()
+        .with_prompt("Argon2id m_cost")
+        .default(Argon2idOptions::DEFAULT_M_COST)
+        .interact_text()
+        .unwrap();
+    let argon2id_t_cost: u32 = Input::new()
+        .with_prompt("Argon2id t_cost")
+        .default(Argon2idOptions::DEFAULT_T_COST)
+        .interact_text()
+        .unwrap();
     let argon2id = Argon2idOptions::new(argon2id_m_cost, argon2id_t_cost);
 
     println!();
 
-    let balloon_s_cost: u32 = Input::new().with_prompt("Balloon Hash s_cost").interact_text().unwrap();
-    let balloon_t_cost: u32 = Input::new().with_prompt("Balloon Hash t_cost").interact_text().unwrap();
+    let balloon_s_cost: u32 = Input::new()
+        .with_prompt("Balloon Hash s_cost")
+        .default(BalloonHashOptions::DEFAULT_S_COST)
+        .interact_text()
+        .unwrap();
+    let balloon_t_cost: u32 = Input::new()
+        .with_prompt("Balloon Hash t_cost")
+        .default(BalloonHashOptions::DEFAULT_T_COST)
+        .interact_text()
+        .unwrap();
     let balloon_hash = BalloonHashOptions::new(balloon_s_cost, balloon_t_cost);
 
     println!();
