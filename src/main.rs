@@ -134,13 +134,16 @@ enum Commands {
 
         #[arg(
             long,
+            default_value = CheckpointOptions::DEFAULT_CHECKPOINT_INTERVAL.to_string(),
+            requires = "checkpoint_dir",
             help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save"
         )]
-        checkpoint_interval: Option<usize>,
+        checkpoint_interval: usize,
 
         #[arg(
             long,
             default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
+            requires = "checkpoint_dir",
             help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
         )]
         max_checkpoints_to_keep: usize,
@@ -186,13 +189,16 @@ enum Commands {
 
         #[arg(
             long,
+            default_value = CheckpointOptions::DEFAULT_CHECKPOINT_INTERVAL.to_string(),
+            requires = "checkpoint_dir",
             help = "Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save"
         )]
-        checkpoint_interval: Option<usize>,
+        checkpoint_interval: usize,
 
         #[arg(
             long,
             default_value = CheckpointOptions::DEFAULT_MAX_CHECKPOINTS_TO_KEEP.to_string(),
+            requires = "checkpoint_dir",
             help = format!("Specifies the number of most recent checkpoints to keep, while automatically deleting older ones")
         )]
         max_checkpoints_to_keep: usize,
@@ -649,7 +655,7 @@ struct DeriveOptions {
     checkpoint_data: Option<CheckpointData>,
     output_key: Option<Vec<u8>>,
     checkpoint_dir: Option<PathBuf>,
-    checkpoint_interval: Option<usize>,
+    checkpoint_interval: usize,
     max_checkpoints_to_keep: usize,
     output: Option<PathBuf>,
     base64: bool,
@@ -674,8 +680,6 @@ fn derive(derive_options: DeriveOptions) {
             slowkey: options.clone(),
         }))
     }
-
-    let mut checkpointing_interval: usize = 0;
 
     if let Some(checkpoint_data) = &derive_options.checkpoint_data {
         checkpoint_data.print(DisplayOptions::default());
@@ -711,8 +715,6 @@ fn derive(derive_options: DeriveOptions) {
     fingerprint.print();
 
     if let Some(dir) = derive_options.checkpoint_dir {
-        checkpointing_interval = derive_options.checkpoint_interval.unwrap();
-
         if output_key.is_none() {
             output_key = Some(get_output_key());
         }
@@ -727,7 +729,7 @@ fn derive(derive_options: DeriveOptions) {
 
         println!(
             "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
-            checkpointing_interval.to_string().cyan(),
+            derive_options.checkpoint_interval.to_string().cyan(),
             &dir.to_string_lossy().cyan()
         );
     }
@@ -799,7 +801,9 @@ fn derive(derive_options: DeriveOptions) {
                 let mut prev_data = prev_data_thread.lock().unwrap();
 
                 // Create a checkpoint if we've reached the checkpoint interval
-                if checkpointing_interval != 0 && (current_iteration + 1) % checkpointing_interval == 0 {
+                if derive_options.checkpoint_interval != 0
+                    && (current_iteration + 1) % derive_options.checkpoint_interval == 0
+                {
                     let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                     if let Some(checkpoint) = &mut checkpoint {

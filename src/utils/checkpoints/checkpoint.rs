@@ -33,6 +33,7 @@ pub struct CheckpointOptions {
 }
 
 impl CheckpointOptions {
+    pub const DEFAULT_CHECKPOINT_INTERVAL: usize = 1;
     pub const DEFAULT_MAX_CHECKPOINTS_TO_KEEP: usize = 1;
 }
 
