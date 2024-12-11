@@ -96,8 +96,6 @@ Options:
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
   -l, --length <LENGTH>
           Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
-      --output <OUTPUT>
-          Optional path for storing the encrypted output
       --scrypt-n <SCRYPT_N>
           Scrypt CPU/memory cost parameter (must be lesser than 18446744073709551615) [default: 1048576]
       --scrypt-r <SCRYPT_R>
@@ -112,6 +110,8 @@ Options:
           Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than 1 and lesser than 4294967295) [default: 131072]
       --balloon-t-cost <BALLOON_T_COST>
           Balloon Hash number of iterations (must be greater than 1 and lesser than 4294967295) [default: 1]
+      --output <OUTPUT>
+          Optional path for storing the encrypted output
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>

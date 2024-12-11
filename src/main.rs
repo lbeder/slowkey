@@ -78,9 +78,6 @@ enum Commands {
         )]
         length: usize,
 
-        #[arg(long, help = "Optional path for storing the encrypted output")]
-        output: Option<PathBuf>,
-
         #[arg(
             long,
             default_value = ScryptOptions::DEFAULT_N.to_string(),
@@ -125,6 +122,9 @@ enum Commands {
             default_value = BalloonHashOptions::DEFAULT_T_COST.to_string(),
             help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
+
+        #[arg(long, help = "Optional path for storing the encrypted output")]
+        output: Option<PathBuf>,
 
         #[arg(
             long,
