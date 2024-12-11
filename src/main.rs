@@ -493,23 +493,6 @@ fn get_checkpoint_data() -> CheckpointData {
     let version: u8 = Input::new().with_prompt("Version").interact_text().unwrap();
     let version = Version::from(version);
 
-    println!();
-
-    let length: usize = Input::new().with_prompt("Length").interact_text().unwrap();
-    if length < SlowKeyOptions::MIN_KEY_SIZE {
-        panic!(
-            "length {} is shorter than the min value of {}",
-            length,
-            SlowKeyOptions::MIN_KEY_SIZE
-        );
-    } else if length > SlowKeyOptions::MAX_KEY_SIZE {
-        panic!(
-            "length {} is greater than the max value of {}",
-            length,
-            SlowKeyOptions::MAX_KEY_SIZE
-        );
-    }
-
     let iteration: usize = Input::new().with_prompt("Iteration").interact_text().unwrap();
     if iteration < SlowKeyOptions::MIN_ITERATIONS {
         panic!(
@@ -548,6 +531,23 @@ fn get_checkpoint_data() -> CheckpointData {
     } else {
         None
     };
+
+    println!();
+
+    let length: usize = Input::new().with_prompt("Length").interact_text().unwrap();
+    if length < SlowKeyOptions::MIN_KEY_SIZE {
+        panic!(
+            "length {} is shorter than the min value of {}",
+            length,
+            SlowKeyOptions::MIN_KEY_SIZE
+        );
+    } else if length > SlowKeyOptions::MAX_KEY_SIZE {
+        panic!(
+            "length {} is greater than the max value of {}",
+            length,
+            SlowKeyOptions::MAX_KEY_SIZE
+        );
+    }
 
     println!();
 
