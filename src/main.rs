@@ -854,9 +854,9 @@ fn derive(derive_options: DeriveOptions) {
         key
     });
 
-    mb.clear().unwrap();
-
     let key = handle.join().unwrap();
+
+    mb.clear().unwrap();
 
     println!(
         "\n\nKey is (please highlight to see): {}",
