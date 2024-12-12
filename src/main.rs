@@ -14,7 +14,7 @@ use crate::{
     utils::sodium_init::initialize,
 };
 use base64::{engine::general_purpose, Engine as _};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
@@ -894,14 +894,14 @@ fn derive(derive_options: DeriveOptions) {
 
     println!(
         "Start time: {}",
-        DateTime::<Utc>::from(start_time)
+        DateTime::<Local>::from(start_time)
             .format("%Y-%m-%d %H:%M:%S")
             .to_string()
             .cyan()
     );
     println!(
         "End time: {}",
-        DateTime::<Utc>::from(SystemTime::now())
+        DateTime::<Local>::from(SystemTime::now())
             .format("%Y-%m-%d %H:%M:%S")
             .to_string()
             .cyan()
