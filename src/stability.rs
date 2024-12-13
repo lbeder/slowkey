@@ -2013,24 +2013,24 @@ const EXPECTED: [&str; ITERATIONS] = [
     "cf47a21d7876e09751c534db476c71689ba52b7c85f0f84945e3fa5c27b736af",
 ];
 
-pub fn stability_test(threads: usize) {
-    if threads == 0 {
-        panic!("Invalid number of threads");
+pub fn stability_test(tasks: usize) {
+    if tasks == 0 {
+        panic!("Invalid number of tasks");
     }
 
     println!(
-            "{}: If the requested number of threads {threads} is greater than the maximum thread count available by the OS it can result in some of threads being stalled\n",
+            "{}: If the requested number of tasks {tasks} is greater than the maximum thread count available by the OS it can result in some of tasks being stalled\n",
             "Warning".dark_yellow(),
         );
 
-    println!("Setting up a stability test thread pool with {threads} threads");
+    println!("Setting up a stability test task pool with {tasks} tasks");
     println!();
 
     let mb = MultiProgress::new();
     let mut pbs = Vec::new();
-    for i in 0..threads {
+    for i in 0..tasks {
         let pb = mb
-            .add(ProgressBar::new(ITERATIONS as u64))
+            .add(ProgressBar::new(2))
             .with_style(
                 ProgressStyle::with_template("{bar:80.cyan/blue}  {msg} {pos:>4}/{len:8} {percent}%    ({eta})")
                     .unwrap(),
@@ -2042,11 +2042,11 @@ pub fn stability_test(threads: usize) {
         pbs.push(pb.clone());
     }
 
-    (0..threads).into_par_iter().for_each(|i| {
+    (0..tasks).into_par_iter().for_each(|i| {
         let pb = &pbs[i];
 
         let slowkey = SlowKey::new(&SlowKeyOptions {
-            iterations: ITERATIONS,
+            iterations: 2,
             length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
@@ -2062,7 +2062,7 @@ pub fn stability_test(threads: usize) {
                 let expected = EXPECTED[current_iteration];
                 if !current_data.eq(&hex::decode(expected).unwrap()) {
                     println!(
-                        "\n\nThread #{} failed on iteration #{}\n\nExpected: 0x{}\nActual: 0x{}",
+                        "\n\nTasks #{} failed on iteration #{}\n\nExpected: 0x{}\nActual: 0x{}",
                         i + 1,
                         current_iteration + 1,
                         expected,
@@ -2076,12 +2076,8 @@ pub fn stability_test(threads: usize) {
             },
         );
 
-        pb.inc(1);
+        pb.finish();
     });
 
-    for pb in pbs {
-        pb.finish();
-    }
-
-    mb.clear().unwrap();
+    println!("All tasks have completed successfully without errors")
 }

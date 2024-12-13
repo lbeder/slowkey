@@ -288,8 +288,8 @@ enum Commands {
 
     #[command(about = "Run stability tests", arg_required_else_help = true)]
     StabilityTest {
-        #[arg(long, short, help = "Number of threads")]
-        threads: usize,
+        #[arg(long, short, help = "Number of tasks")]
+        tasks: usize,
     },
 }
 
@@ -1118,8 +1118,8 @@ fn main() {
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
-        Some(Commands::StabilityTest { threads }) => {
-            stability_test(threads);
+        Some(Commands::StabilityTest { tasks }) => {
+            stability_test(tasks);
         },
         None => {},
     }

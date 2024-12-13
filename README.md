@@ -177,11 +177,11 @@ Options:
 ```sh
 Run stability test
 
-Usage: slowkey stability-test --threads <THREADS>
+Usage: slowkey stability-test --tasks <THREADS>
 
 Options:
-  -t, --threads <THREADS>  Number of threads
-  -h, --help               Print help
+  -t, --tasks <THREADS>  Number of tasks
+  -h, --help             Print help
 ```
 
 ## Build
@@ -812,11 +812,11 @@ An HTML report will be generated in the `benchmarks` directory, but please make 
 
 ## Stability Tests
 
-The stability test works by ensuring the iteration outputs match expected pre-computed results. Setting a higher thread count may take longer to complete but also increases stress testing on the system's resources, specifically CPU and RAM, in order to uncover faulty hardware or overclock settings which may result in incorrect hashing results that otherwise wouldn't be detected and could lead to random results. In general if you are using an overclocked system or suspected defective hardware it is recommended to also use an external stress testing application to ensure system stability.
+The stability test works by ensuring the iteration outputs match expected pre-computed results. Setting a higher task count may take longer to complete but also increases stress testing on the system's resources, specifically CPU and RAM, in order to uncover faulty hardware or overclock settings which may result in incorrect hashing results that otherwise wouldn't be detected and could lead to random results. In general if you are using an overclocked system or suspected defective hardware it is recommended to also use an external stress testing application to ensure system stability.
 
-Too many threads may cause the application to be killed prematurely, therefore you should consider how many cpu cores are available when choosing a max thread count. The higher the thread count the heavier the load and the more likely to detect an error faster and in general. If an error is detected the thread which failed is reported and the process is stopped. In this event it's important to further check for faulty RAM and/or unstable overclock settings before relying on your computer for using this key stretching tool.
+Too many tasks may cause the application to be killed prematurely, therefore you should consider how many cpu cores are available when choosing a max task count. The higher the task count the heavier the load and the more likely to detect an error faster and in general. If an error is detected the task which failed is reported and the process is stopped. In this event it's important to further check for faulty RAM and/or unstable overclock settings before relying on your computer for using this key stretching tool.
 
-Please note that based on your operation system environment each thread may use a single CPU core for all three hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use separate cores for each (three CPU cores per thread).
+Please note that based on your operation system environment each task may use a single CPU thread for all three hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use separate threads for each (three CPU threads per task).
 
 Technically the user doesn't need to let the tool finish the full 2000 iterations however the longer it runs the more certain you can be that your system is stable for the purposes of using this key stretching tool. If you plan on doing very long term key stretching (weeks or months) and prefer to run the stability test for more than 2000 iterations simply restart the test process when it finishes either manually or using a script. Regardless, it is always recommended to run two separate instances of the key stretch to verify you generate the same output.
 
@@ -824,12 +824,12 @@ The stability test is also useful as a general sanity check as it verifies the r
 
 Disclaimer: This test is meant only to uncover some potential issues with your specific hardware/software environment but by no means does it guarantee the key stretching process will work correctly 100% of the time. You must manually verify the results yourself especially with higher iteration counts as key stretching is a memory and computationally resource intensive process therefore hardware heat issues and general hardware exhaustion can lead to faulty results without the user knowing.
 
-In order to run stability tests, you can run the `stability-test` command and specifying the number of threads via the `-t/--threads` argument:
+In order to run stability tests, you can run the `stability-test` command and specifying the number of tasks via the `-t/--tasks` argument:
 
 > slowkey stability-test -t 8
 
 ```sh
-Setting up a stability test thread pool with 8 threads
+Setting up a stability test task pool with 8 tasks
 
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
