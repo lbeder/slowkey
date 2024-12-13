@@ -78,6 +78,7 @@ Commands:
   show-checkpoint          Decrypt and print a checkpoint
   show-output              Decrypt and print an output file
   bench                    Run benchmarks
+  stability-test           Run stability test
 
 Options:
   -h, --help     Print help
@@ -169,6 +170,18 @@ Usage: slowkey bench
 
 Options:
   -h, --help  Print help
+```
+
+### Running Stability Tests
+
+```sh
+Run stability test
+
+Usage: slowkey stability-test --threads <THREADS>
+
+Options:
+  -t, --threads <THREADS>  Number of threads
+  -h, --help               Print help
 ```
 
 ## Build
@@ -727,7 +740,7 @@ Verifying the output...
 The password, salt and internal data are correct
 ```
 
-## Run Benchmark
+## Benchmarks
 
 In order to run the benchmark suite, you can run the `bench` command:
 
@@ -792,6 +805,29 @@ Saved benchmark reports to: "~/benchmarks"
 ```
 
 An HTML report will be generated in the `benchmarks` directory, but please make sure to install `gnuplot` beforehand.
+
+## Stability Tests
+
+Stability tests are crucial for ensuring the reliability and accuracy of the SlowKey algorithm, especially when deployed in environments where the running machine is overclocked or operating at its maximum configuration. Overclocking or pushing hardware to its limits can increase the likelihood of hardware and memory corruption, which poses significant risks to the integrity of the SlowKey algorithm's computations. In such high-stress scenarios, even minor memory corruptions can lead to erroneous results, undermining the algorithm's effectiveness and potentially compromising security measures it may be designed to enforce.
+
+Additionally, configurations that maximize performance can inadvertently introduce vulnerabilities, making the system more prone to subtle errors in memory handling or processing. By implementing running stability tests, users can identify and address these vulnerabilities early on, ensuring that the SlowKey algorithm maintains its precision and reliability under extreme conditions.
+
+In order to run stability tests, you can run the `stability-test` command and specifying the number of threads via the `-t/--threads` argument:
+
+> slowkey stability-test -t 8
+
+```sh
+Setting up a stability test thread pool with 8 threads
+
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
+```
 
 ## License
 
