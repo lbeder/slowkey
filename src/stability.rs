@@ -2030,7 +2030,7 @@ pub fn stability_test(tasks: usize) {
     let mut pbs = Vec::new();
     for i in 0..tasks {
         let pb = mb
-            .add(ProgressBar::new(2))
+            .add(ProgressBar::new(ITERATIONS))
             .with_style(
                 ProgressStyle::with_template("{bar:80.cyan/blue}  {msg} {pos:>4}/{len:8} {percent}%    ({eta})")
                     .unwrap(),
@@ -2046,7 +2046,7 @@ pub fn stability_test(tasks: usize) {
         let pb = &pbs[i];
 
         let slowkey = SlowKey::new(&SlowKeyOptions {
-            iterations: 2,
+            iterations: ITERATIONS,
             length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
