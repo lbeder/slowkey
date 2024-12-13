@@ -422,13 +422,10 @@ fn get_password() -> Vec<u8> {
     password
 }
 
-fn get_output_key() -> Vec<u8> {
+fn get_file_key() -> Vec<u8> {
     let input = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your checkpoint/output encryption key")
-        .with_confirmation(
-            "Enter your checkpoint/output encryption key again",
-            "Error: keys don't match",
-        )
+        .with_prompt("Enter your file encryption key")
+        .with_confirmation("Enter your file encryption key again", "Error: keys don't match")
         .interact()
         .unwrap();
 
@@ -440,13 +437,13 @@ fn get_output_key() -> Vec<u8> {
         input.as_bytes().to_vec()
     };
 
-    show_hint(&input, "Output encryption key", hex);
+    show_hint(&input, "File encryption key", hex);
 
     let key_len = key.len();
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
             println!(
-                "\nOutput encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\nFile encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -470,7 +467,7 @@ fn get_output_key() -> Vec<u8> {
         },
         Ordering::Greater => {
             println!(
-                "\nOutput encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\nFile encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -662,7 +659,7 @@ fn show_hint(data: &str, description: &str, hex: bool) {
 struct DeriveOptions {
     options: SlowKeyOptions,
     checkpoint_data: Option<CheckpointData>,
-    output_key: Option<Vec<u8>>,
+    file_key: Option<Vec<u8>>,
     checkpoint_dir: Option<PathBuf>,
     checkpoint_interval: usize,
     max_checkpoints_to_keep: usize,
@@ -674,7 +671,7 @@ struct DeriveOptions {
 
 fn derive(derive_options: DeriveOptions) {
     let options = derive_options.options;
-    let mut output_key = derive_options.output_key;
+    let mut file_key = derive_options.file_key;
     let mut checkpoint: Option<Checkpoint> = None;
 
     let mut _output_lock: Option<FileLock> = None;
@@ -689,13 +686,13 @@ fn derive(derive_options: DeriveOptions) {
             Err(_) => panic!("Unable to lock {}", path.to_string_lossy()),
         };
 
-        if output_key.is_none() {
-            output_key = Some(get_output_key());
+        if file_key.is_none() {
+            file_key = Some(get_file_key());
         }
 
         out = Some(Output::new(&OutputOptions {
             path,
-            key: output_key.clone().unwrap(),
+            key: file_key.clone().unwrap(),
             slowkey: options.clone(),
         }))
     }
@@ -734,14 +731,14 @@ fn derive(derive_options: DeriveOptions) {
     fingerprint.print();
 
     if let Some(dir) = derive_options.checkpoint_dir {
-        if output_key.is_none() {
-            output_key = Some(get_output_key());
+        if file_key.is_none() {
+            file_key = Some(get_file_key());
         }
 
         checkpoint = Some(Checkpoint::new(&CheckpointOptions {
             iterations: options.iterations,
             dir: dir.to_owned(),
-            key: output_key.clone().unwrap(),
+            key: file_key.clone().unwrap(),
             max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
             slowkey: options.clone(),
         }));
@@ -978,7 +975,7 @@ fn main() {
                     &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
                 ),
                 checkpoint_data: None,
-                output_key: None,
+                file_key: None,
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
@@ -1003,12 +1000,12 @@ fn main() {
         }) => {
             print_input_instructions();
 
-            let mut output_key: Option<Vec<u8>> = None;
+            let mut file_key: Option<Vec<u8>> = None;
 
             let checkpoint_data = match checkpoint {
                 Some(path) => {
-                    let key = get_output_key();
-                    output_key = Some(key.clone());
+                    let key = get_file_key();
+                    file_key = Some(key.clone());
 
                     Checkpoint::get_checkpoint(&OpenCheckpointOptions { key: key.clone(), path })
                 },
@@ -1037,7 +1034,7 @@ fn main() {
             derive(DeriveOptions {
                 options,
                 checkpoint_data: Some(checkpoint_data),
-                output_key,
+                file_key,
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
@@ -1056,9 +1053,9 @@ fn main() {
         }) => {
             print_input_instructions();
 
-            let output_key = get_output_key();
+            let file_key = get_file_key();
             let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
-                key: output_key,
+                key: file_key,
                 path: checkpoint,
             });
 
@@ -1090,9 +1087,9 @@ fn main() {
         }) => {
             print_input_instructions();
 
-            let output_key = get_output_key();
+            let file_key = get_file_key();
             let output_data = Output::get(&OpenOutputOptions {
-                key: output_key,
+                key: file_key,
                 path: output,
             });
 

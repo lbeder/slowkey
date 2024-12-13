@@ -333,7 +333,7 @@ For instance, to elaborate on the previous example, suppose we want to create a 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" checkpoints directory
 
@@ -367,7 +367,7 @@ Let's use the `show-checkpoint` command to decrypt its contents and verify the p
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Checkpoint:
   Version: 2:
@@ -389,7 +389,7 @@ We can also verify that the password and salt match the checkpoint by passing th
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Checkpoint:
   Version: 2:
@@ -424,7 +424,7 @@ Let's continue the derivation process from this checkpoint and verify that we ar
 
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Checkpoint:
   Version: 2:
@@ -478,7 +478,7 @@ In addition to the above, you can use a checkpoint while specifying a larger ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Checkpoint:
   Version: 2:
@@ -530,7 +530,7 @@ You can also provide checkpoint data in an interactive way by specifying the `--
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Please enter the checkpoint data manually:
 
@@ -633,7 +633,7 @@ In addition to the above, the tool also supports saving the output to be encrypt
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 ✔ Enter your salt · ********
 
@@ -701,7 +701,7 @@ The output file checkpoint, except for the one that coincides with the first ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your checkpoint/output encryption key · ********
+✔ Enter your file key · ********
 
 Output:
   Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
