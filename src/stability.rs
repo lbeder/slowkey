@@ -2030,7 +2030,7 @@ pub fn stability_test(tasks: usize) {
     let mut pbs = Vec::new();
     for i in 0..tasks {
         let pb = mb
-            .add(ProgressBar::new(ITERATIONS))
+            .add(ProgressBar::new(ITERATIONS as u64))
             .with_style(
                 ProgressStyle::with_template("{bar:80.cyan/blue}  {msg} {pos:>4}/{len:8} {percent}%    ({eta})")
                     .unwrap(),
@@ -2079,5 +2079,5 @@ pub fn stability_test(tasks: usize) {
         pb.finish();
     });
 
-    println!("All tasks have completed successfully without errors")
+    println!("\n\nAll tasks have completed successfully without errors")
 }
