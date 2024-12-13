@@ -4,7 +4,7 @@
 
 ## Introduction
 
-SlowKey is a cutting-edge [Key Derivation Function](https://en.wikipedia.org/wiki/Key_derivation_function) (KDF) tool designed to enhance cryptographic security in various applications, from securing sensitive data to protecting user passwords. At its core, SlowKey leverages the power of three renowned cryptographic algorithms: [Scrypt](https://en.wikipedia.org/wiki/Scrypt), [Argon2](https://en.wikipedia.org/wiki/Argon2), [Balloon Hash](https://en.wikipedia.org/wiki/Balloon_hashing), [SHA2](https://en.wikipedia.org/wiki/SHA-2), and [SHA3](https://en.wikipedia.org/wiki/SHA-3), each selected for its unique strengths in ensuring data integrity and security.
+SlowKey is a cutting-edge [Key Derivation Function](https://en.wikipedia.org/wiki/Key_derivation_function) (KDF) tool designed to enhance cryptographic security in various applications, from securing sensitive data to protecting user passwords. At its core, SlowKey leverages the power of five renowned cryptographic algorithms: [Scrypt](https://en.wikipedia.org/wiki/Scrypt), [Argon2](https://en.wikipedia.org/wiki/Argon2), [Balloon Hash](https://en.wikipedia.org/wiki/Balloon_hashing), [SHA2](https://en.wikipedia.org/wiki/SHA-2), and [SHA3](https://en.wikipedia.org/wiki/SHA-3), each selected for its unique strengths in ensuring data integrity and security.
 
 SlowKey incorporates Scrypt, a memory-hard KDF that is specifically engineered to make brute-force attacks prohibitively expensive. By requiring significant amounts of memory and processing power to compute the hash functions, Scrypt ensures that the cost and time to perform large-scale custom hardware attacks are beyond the reach of most attackers, offering robust protection against rainbow table and brute-force attacks.
 
@@ -816,7 +816,7 @@ The stability test works by ensuring the iteration outputs match expected pre-co
 
 Too many tasks may cause the application to be killed prematurely, therefore you should consider how many cpu cores are available when choosing a max task count. The higher the task count the heavier the load and the more likely to detect an error faster and in general. If an error is detected the task which failed is reported and the process is stopped. In this event it's important to further check for faulty RAM and/or unstable overclock settings before relying on your computer for using this key stretching tool.
 
-Please note that based on your operation system environment each task may use a single CPU thread for all three hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use separate threads for each (three CPU threads per task).
+Please note that based on your operation system environment each task may use a single CPU thread for all three hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use more than one thread collectively.
 
 Technically the user doesn't need to let the tool finish the full 2000 iterations however the longer it runs the more certain you can be that your system is stable for the purposes of using this key stretching tool. If you plan on doing very long term key stretching (weeks or months) and prefer to run the stability test for more than 2000 iterations simply restart the test process when it finishes either manually or using a script. Regardless, it is always recommended to run two separate instances of the key stretch to verify you generate the same output.
 
