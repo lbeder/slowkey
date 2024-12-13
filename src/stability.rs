@@ -1,11 +1,13 @@
-use std::process::{self};
-
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use rayon::ThreadPoolBuilder;
-
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
+};
+use crossterm::style::Stylize;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use std::{
+    process::{self},
+    thread,
 };
 
 const TEST_SALT: &str = "saltsaltsaltsalt";
@@ -2014,25 +2016,41 @@ const EXPECTED: [&str; ITERATIONS] = [
     "cf47a21d7876e09751c534db476c71689ba52b7c85f0f84945e3fa5c27b736af",
 ];
 
-pub fn stability_test(threads: u8) {
+pub fn stability_test(threads: usize) {
     if threads == 0 {
         panic!("Invalid number of threads");
+    }
+
+    let estimate_max_number_of_threads = thread::available_parallelism().map(|n| n.get()).unwrap_or_else(|_| 1);
+
+    if threads > estimate_max_number_of_threads {
+        println!(
+            "{}: the requested number of threads {threads} is greater than the estimated maximum available threads {estimate_max_number_of_threads}. This can result in some of threads being stalled by the OS\n",
+            "Warning".dark_yellow(),
+        );
     }
 
     println!("Setting up a stability test thread pool with {threads} threads");
     println!();
 
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(threads as usize)
-        .build()
-        .expect("Failed to build thread pool");
-
     let mb = MultiProgress::new();
+    let mut pbs = Vec::new();
+    for i in 0..threads {
+        let pb = mb
+            .add(ProgressBar::new(ITERATIONS as u64))
+            .with_style(
+                ProgressStyle::with_template("{bar:80.cyan/blue}  {msg} {pos:>4}/{len:8} {percent}%    ({eta})")
+                    .unwrap(),
+            )
+            .with_message(format!("{:>4}", i + 1));
 
-    let task = |i: u8| {
-        let pb = mb.add(ProgressBar::new(ITERATIONS as u64)).with_style(
-            ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {percent}%    ({eta})").unwrap(),
-        );
+        pb.set_position(0);
+
+        pbs.push(pb.clone());
+    }
+
+    (0..threads).into_par_iter().for_each(|i| {
+        let pb = &pbs[i];
 
         let slowkey = SlowKey::new(&SlowKeyOptions {
             iterations: ITERATIONS,
@@ -2066,18 +2084,7 @@ pub fn stability_test(threads: u8) {
         );
 
         pb.inc(1);
-    };
-
-    // Execute N tasks in parallel
-    pool.scope(|s| {
-        for i in 0..threads {
-            s.spawn(move |_| {
-                task(i);
-            });
-        }
     });
 
     mb.clear().unwrap();
-
-    println!("All {threads} tasks have been executed");
 }

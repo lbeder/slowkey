@@ -289,7 +289,7 @@ enum Commands {
     #[command(about = "Run stability tests")]
     StabilityTest {
         #[arg(long, short, help = "Number of threads")]
-        threads: u8,
+        threads: usize,
     },
 }
 
