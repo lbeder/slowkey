@@ -76,7 +76,7 @@ enum Commands {
         #[arg(
             short,
             long,
-            default_value = SlowKeyOptions::DEFAULT_KEY_SIZE.to_string(),
+            default_value = SlowKeyOptions::DEFAULT_OUTPUT_SIZE.to_string(),
             help = format!("Length of the derived result (must be greater than {} and lesser than or equal to {})", SlowKeyOptions::MIN_KEY_SIZE, SlowKeyOptions::MAX_KEY_SIZE)
         )]
         length: usize,
@@ -561,7 +561,7 @@ fn get_checkpoint_data() -> CheckpointData {
 
     let length: usize = Input::new()
         .with_prompt("Length")
-        .default(SlowKeyOptions::DEFAULT_KEY_SIZE)
+        .default(SlowKeyOptions::DEFAULT_OUTPUT_SIZE)
         .interact_text()
         .unwrap();
     if length < SlowKeyOptions::MIN_KEY_SIZE {
@@ -867,20 +867,20 @@ fn derive(derive_options: DeriveOptions) {
     mb.clear().unwrap();
 
     println!(
-        "\n\nKey is (please highlight to see): {}",
+        "\n\nOutput is (please highlight to see): {}",
         format!("0x{}", hex::encode(&key)).black().on_black()
     );
 
     if derive_options.base64 {
         println!(
-            "Key (base64) is (please highlight to see): {}",
+            "nOutput (base64) is (please highlight to see): {}",
             general_purpose::STANDARD.encode(&key).black().on_black()
         );
     }
 
     if derive_options.base58 {
         println!(
-            "Key (base58) is (please highlight to see): {}",
+            "nOutput (base58) is (please highlight to see): {}",
             bs58::encode(&key).into_string().black().on_black()
         );
     }

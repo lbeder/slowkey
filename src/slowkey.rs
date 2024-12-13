@@ -27,7 +27,7 @@ impl SlowKeyOptions {
 
     pub const MIN_KEY_SIZE: usize = 9;
     pub const MAX_KEY_SIZE: usize = 64;
-    pub const DEFAULT_KEY_SIZE: usize = 32;
+    pub const DEFAULT_OUTPUT_SIZE: usize = 32;
 
     pub fn new(
         iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions,
@@ -309,7 +309,7 @@ impl SlowKey<'_> {
 
         let options = SlowKeyOptions {
             iterations: 1,
-            length: SlowKeyOptions::DEFAULT_KEY_SIZE,
+            length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
             balloon_hash: BalloonHashOptions::default(),

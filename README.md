@@ -267,7 +267,7 @@ Password is: p...d
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Start time: 2024-12-06 21:56:34
 End time: 2024-12-06 21:57:01
@@ -463,7 +463,7 @@ Final result:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Start time: 2024-12-06 22:10:30
 End time: 2024-12-06 22:11:09
@@ -515,7 +515,7 @@ Final result:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0x9e1a4e794f9c4f62a753f12b8c6971629579822c326c7ffcfdb8605a6146f94b
+Output is (please highlight to see): 0x9e1a4e794f9c4f62a753f12b8c6971629579822c326c7ffcfdb8605a6146f94b
 
 Start time: 2024-12-06 22:10:30
 End time: 2024-12-06 22:11:09
@@ -580,7 +580,7 @@ The password, salt and internal data are correct
 
 Iteration time moving average (10): 2s 610ms, last iteration time: 2s 625ms
 
-Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Start time: 2024-12-10 08:47:27
 End time: 2024-12-10 08:47:40
@@ -616,7 +616,7 @@ Password is: p...d
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 Key (base64) is (please highlight to see): 2hWL7fAOWrupAODAJ8JJkS461c5UME/bVPGTndsUIyo
 Key (base58) is (please highlight to see): FgJwB6BRc5wYjbeQnWh2q8egP3WVxK9hRqLsojvELRiR
 
@@ -654,7 +654,7 @@ SlowKey Parameters:
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
 
-Key is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
 Saved encrypted output to "~/output.enc"
 

@@ -2036,7 +2036,7 @@ pub fn stability_test(threads: u8) {
 
         let slowkey = SlowKey::new(&SlowKeyOptions {
             iterations: ITERATIONS,
-            length: SlowKeyOptions::DEFAULT_KEY_SIZE,
+            length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),
             balloon_hash: BalloonHashOptions::default(),
