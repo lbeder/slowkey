@@ -5,10 +5,7 @@ use crate::{
 use crossterm::style::Stylize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::{
-    process::{self},
-    thread,
-};
+use std::process::{self};
 
 const TEST_SALT: &str = "saltsaltsaltsalt";
 const TEST_PASSWORD: &str = "password";
@@ -2021,14 +2018,10 @@ pub fn stability_test(threads: usize) {
         panic!("Invalid number of threads");
     }
 
-    let estimate_max_number_of_threads = thread::available_parallelism().map(|n| n.get()).unwrap_or_else(|_| 1);
-
-    if threads > estimate_max_number_of_threads {
-        println!(
-            "{}: the requested number of threads {threads} is greater than the estimated maximum available threads {estimate_max_number_of_threads}. This can result in some of threads being stalled by the OS\n",
+    println!(
+            "{}: If the requested number of threads {threads} is greater than the maximum thread count available by the OS it can result in some of threads being stalled\n",
             "Warning".dark_yellow(),
         );
-    }
 
     println!("Setting up a stability test thread pool with {threads} threads");
     println!();
@@ -2085,6 +2078,10 @@ pub fn stability_test(threads: usize) {
 
         pb.inc(1);
     });
+
+    for pb in pbs {
+        pb.finish();
+    }
 
     mb.clear().unwrap();
 }

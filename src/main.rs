@@ -861,8 +861,6 @@ fn derive(derive_options: DeriveOptions) {
 
     let key = handle.join().unwrap();
 
-    mb.clear().unwrap();
-
     println!(
         "\n\nOutput is (please highlight to see): {}",
         format!("0x{}", hex::encode(&key)).black().on_black()

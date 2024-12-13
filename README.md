@@ -260,9 +260,11 @@ Salt is: s...t
 
 Password is: p...d
 
-████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░       1/10      10%    (54s)
+Fingerprint: E5E61F417790448A
 
-Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/10       30%    (19s)
+
+Iteration time moving average (10): 2s 546ms, last iteration time: 2s 536ms
 ```
 
 Final result:
@@ -278,14 +280,14 @@ Password is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
-Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+Iteration time moving average (10): 2s 526ms, last iteration time: 2s 529ms
 
 Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
-Start time: 2024-12-06 21:56:34
-End time: 2024-12-06 21:57:01
-Total running time: 27s
-Average iteration time: 2s 717ms
+Start time: 2024-12-13 19:20:53
+End time: 2024-12-13 19:21:18
+Total running time: 25s
+Average iteration time: 2s 526ms
 ```
 
 Please note that salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated into `16` bytes:
@@ -346,8 +348,6 @@ For instance, to elaborate on the previous example, suppose we want to create a 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
-
 Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" checkpoints directory
 
 SlowKey Parameters:
@@ -365,9 +365,11 @@ Salt is: s...t
 
 Password is: p...d
 
+✔ Enter your file encryption key · ********
+
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
-Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+Iteration time moving average (10): 2s 544ms, last iteration time: 2s 521ms
 Created checkpoint #5 with data hash 0xc33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 ```
 
@@ -380,7 +382,7 @@ Let's use the `show-checkpoint` command to decrypt its contents and verify the p
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -402,7 +404,7 @@ We can also verify that the password and salt match the checkpoint by passing th
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -434,10 +436,9 @@ Let's continue the derivation process from this checkpoint and verify that we ar
 > slowkey restore-from-checkpoint -i 10 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
-
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -464,9 +465,11 @@ Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
+Fingerprint: E5E61F417790448A
+
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        5/10        0%    (4s)
 
-Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+Iteration time moving average (10): 4s 74ms, last iteration time: 4s 212ms
 ```
 
 Final result:
@@ -474,14 +477,14 @@ Final result:
 ```sh
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
-Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
+Iteration time moving average (10): 4s 78ms, last iteration time: 4s 376ms
 
 Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
-Start time: 2024-12-06 22:10:30
-End time: 2024-12-06 22:11:09
-Total running time: 39s
-Average iteration time: 1s 993ms
+Start time: 2024-12-13 19:27:29
+End time: 2024-12-13 19:27:50
+Total running time: 20s
+Average iteration time: 2s 40ms
 ```
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
@@ -491,7 +494,7 @@ In addition to the above, you can use a checkpoint while specifying a larger ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -518,6 +521,8 @@ Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
+Fingerprint: 2BF6533527D88603
+
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        5/20        0%    (56s)
 ```
 
@@ -543,16 +548,16 @@ You can also provide checkpoint data in an interactive way by specifying the `--
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Please enter the checkpoint data manually:
 
 Version: 2
-
-Length: 32
 Iteration: 5
 Data: 0x7ce6792307959432459050b666260a72c7105d18e66c31cc59d3044fb827f482
 Previous data: 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec2
+
+Length: 32
 
 Scrypt n: 1048576
 Scrypt r: 8
@@ -589,16 +594,18 @@ Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
+Fingerprint: E5E61F417790448A
+
 ████████████████████████████████████████████████████████████████████████████████       10/10       100%    (0s)
 
-Iteration time moving average (10): 2s 610ms, last iteration time: 2s 625ms
+Iteration time moving average (10): 3s 705ms, last iteration time: 2s 505ms
 
 Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
 
-Start time: 2024-12-10 08:47:27
-End time: 2024-12-10 08:47:40
-Total running time: 13s
-Average iteration time: 1s 305ms
+Start time: 2024-12-13 19:35:09
+End time: 2024-12-13 19:35:28
+Total running time: 18s
+Average iteration time: 1s 853ms
 ```
 
 ### Outputs
@@ -625,6 +632,8 @@ Salt is: s...t
 
 Password is: p...d
 
+Fingerprint: E5E61F417790448A
+
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
 Iteration time moving average (10): 4s 425ms, last iteration time: 4s 322ms
@@ -646,7 +655,14 @@ In addition to the above, the tool also supports saving the output to be encrypt
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (n: 1048576, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
 ✔ Enter your salt · ********
 
@@ -656,12 +672,7 @@ Salt is: s...t
 
 Password is: p...d
 
-SlowKey Parameters:
-  Iterations: 10
-  Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
-  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
-  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
+Fingerprint: E5E61F417790448A
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
@@ -679,25 +690,13 @@ Average iteration time: 2s 717ms
 
 Let's use the `show-output` command to decrypt its contents:
 
-```sh
-Decrypt and print an output file
-
-Usage: slowkey show-output [OPTIONS] --output <OUTPUT>
-
-Options:
-      --output <OUTPUT>  Path to an existing output
-      --verify           Verify that the password and salt match the output
-      --base64           Show the result in Base64 (in addition to hex)
-      --base58           Show the result in Base58 (in addition to hex)
-  -h, --help             Print help
-```
-
 > slowkey show-output --output ~/output.enc
 
 ```sh
 Output:
+  Version: 2:
   Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
-  Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
+  Previous Iteration's Data (please highlight to see): 0x339f2d3942a0eafba023a76b70148efd0b57aa760c17e61a2047b11c771d7e9b
 
 SlowKey Parameters:
   Iterations: 10
@@ -705,6 +704,8 @@ SlowKey Parameters:
   Scrypt: (n: 1048576, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
+
+Fingerprint: E5E61F417790448A
 ```
 
 The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
@@ -714,11 +715,12 @@ The output file checkpoint, except for the one that coincides with the first ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file key · ********
+✔ Enter your file encryption key · ********
 
 Output:
+  Version: 2:
   Data (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
-  Previous Iteration's Data (please highlight to see): 0x1022becf0bd59c89fd6db6c9b0ccd0514c0022204521616a93d208bcdfa53e85
+  Previous Iteration's Data (please highlight to see): 0x339f2d3942a0eafba023a76b70148efd0b57aa760c17e61a2047b11c771d7e9b
 
 SlowKey Parameters:
   Iterations: 10
@@ -726,6 +728,8 @@ SlowKey Parameters:
   Scrypt: (n: 1048576, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
+
+Fingerprint: E5E61F417790448A
 
 ✔ Enter your salt · ********
 
