@@ -8,7 +8,9 @@ extern crate serde;
 extern crate serde_json;
 
 mod slowkey;
+mod stability;
 
+use crate::stability::stability_test;
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::sodium_init::initialize,
@@ -283,6 +285,12 @@ enum Commands {
 
     #[command(about = "Run benchmarks")]
     Bench {},
+
+    #[command(about = "Run stability test")]
+    StabilityTest {
+        #[arg(long, short, help = "Number of threads")]
+        threads: u8,
+    },
 }
 
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
@@ -1114,6 +1122,9 @@ fn main() {
             SlowKey::benchmark(&output_path);
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
+        },
+        Some(Commands::StabilityTest { threads }) => {
+            stability_test(threads);
         },
         None => {},
     }
