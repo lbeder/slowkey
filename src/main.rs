@@ -286,7 +286,7 @@ enum Commands {
     #[command(about = "Run benchmarks")]
     Bench {},
 
-    #[command(about = "Run stability tests")]
+    #[command(about = "Run stability tests", arg_required_else_help = true)]
     StabilityTest {
         #[arg(long, short, help = "Number of threads")]
         threads: usize,
