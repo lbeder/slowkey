@@ -168,6 +168,13 @@ enum Commands {
 
         #[arg(long, default_value = "10", help = "Iteration time sampling moving window size")]
         iteration_moving_window: u32,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Perform an optional sanity check by computing the algorithm twice and verifying the results"
+        )]
+        sanity: bool,
     },
 
     #[command(
@@ -236,6 +243,13 @@ enum Commands {
 
         #[arg(long, default_value = "10", help = "Iteration time sampling moving window size")]
         iteration_moving_window: u32,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Perform an optional sanity check by computing the algorithm twice and verifying the results"
+        )]
+        sanity: bool,
     },
 
     #[command(about = "Decrypt and print a checkpoint", arg_required_else_help = true)]
@@ -675,6 +689,7 @@ struct DeriveOptions {
     base64: bool,
     base58: bool,
     iteration_moving_window: u32,
+    sanity: bool,
 }
 
 fn derive(derive_options: DeriveOptions) {
@@ -796,6 +811,7 @@ fn derive(derive_options: DeriveOptions) {
             &password,
             &offset_data,
             offset,
+            derive_options.sanity,
             |current_iteration, current_data| {
                 // Track iteration times
                 let last_iteration_time = iteration_time.elapsed().as_millis();
@@ -969,6 +985,7 @@ fn main() {
             base64,
             base58,
             iteration_moving_window,
+            sanity,
         }) => {
             print_input_instructions();
 
@@ -989,6 +1006,7 @@ fn main() {
                 base64,
                 base58,
                 iteration_moving_window,
+                sanity,
             });
         },
 
@@ -1003,6 +1021,7 @@ fn main() {
             base64,
             base58,
             iteration_moving_window,
+            sanity,
         }) => {
             print_input_instructions();
 
@@ -1048,6 +1067,7 @@ fn main() {
                 base64,
                 base58,
                 iteration_moving_window,
+                sanity,
             });
         },
 

@@ -116,7 +116,7 @@ impl SlowKey<'_> {
     }
 
     pub fn derive_key_with_callback<F: FnMut(usize, &Vec<u8>)>(
-        &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, mut callback: F,
+        &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, sanity: bool, mut callback: F,
     ) -> Vec<u8> {
         if salt.len() != Self::SALT_SIZE {
             panic!("Salt must be {} long", Self::SALT_SIZE);
@@ -134,16 +134,27 @@ impl SlowKey<'_> {
         for i in offset..self.iterations {
             let iteration = i as u64;
 
-            let mut scrypt_output = Vec::new();
-            let mut argon2_output = Vec::new();
-            let mut balloon_hash_output = Vec::new();
-
             // Run all KDF algorithms in parallel
-            rayon::scope(|s| {
-                s.spawn(|_| scrypt_output = self.scrypt(salt, password, iteration, &res));
-                s.spawn(|_| argon2_output = self.argon2id(salt, password, iteration, &res));
-                s.spawn(|_| balloon_hash_output = self.balloon_hash(salt, &salt_string, password, iteration, &res));
-            });
+            let [scrypt_output, argon2_output, balloon_hash_output] =
+                self.slowkey(salt, &salt_string, password, iteration, &res);
+
+            // Perform an optional sanity check
+            if sanity {
+                let [scrypt_output2, argon2_output2, balloon_hash_output2] =
+                    self.slowkey(salt, &salt_string, password, iteration, &res);
+
+                if scrypt_output != scrypt_output2 {
+                    panic!("Sanity check has failed: different scrypt outputs");
+                }
+
+                if argon2_output != argon2_output2 {
+                    panic!("Sanity check has failed: different argon2 outputs");
+                }
+
+                if balloon_hash_output != balloon_hash_output2 {
+                    panic!("Sanity check has failed: different argon2 outputs");
+                }
+            }
 
             // Concatenate all the results and the inputs
             res = [
@@ -166,7 +177,7 @@ impl SlowKey<'_> {
     }
 
     pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize) -> Vec<u8> {
-        self.derive_key_with_callback(salt, password, offset_data, offset, |_, _| {})
+        self.derive_key_with_callback(salt, password, offset_data, offset, false, |_, _| {})
     }
 
     fn double_hash(&self, salt: &[u8], password: &[u8], iteration: Option<u64>, input: &[u8]) -> Vec<u8> {
@@ -228,6 +239,23 @@ impl SlowKey<'_> {
         res.extend_from_slice(&iteration.to_le_bytes());
 
         self.balloon_hash.hash(salt_string, &res)
+    }
+
+    fn slowkey(
+        &self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, input: &[u8],
+    ) -> [Vec<u8>; 3] {
+        let mut scrypt_output = Vec::new();
+        let mut argon2_output = Vec::new();
+        let mut balloon_hash_output = Vec::new();
+
+        // Run all KDF algorithms in parallel
+        rayon::scope(|s| {
+            s.spawn(|_| scrypt_output = self.scrypt(salt, password, iteration, input));
+            s.spawn(|_| argon2_output = self.argon2id(salt, password, iteration, input));
+            s.spawn(|_| balloon_hash_output = self.balloon_hash(salt, salt_string, password, iteration, input));
+        });
+
+        [scrypt_output, argon2_output, balloon_hash_output]
     }
 
     pub fn benchmark(output_path: &Path) {

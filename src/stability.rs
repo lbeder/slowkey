@@ -2062,9 +2062,10 @@ pub fn stability_test(tasks: usize, iterations: usize) {
             TEST_PASSWORD.as_bytes(),
             &Vec::new(),
             0,
+            false,
             |current_iteration, current_data| {
                 let expected = EXPECTED[current_iteration];
-                if !current_data.eq(&hex::decode(expected).unwrap()) {
+                if current_data != &hex::decode(expected).unwrap() {
                     println!(
                         "\n\nTasks #{} failed on iteration #{}\n\nExpected: 0x{}\nActual: 0x{}",
                         i + 1,

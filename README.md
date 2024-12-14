@@ -125,6 +125,8 @@ Options:
           Show the result in Base58 (in addition to hex)
       --iteration-moving-window <ITERATION_MOVING_WINDOW>
           Iteration time sampling moving window size [default: 10]
+      --sanity
+          Perform an optional sanity check by computing the algorithm twice and verifying the results
   -h, --help
           Print help
 ```
@@ -157,6 +159,8 @@ Options:
           Show the result in Base58 (in addition to hex)
       --iteration-moving-window <ITERATION_MOVING_WINDOW>
           Iteration time sampling moving window size [default: 10]
+      --sanity
+          Perform an optional sanity check by computing the algorithm twice and verifying the results
   -h, --help
           Print help
 ```
