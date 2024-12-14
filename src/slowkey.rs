@@ -1,3 +1,8 @@
+use crate::utils::algorithms::{
+    argon2id::{Argon2id, Argon2idOptions},
+    balloon_hash::{BalloonHash, BalloonHashOptions},
+    scrypt::{Scrypt, ScryptOptions},
+};
 use balloon_hash::password_hash::SaltString;
 use criterion::{black_box, BenchmarkId, Criterion, SamplingMode};
 use crossterm::style::Stylize;
@@ -5,12 +10,6 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use sha3::{Digest, Keccak512};
 use std::{path::Path, time::Duration};
-
-use crate::utils::algorithms::{
-    argon2id::{Argon2id, Argon2idOptions},
-    balloon_hash::{BalloonHash, BalloonHashOptions},
-    scrypt::{Scrypt, ScryptOptions},
-};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlowKeyOptions {
