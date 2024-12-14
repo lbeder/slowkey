@@ -85,7 +85,7 @@ enum Commands {
         #[arg(
             long,
             default_value = ScryptOptions::DEFAULT_N.to_string(),
-            help = format!("Scrypt CPU/memory cost parameter (must be lesser than {})", ScryptOptions::MAX_N)
+            help = format!("Scrypt CPU/memory cost parameter (must be lesser than or equal {})", ScryptOptions::MAX_N)
         )]
         scrypt_n: u64,
 
@@ -99,32 +99,32 @@ enum Commands {
         #[arg(
             long,
             default_value = ScryptOptions::DEFAULT_P.to_string(),
-            help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P)
+            help = format!("Scrypt parallelization parameter (must be greater than {} and lesser than or equal {})", ScryptOptions::MIN_P, ScryptOptions::MAX_P)
         )]
         scrypt_p: u32,
 
         #[arg(
             long,
             default_value = Argon2idOptions::DEFAULT_M_COST.to_string(),
-            help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
+            help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than or equal {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
 
         #[arg(
             long,
             default_value = Argon2idOptions::DEFAULT_T_COST.to_string(),
-            help = format!("Argon2 number of iterations (must be greater than {} and lesser than {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
+            help = format!("Argon2 number of iterations (must be greater than {} and lesser than or equal {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
 
         #[arg(
             long,
             default_value = BalloonHashOptions::DEFAULT_S_COST.to_string(),
-            help = format!("Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_S_COST, BalloonHashOptions::MAX_S_COST))]
+            help = format!("Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than {} and lesser than or equal {})", BalloonHashOptions::MIN_S_COST, BalloonHashOptions::MAX_S_COST))]
         balloon_s_cost: u32,
 
         #[arg(
             long,
             default_value = BalloonHashOptions::DEFAULT_T_COST.to_string(),
-            help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
+            help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than or equal {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
 
         #[arg(long, help = "Optional path for storing the encrypted output")]
@@ -296,7 +296,7 @@ enum Commands {
             long,
             short,
             default_value = STABILITY_TEST_ITERATIONS.to_string(),
-            help = format!("Number of iterations to perform (must be greater than {} and lesser than {})", 0, STABILITY_TEST_ITERATIONS))]
+            help = format!("Number of iterations to perform (must be greater than {} and lesser than or equal {})", 0, STABILITY_TEST_ITERATIONS))]
         iterations: usize,
     },
 }
