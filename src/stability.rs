@@ -5,7 +5,13 @@ use crate::{
 use crossterm::style::Stylize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::process::{self};
+use std::{
+    process::{self},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 const TEST_SALT: &str = "saltsaltsaltsalt";
 const TEST_PASSWORD: &str = "password";
@@ -2046,6 +2052,8 @@ pub fn stability_test(tasks: usize, iterations: usize) {
         pbs.push(pb.clone());
     }
 
+    let failed = Arc::new(AtomicBool::new(false));
+
     (0..tasks).into_par_iter().for_each(|i| {
         let pb = &pbs[i];
 
@@ -2064,8 +2072,14 @@ pub fn stability_test(tasks: usize, iterations: usize) {
             0,
             false,
             |current_iteration, current_data| {
+                if failed.load(Ordering::Relaxed) {
+                    process::exit(1);
+                }
+
                 let expected = EXPECTED[current_iteration];
                 if current_data != &hex::decode(expected).unwrap() {
+                    failed.store(true, Ordering::Release);
+
                     println!(
                         "\n\nTasks #{} failed on iteration #{}\n\nExpected: 0x{}\nActual: 0x{}",
                         i + 1,
