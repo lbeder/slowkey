@@ -9,8 +9,8 @@ use std::process::{self};
 
 const TEST_SALT: &str = "saltsaltsaltsalt";
 const TEST_PASSWORD: &str = "password";
-const ITERATIONS: usize = 2000;
-const EXPECTED: [&str; ITERATIONS] = [
+pub const STABILITY_TEST_ITERATIONS: usize = 2000;
+const EXPECTED: [&str; STABILITY_TEST_ITERATIONS] = [
     "392ddd7c90c91ca9ec1814f50a69ed82e489da4a4eb064dee8029a1a9baafc8e",
     "9e337dd977ddba27adafb52c4209a2f8aa002494432063a642b4547fde14e1d8",
     "b7520f0d5a2b09f1ca04e95db78dfc7be9fc081dbbbd5b9d9bf229cbea2f8799",
@@ -2013,9 +2013,13 @@ const EXPECTED: [&str; ITERATIONS] = [
     "cf47a21d7876e09751c534db476c71689ba52b7c85f0f84945e3fa5c27b736af",
 ];
 
-pub fn stability_test(tasks: usize) {
+pub fn stability_test(tasks: usize, iterations: usize) {
     if tasks == 0 {
         panic!("Invalid number of tasks");
+    }
+
+    if iterations == 0 || iterations > STABILITY_TEST_ITERATIONS {
+        panic!("Invalid number of iterations");
     }
 
     println!(
@@ -2023,14 +2027,14 @@ pub fn stability_test(tasks: usize) {
             "Warning".dark_yellow(),
         );
 
-    println!("Setting up a stability test task pool with {tasks} tasks");
+    println!("Setting up a stability test task pool with {tasks} tasks, each running {iterations} iterations");
     println!();
 
     let mb = MultiProgress::new();
     let mut pbs = Vec::new();
     for i in 0..tasks {
         let pb = mb
-            .add(ProgressBar::new(ITERATIONS as u64))
+            .add(ProgressBar::new(iterations as u64))
             .with_style(
                 ProgressStyle::with_template("{bar:80.cyan/blue}  {msg} {pos:>4}/{len:8} {percent}%    ({eta})")
                     .unwrap(),
@@ -2046,7 +2050,7 @@ pub fn stability_test(tasks: usize) {
         let pb = &pbs[i];
 
         let slowkey = SlowKey::new(&SlowKeyOptions {
-            iterations: ITERATIONS,
+            iterations,
             length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
             scrypt: ScryptOptions::default(),
             argon2id: Argon2idOptions::default(),

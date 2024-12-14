@@ -175,13 +175,14 @@ Options:
 ### Running Stability Tests
 
 ```sh
-Run stability test
+Run stability tests
 
-Usage: slowkey stability-test --tasks <THREADS>
+Usage: slowkey stability-test [OPTIONS] --tasks <TASKS>
 
 Options:
-  -t, --tasks <THREADS>  Number of tasks
-  -h, --help             Print help
+  -t, --tasks <TASKS>            Number of tasks
+  -i, --iterations <ITERATIONS>  Number of iterations to perform (must be greater than 0 and lesser than 2000) [default: 2000]
+  -h, --help                     Print help
 ```
 
 ## Build
@@ -829,7 +830,7 @@ In order to run stability tests, you can run the `stability-test` command and sp
 > slowkey stability-test -t 8
 
 ```sh
-Setting up a stability test task pool with 8 tasks
+Setting up a stability test task pool with 8 tasks, each running 2000 iterations
 
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)

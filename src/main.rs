@@ -24,6 +24,7 @@ use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
 use sha2::{Digest, Sha512};
+use stability::STABILITY_TEST_ITERATIONS;
 use std::{
     cmp::Ordering,
     collections::VecDeque,
@@ -290,6 +291,13 @@ enum Commands {
     StabilityTest {
         #[arg(long, short, help = "Number of tasks")]
         tasks: usize,
+
+        #[arg(
+            long,
+            short,
+            default_value = STABILITY_TEST_ITERATIONS.to_string(),
+            help = format!("Number of iterations to perform (must be greater than {} and lesser than {})", 0, STABILITY_TEST_ITERATIONS))]
+        iterations: usize,
     },
 }
 
@@ -1118,8 +1126,8 @@ fn main() {
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
-        Some(Commands::StabilityTest { tasks }) => {
-            stability_test(tasks);
+        Some(Commands::StabilityTest { tasks, iterations }) => {
+            stability_test(tasks, iterations);
         },
         None => {},
     }
