@@ -821,7 +821,7 @@ The stability test works by ensuring the iteration outputs match expected pre-co
 
 Too many tasks may cause the application to be killed prematurely, therefore you should consider how many cpu cores are available when choosing a max task count. The higher the task count the heavier the load and the more likely to detect an error faster and in general. If an error is detected the task which failed is reported and the process is stopped. In this event it's important to further check for faulty RAM and/or unstable overclock settings before relying on your computer for using this key stretching tool.
 
-Please note that based on your operation system environment each task may use a single CPU thread for all three hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use more than one thread collectively.
+Please note that based on your operation system environment each task may use a single CPU thread for all 3 hash functions (Scrypt, Argon2, Balloon Hash) or alternatively may use more than one thread collectively.
 
 Technically the user doesn't need to let the tool finish the full 2000 iterations however the longer it runs the more certain you can be that your system is stable for the purposes of using this key stretching tool. If you plan on doing very long term key stretching (weeks or months) and prefer to run the stability test for more than 2000 iterations simply restart the test process when it finishes either manually or using a script. Regardless, it is always recommended to run two separate instances of the key stretch to verify you generate the same output.
 
@@ -845,6 +845,14 @@ Setting up a stability test task pool with 8 tasks, each running 2000 iterations
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/2000     0%    (4h)
 ```
+
+## Sanity Mode
+
+If using the `--sanity` flag the application will run each of the 3 primary hash functions twice (6 threads in parallel) on the same input data and also derive the iteration output twice, and compare all the outputs to verify they are identical. If there is a discrepancy it will halt the process and provide details regarding the mismatch.
+
+This is similar to the `stability-test`  function however can be used in real-time when key stretching and has the advantage of immediately notifying the user when an error has occurred. This can happen due to overstressed or faulty hardware, or problematic environment configurations and is an indication that the system in use in its current state is not stable enough for the purposes of key stretching. While it does provide a form of verification it does not guarantee that other types of errors might have occurred, and is not a replacement for verifying the results on a separate system either subsequently or in parallel.
+
+Please note that due to how different operating systems manage multi-threaded processes, performance may be affected differently. For example using the `--sanity` flag may run just as fast as running two separate instances without the flag, or it may run significantly slower despite the fact that it is essentially the same number of threads/resources/computational overhead.
 
 ## License
 
