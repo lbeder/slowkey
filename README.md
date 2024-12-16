@@ -2,6 +2,31 @@
 
 [![Build Status](https://github.com/lbeder/slowkey/actions/workflows/ci.yml/badge.svg)](https://github.com/lbeder/slowkey/actions/workflows/ci.yml)
 
+## Table of Contents
+
+1. [Introduction](#introduction)
+2. [SlowKey Key Derivation Scheme](#slowkey-key-derivation-scheme)
+   - [Definitions](#definitions)
+   - [Input](#input)
+   - [Output](#output)
+   - [Scheme](#scheme)
+3. [Usage](#usage)
+   - [General](#general)
+   - [Deriving](#deriving)
+   - [Restoring from a Checkpoint](#restoring-from-a-checkpoint)
+   - [Running Benchmarks](#running-benchmarks)
+   - [Running Stability Tests](#running-stability-tests)
+4. [Build](#build)
+   - [Mac OS ARM64](#mac-os-arm64)
+   - [Linux x64](#linux-x64)
+5. [Examples](#examples)
+   - [Checkpoints](#checkpoints)
+   - [Outputs](#outputs)
+6. [Benchmarks](#benchmarks)
+7. [Stability Tests](#stability-tests)
+8. [Sanity Mode](#sanity-mode)
+9. [License](#license)
+
 ## Introduction
 
 SlowKey is a cutting-edge [Key Derivation Function](https://en.wikipedia.org/wiki/Key_derivation_function) (KDF) tool designed to enhance cryptographic security in various applications, from securing sensitive data to protecting user passwords. At its core, SlowKey leverages the power of five renowned cryptographic algorithms: [Scrypt](https://en.wikipedia.org/wiki/Scrypt), [Argon2](https://en.wikipedia.org/wiki/Argon2), [Balloon Hash](https://en.wikipedia.org/wiki/Balloon_hashing), [SHA2](https://en.wikipedia.org/wiki/SHA-2), and [SHA3](https://en.wikipedia.org/wiki/SHA-3), each selected for its unique strengths in ensuring data integrity and security.
@@ -29,7 +54,7 @@ The SlowKey Key Derivation Scheme is defined as follows:
 - `Argon2id(data, salt)`: Function to derive a key using Argon2id KDF with `data` and `salt`.
 - `BalloonHash(data, salt)`: Function to derive a key using Balloon Hash KDF with `data` and `salt`.
 
-### Inputs
+### Input
 
 - `password`: User's password.
 - `salt`: Unique salt for hashing. Please note that the salt must be `16` bytes long, therefore shorter/longer salts will be SHA512 hashed and then truncated into `16` bytes.
