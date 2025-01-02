@@ -2029,7 +2029,7 @@ pub fn stability_test(tasks: usize, iterations: usize) {
     }
 
     println!(
-            "{}: If the requested number of tasks {tasks} is greater than the maximum thread count available by the OS it can result in some of tasks being stalled\n",
+            "{}: If the requested number of tasks {tasks} is greater than the maximum thread count available by the OS it can result in some of tasks being stalled. If the requested number of tasks {tasks} requires more than the available memory, it may result in the application crashing\n",
             "Warning".dark_yellow(),
         );
 
