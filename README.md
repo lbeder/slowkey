@@ -41,6 +41,12 @@ Alongside Scrypt, Argon2, and Balloon Hash, SlowKey utilizes SHA2 and SHA3 for t
 
 A cornerstone of SlowKey's design philosophy is its commitment to resilience through diversity. By integrating Scrypt, SHA2, and SHA3 within its cryptographic framework, SlowKey not only capitalizes on the unique strengths of each algorithm but also ensures a level of security redundancy that is critical in the face of evolving cyber threats. This strategic mixture means that even if one of these algorithms were to be compromised or "broken" due to unforeseen vulnerabilities, the overall security scheme of SlowKey would remain robust and intact, safeguarded by the uncompromised integrity of the remaining algorithms. This approach mirrors the principle of layered security in cybersecurity, where multiple defensive strategies are employed to protect against a single point of failure. Consequently, SlowKey offers an advanced, forward-thinking solution that anticipates and mitigates the potential impact of future cryptographic breakthroughs or advancements in quantum computing that could threaten individual hash functions. Through this multi-algorithm strategy, SlowKey provides a safeguard against the entire spectrum of cryptographic attacks, ensuring long-term security for its users in a landscape where the only constant is change.
 
+The use of ECC memory is recommended where possible as it provides much higher stability and protection against data errors and corruption especially when performing long term key stretching. Please note however that full system ECC is rarely supported, is much more expensive,  and is usually found in high-end workstations and servers where data reliability is critical. It is also not common in high-end consumer and gaming systems which are actually likely to yield the fastest results (highest CPU and RAM clock speeds).
+
+Regardless, This does not replace the need for verifying that the key stretching performed correctly by running it a second time, preferably on a separate system.
+
+Please note that separate from full system ECC which requires specific CPU, RAM and motherboard compatibility support, there is RAM with on-die (internal) ECC which, while not as robust as full system ECC, does provide additional stability and is a recommended optimization for long term key stretching.
+
 ## SlowKey Key Derivation Scheme
 
 The SlowKey Key Derivation Scheme is defined as follows:
