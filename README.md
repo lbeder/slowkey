@@ -104,12 +104,11 @@ function deriveKey(password, salt, iterations):
 Usage: slowkey [COMMAND]
 
 Commands:
-  derive                   Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
-  restore-from-checkpoint  Continue derivation process from an existing checkpoint
-  show-checkpoint          Decrypt and print a checkpoint
-  show-output              Decrypt and print an output file
-  bench                    Run benchmarks
-  stability-test           Run stability test
+  derive          Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
+  checkpoint      Checkpoint operations
+  output          Output operations
+  bench           Run benchmarks
+  stability-test  Run stability tests
 
 Options:
   -h, --help     Print help
@@ -162,12 +161,42 @@ Options:
           Print help
 ```
 
-### Restoring from a checkpoint
+### Checkpoints
+
+```sh
+Checkpoint operations
+
+Usage: slowkey checkpoint <COMMAND>
+
+Commands:
+  show     Print a checkpoint
+  restore  Continue derivation process from an existing checkpoint
+
+Options:
+  -h, --help  Print help
+```
+
+#### Showing a Checkpoint
+
+```sh
+Print a checkpoint
+
+Usage: slowkey checkpoint show [OPTIONS] --checkpoint <CHECKPOINT>
+
+Options:
+      --checkpoint <CHECKPOINT>  Path to an existing checkpoint
+      --verify                   Verify that the password and salt match the checkpoint
+      --base64                   Show the result in Base64 (in addition to hex)
+      --base58                   Show the result in Base58 (in addition to hex)
+  -h, --help                     Print help
+```
+
+#### Restoring from a Checkpoint
 
 ```sh
 Continue derivation process from an existing checkpoint
 
-Usage: slowkey restore-from-checkpoint [OPTIONS] --iterations <ITERATIONS>
+Usage: slowkey checkpoint restore [OPTIONS] --iterations <ITERATIONS>
 
 Options:
   -i, --iterations <ITERATIONS>
@@ -194,6 +223,35 @@ Options:
           Perform an optional sanity check by computing the algorithm twice and verifying the results
   -h, --help
           Print help
+```
+
+### Outputs
+
+```sh
+Output operations
+
+Usage: slowkey output <COMMAND>
+
+Commands:
+  show  Print an output file
+
+Options:
+  -h, --help  Print help
+```
+
+#### Showing an Output
+
+```sh
+Print an output file
+
+Usage: slowkey output show [OPTIONS] --output <OUTPUT>
+
+Options:
+      --output <OUTPUT>  Path to an existing output
+      --verify           Verify that the password and salt match the output
+      --base64           Show the result in Base64 (in addition to hex)
+      --base58           Show the result in Base58 (in addition to hex)
+  -h, --help             Print help
 ```
 
 ### Running Benchmarks
@@ -352,20 +410,7 @@ Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated in
 Do you want to continue? [y/n]
 ```
 
-### Checkpoints
-
-```sh
-Decrypt and print a checkpoint
-
-Usage: slowkey show-checkpoint [OPTIONS] --checkpoint <CHECKPOINT>
-
-Options:
-      --checkpoint <CHECKPOINT>  Path to an existing checkpoint
-      --verify                   Verify that the password and salt match the checkpoint
-      --base64                   Show the result in Base64 (in addition to hex)
-      --base58                   Show the result in Base58 (in addition to hex)
-  -h, --help                     Print help
-```
+### Checkpoint Operations
 
 The tool also supports the creation of periodic checkpoints, which are securely encrypted and stored on the disk. Each checkpoint captures all parameters and the output from the last iteration, enabling you to resume computation from a previously established checkpoint. Additionally, the tool allows for the retention of multiple checkpoints.
 
@@ -411,9 +456,9 @@ Created checkpoint #5 with data hash 0xc33f06fe6bdaac774ab473181aa4fe46a3baadee4
 
 We can see that the `checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0` was retained in the `~/checkpoints` directory. Please note that file name contains iteration the checkpoint was taken at and a salted hash of the data.
 
-Let's use the `show-checkpoint` command to decrypt its contents and verify the parameters:
+Let's use the `checkpoint show` command to decrypt its contents and verify the parameters:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint show --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -435,7 +480,7 @@ SlowKey Parameters:
 
 We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
 
-> slowkey show-checkpoint --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0 --verify
+> slowkey checkpoint show --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0 --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -469,7 +514,7 @@ The password, salt and internal data are correct
 
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey restore-from-checkpoint -i 10 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint restore -i 10 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -525,7 +570,7 @@ Average iteration time: 2s 40ms
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey restore-from-checkpoint -i 20 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint restore -i 20 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -579,7 +624,7 @@ Average iteration time: 1s 993ms
 
 You can also provide checkpoint data in an interactive way by specifying the `--interactive` flag:
 
-> slowkey restore-from-checkpoint -i 10 --interactive
+> slowkey checkpoint restore -i 10 --interactive
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -644,7 +689,7 @@ Total running time: 18s
 Average iteration time: 1s 853ms
 ```
 
-### Outputs
+### Output Commands
 
 By default, the tool outputs they key in a hexadecimal format, but the tool also supports both [Base64](https://en.wikipedia.org/wiki/Base64) and [Base58](https://en.wikipedia.org/wiki/Binary-to-text_encoding#Base58) formats optionally:
 
@@ -724,9 +769,9 @@ Total running time: 27s
 Average iteration time: 2s 717ms
 ```
 
-Let's use the `show-output` command to decrypt its contents:
+Let's use the `output show` command to decrypt its contents:
 
-> slowkey show-output --output ~/output.enc
+> slowkey output show --output ~/output.enc
 
 ```sh
 Output:
@@ -746,7 +791,7 @@ Fingerprint: E5E61F417790448A
 
 The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
 
-> slowkey show-output --output ~/output.enc --verify
+> slowkey output show --output ~/output.enc --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix

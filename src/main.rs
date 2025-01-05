@@ -60,7 +60,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[command(author, about, long_about = None, arg_required_else_help = true, disable_help_subcommand = true)]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
@@ -177,11 +177,59 @@ enum Commands {
         sanity: bool,
     },
 
+    #[command(subcommand, about = "Checkpoint operations", arg_required_else_help = true)]
+    Checkpoint(CheckpointCommands),
+
+    #[command(subcommand, about = "Output operations", arg_required_else_help = true)]
+    Output(OutputCommands),
+
+    #[command(about = "Run benchmarks")]
+    Bench {},
+
+    #[command(about = "Run stability tests", arg_required_else_help = true)]
+    StabilityTest {
+        #[arg(long, short, help = "Number of tasks")]
+        tasks: usize,
+
+        #[arg(
+            long,
+            short,
+            default_value = STABILITY_TEST_ITERATIONS.to_string(),
+            help = format!("Number of iterations to perform (must be greater than {} and lesser than or equal {})", 0, STABILITY_TEST_ITERATIONS))]
+        iterations: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum CheckpointCommands {
+    #[command(about = "Print a checkpoint", arg_required_else_help = true)]
+    Show {
+        #[arg(long, help = "Path to an existing checkpoint")]
+        checkpoint: PathBuf,
+
+        #[arg(long, help = "Verify that the password and salt match the checkpoint")]
+        verify: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base64 (in addition to hex)"
+        )]
+        base64: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Show the result in Base58 (in addition to hex)"
+        )]
+        base58: bool,
+    },
+
     #[command(
         about = "Continue derivation process from an existing checkpoint",
         arg_required_else_help = true
     )]
-    RestoreFromCheckpoint {
+    Restore {
         #[arg(
             short,
             long,
@@ -251,32 +299,12 @@ enum Commands {
         )]
         sanity: bool,
     },
+}
 
-    #[command(about = "Decrypt and print a checkpoint", arg_required_else_help = true)]
-    ShowCheckpoint {
-        #[arg(long, help = "Path to an existing checkpoint")]
-        checkpoint: PathBuf,
-
-        #[arg(long, help = "Verify that the password and salt match the checkpoint")]
-        verify: bool,
-
-        #[arg(
-            long,
-            action = clap::ArgAction::SetTrue,
-            help = "Show the result in Base64 (in addition to hex)"
-        )]
-        base64: bool,
-
-        #[arg(
-            long,
-            action = clap::ArgAction::SetTrue,
-            help = "Show the result in Base58 (in addition to hex)"
-        )]
-        base58: bool,
-    },
-
-    #[command(about = "Decrypt and print an output file", arg_required_else_help = true)]
-    ShowOutput {
+#[derive(Subcommand)]
+enum OutputCommands {
+    #[command(about = "Print an output file", arg_required_else_help = true)]
+    Show {
         #[arg(long, help = "Path to an existing output")]
         output: PathBuf,
 
@@ -296,22 +324,6 @@ enum Commands {
             help = "Show the result in Base58 (in addition to hex)"
         )]
         base58: bool,
-    },
-
-    #[command(about = "Run benchmarks")]
-    Bench {},
-
-    #[command(about = "Run stability tests", arg_required_else_help = true)]
-    StabilityTest {
-        #[arg(long, short, help = "Number of tasks")]
-        tasks: usize,
-
-        #[arg(
-            long,
-            short,
-            default_value = STABILITY_TEST_ITERATIONS.to_string(),
-            help = format!("Number of iterations to perform (must be greater than {} and lesser than or equal {})", 0, STABILITY_TEST_ITERATIONS))]
-        iterations: usize,
     },
 }
 
@@ -968,7 +980,7 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Derive {
+        Commands::Derive {
             iterations,
             length,
             output,
@@ -986,7 +998,7 @@ fn main() {
             base58,
             iteration_moving_window,
             sanity,
-        }) => {
+        } => {
             print_input_instructions();
 
             derive(DeriveOptions {
@@ -1010,145 +1022,149 @@ fn main() {
             });
         },
 
-        Some(Commands::RestoreFromCheckpoint {
-            iterations,
-            output,
-            checkpoint_dir,
-            checkpoint_interval,
-            max_checkpoints_to_keep,
-            checkpoint,
-            interactive,
-            base64,
-            base58,
-            iteration_moving_window,
-            sanity,
-        }) => {
-            print_input_instructions();
+        Commands::Checkpoint(cmd) => match cmd {
+            CheckpointCommands::Show {
+                checkpoint,
+                verify,
+                base64,
+                base58,
+            } => {
+                print_input_instructions();
 
-            let mut file_key: Option<Vec<u8>> = None;
+                let file_key = get_file_key();
+                let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
+                    key: file_key,
+                    path: checkpoint,
+                });
 
-            let checkpoint_data = match checkpoint {
-                Some(path) => {
-                    let key = get_file_key();
-                    file_key = Some(key.clone());
+                checkpoint_data.print(DisplayOptions {
+                    base64,
+                    base58,
+                    options: true,
+                });
 
-                    Checkpoint::get_checkpoint(&OpenCheckpointOptions { key: key.clone(), path })
-                },
-                None => match interactive {
-                    true => get_checkpoint_data(),
-                    false => panic!("Missing checkpoint path"),
-                },
-            };
+                if verify {
+                    let salt = get_salt();
+                    let password = get_password();
 
-            if iterations <= checkpoint_data.data.iteration {
-                panic!(
-                    "Invalid iterations number {} for checkpoint {}",
-                    iterations, checkpoint_data.data.iteration
-                );
-            }
+                    println!("Verifying the checkpoint...\n");
 
-            let opts = &checkpoint_data.data.slowkey;
-            let options = SlowKeyOptions {
+                    if !checkpoint_data.verify(&salt, &password) {
+                        panic!("The password, salt, or internal data is incorrect!");
+                    }
+
+                    println!("The password, salt and internal data are correct\n");
+                }
+            },
+
+            CheckpointCommands::Restore {
                 iterations,
-                length: opts.length,
-                scrypt: opts.scrypt,
-                argon2id: opts.argon2id,
-                balloon_hash: opts.balloon_hash,
-            };
-
-            derive(DeriveOptions {
-                options,
-                checkpoint_data: Some(checkpoint_data),
-                file_key,
+                output,
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
-                output,
+                checkpoint,
+                interactive,
                 base64,
                 base58,
                 iteration_moving_window,
                 sanity,
-            });
-        },
+            } => {
+                print_input_instructions();
 
-        Some(Commands::ShowCheckpoint {
-            checkpoint,
-            verify,
-            base64,
-            base58,
-        }) => {
-            print_input_instructions();
+                let mut file_key: Option<Vec<u8>> = None;
 
-            let file_key = get_file_key();
-            let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
-                key: file_key,
-                path: checkpoint,
-            });
+                let checkpoint_data = match checkpoint {
+                    Some(path) => {
+                        let key = get_file_key();
+                        file_key = Some(key.clone());
 
-            checkpoint_data.print(DisplayOptions {
-                base64,
-                base58,
-                options: true,
-            });
+                        Checkpoint::get_checkpoint(&OpenCheckpointOptions { key: key.clone(), path })
+                    },
+                    None => match interactive {
+                        true => get_checkpoint_data(),
+                        false => panic!("Missing checkpoint path"),
+                    },
+                };
 
-            if verify {
-                let salt = get_salt();
-                let password = get_password();
-
-                println!("Verifying the checkpoint...\n");
-
-                if !checkpoint_data.verify(&salt, &password) {
-                    panic!("The password, salt, or internal data is incorrect!");
+                if iterations <= checkpoint_data.data.iteration {
+                    panic!(
+                        "Invalid iterations number {} for checkpoint {}",
+                        iterations, checkpoint_data.data.iteration
+                    );
                 }
 
-                println!("The password, salt and internal data are correct\n");
-            }
+                let opts = &checkpoint_data.data.slowkey;
+                let options = SlowKeyOptions {
+                    iterations,
+                    length: opts.length,
+                    scrypt: opts.scrypt,
+                    argon2id: opts.argon2id,
+                    balloon_hash: opts.balloon_hash,
+                };
+
+                derive(DeriveOptions {
+                    options,
+                    checkpoint_data: Some(checkpoint_data),
+                    file_key,
+                    checkpoint_dir,
+                    checkpoint_interval,
+                    max_checkpoints_to_keep,
+                    output,
+                    base64,
+                    base58,
+                    iteration_moving_window,
+                    sanity,
+                });
+            },
         },
 
-        Some(Commands::ShowOutput {
-            output,
-            verify,
-            base64,
-            base58,
-        }) => {
-            print_input_instructions();
-
-            let file_key = get_file_key();
-            let output_data = Output::get(&OpenOutputOptions {
-                key: file_key,
-                path: output,
-            });
-
-            output_data.print(DisplayOptions {
+        Commands::Output(cmd) => match cmd {
+            OutputCommands::Show {
+                output,
+                verify,
                 base64,
                 base58,
-                options: true,
-            });
+            } => {
+                print_input_instructions();
 
-            if verify {
-                let salt = get_salt();
-                let password = get_password();
+                let file_key = get_file_key();
+                let output_data = Output::get(&OpenOutputOptions {
+                    key: file_key,
+                    path: output,
+                });
 
-                println!("Verifying the output...\n");
+                output_data.print(DisplayOptions {
+                    base64,
+                    base58,
+                    options: true,
+                });
 
-                if !output_data.verify(&salt, &password) {
-                    panic!("The password, salt, or internal data is incorrect!");
+                if verify {
+                    let salt = get_salt();
+                    let password = get_password();
+
+                    println!("Verifying the output...\n");
+
+                    if !output_data.verify(&salt, &password) {
+                        panic!("The password, salt, or internal data is incorrect!");
+                    }
+
+                    println!("The password, salt and internal data are correct\n");
                 }
-
-                println!("The password, salt and internal data are correct\n");
-            }
+            },
         },
 
-        Some(Commands::Bench {}) => {
+        Commands::Bench {} => {
             let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 
             SlowKey::benchmark(&output_path);
 
             println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
-        Some(Commands::StabilityTest { tasks, iterations }) => {
+
+        Commands::StabilityTest { tasks, iterations } => {
             stability_test(tasks, iterations);
         },
-        None => {},
     }
 }
