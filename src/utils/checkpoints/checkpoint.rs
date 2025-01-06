@@ -253,7 +253,7 @@ impl Checkpoint {
             },
         };
 
-        self.store(&checkpoint_path, &checkpoint);
+        self.save(&checkpoint_path, &checkpoint);
 
         self.data = CheckpointData {
             version: Version::V2,
@@ -305,7 +305,7 @@ impl Checkpoint {
         }
     }
 
-    fn store(&mut self, checkpoint_path: &Path, checkpoint: &CheckpointData) {
+    fn save(&mut self, checkpoint_path: &Path, checkpoint: &CheckpointData) {
         let file = File::create(checkpoint_path).unwrap();
         let mut writer = BufWriter::new(file);
 
@@ -328,29 +328,20 @@ impl Checkpoint {
         self.checkpoint_paths.push_back(checkpoint_path.to_path_buf());
     }
 
-    pub fn reencrypt(checkpoint_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
-        if !checkpoint_path.exists() {
-            panic!(
-                "Input checkpoint path \"{}\" does not exist",
-                checkpoint_path.to_string_lossy()
-            );
+    pub fn reencrypt(input_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
+        if !input_path.exists() {
+            panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
         }
 
-        if checkpoint_path.is_dir() {
-            panic!(
-                "Input checkpoint path \"{}\" is a directory",
-                checkpoint_path.to_string_lossy()
-            );
+        if input_path.is_dir() {
+            panic!("Input path \"{}\" is a directory", input_path.to_string_lossy());
         }
 
         if output_path.exists() {
-            panic!(
-                "Output checkpoint path \"{}\" already exists",
-                output_path.to_string_lossy()
-            );
+            panic!("Output path \"{}\" already exists", output_path.to_string_lossy());
         }
 
-        let checkpoint_file = File::open(checkpoint_path).unwrap();
+        let checkpoint_file = File::open(input_path).unwrap();
         let mut reader = BufReader::new(checkpoint_file);
 
         // Read the first byte (version)

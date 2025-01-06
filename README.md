@@ -169,8 +169,9 @@ Checkpoint operations
 Usage: slowkey checkpoint <COMMAND>
 
 Commands:
-  show     Print a checkpoint
-  restore  Continue derivation process from an existing checkpoint
+  show       Print a checkpoint
+  restore    Continue derivation process from an existing checkpoint
+  reencrypt  Reencrypt a checkpoint
 
 Options:
   -h, --help  Print help
@@ -181,14 +182,14 @@ Options:
 ```sh
 Print a checkpoint
 
-Usage: slowkey checkpoint show [OPTIONS] --checkpoint <CHECKPOINT>
+Usage: slowkey checkpoint show [OPTIONS] --path <PATH>
 
 Options:
-      --checkpoint <CHECKPOINT>  Path to an existing checkpoint
-      --verify                   Verify that the password and salt match the checkpoint
-      --base64                   Show the result in Base64 (in addition to hex)
-      --base58                   Show the result in Base58 (in addition to hex)
-  -h, --help                     Print help
+      --path <PATH>  Path to an existing checkpoint
+      --verify       Verify that the password and salt match the checkpoint
+      --base64       Show the result in Base64 (in addition to hex)
+      --base58       Show the result in Base58 (in addition to hex)
+  -h, --help         Print help
 ```
 
 #### Restoring from a Checkpoint
@@ -209,7 +210,7 @@ Options:
           Frequency of saving encrypted checkpoints to disk, specified as the number of iterations between each save [default: 1]
       --max-checkpoints-to-keep <MAX_CHECKPOINTS_TO_KEEP>
           Specifies the number of most recent checkpoints to keep, while automatically deleting older ones [default: 1]
-      --checkpoint <CHECKPOINT>
+      --path <PATH>
           Path to an existing checkpoint from which to resume the derivation process
       --interactive
           Input checkpoint data interactively (instead of providing the path to an existing checkpoint)
@@ -225,6 +226,19 @@ Options:
           Print help
 ```
 
+#### Reencrypting a Checkpoint
+
+```sh
+Reencrypt a checkpoint
+
+Usage: slowkey checkpoint reencrypt --input <INPUT> --output <OUTPUT>
+
+Options:
+      --input <INPUT>    Path to an existing checkpoint
+      --output <OUTPUT>  Path to the new checkpoint
+  -h, --help             Print help
+```
+
 ### Outputs
 
 ```sh
@@ -233,7 +247,8 @@ Output operations
 Usage: slowkey output <COMMAND>
 
 Commands:
-  show  Print an output file
+  show       Print an output file
+  reencrypt  Reencrypt an output file
 
 Options:
   -h, --help  Print help
@@ -244,13 +259,26 @@ Options:
 ```sh
 Print an output file
 
-Usage: slowkey output show [OPTIONS] --output <OUTPUT>
+Usage: slowkey output show [OPTIONS] --path <PATH>
 
 Options:
-      --output <OUTPUT>  Path to an existing output
-      --verify           Verify that the password and salt match the output
-      --base64           Show the result in Base64 (in addition to hex)
-      --base58           Show the result in Base58 (in addition to hex)
+      --path <PATH>  Path to an existing output
+      --verify       Verify that the password and salt match the output
+      --base64       Show the result in Base64 (in addition to hex)
+      --base58       Show the result in Base58 (in addition to hex)
+  -h, --help         Print help
+```
+
+#### Reencrypting an Output
+
+```sh
+Reencrypt an output file
+
+Usage: slowkey output reencrypt --input <INPUT> --output <OUTPUT>
+
+Options:
+      --input <INPUT>    Path to an existing output
+      --output <OUTPUT>  Path to the new checkpoint
   -h, --help             Print help
 ```
 
@@ -458,7 +486,7 @@ We can see that the `checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4
 
 Let's use the `checkpoint show` command to decrypt its contents and verify the parameters:
 
-> slowkey checkpoint show --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint show --path ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -480,7 +508,7 @@ SlowKey Parameters:
 
 We can also verify that the password and salt match the checkpoint by passing the optional `--verify` flag:
 
-> slowkey checkpoint show --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0 --verify
+> slowkey checkpoint show --path ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0 --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -514,7 +542,7 @@ The password, salt and internal data are correct
 
 Let's continue the derivation process from this checkpoint and verify that we arrive at the same final result as before. Please make sure to specify the correct number of iterations, as the checkpoint does not store the original iteration count.
 
-> slowkey checkpoint restore -i 10 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint restore -i 10 --path ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -570,7 +598,7 @@ Average iteration time: 2s 40ms
 
 In addition to the above, you can use a checkpoint while specifying a larger iteration count. For example, if you originally ran 10,000 iterations and want to continue from checkpoint 9,000, you can set a higher iteration count, such as 100,000, when restoring from this checkpoint:
 
-> slowkey checkpoint restore -i 20 --checkpoint ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
+> slowkey checkpoint restore -i 20 --path ~/checkpoints/checkpoint.05.c33f06fe6bdaac774ab473181aa4fe46a3baadee4b8f4dc02be2248dea5308c0
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
@@ -771,7 +799,7 @@ Average iteration time: 2s 717ms
 
 Let's use the `output show` command to decrypt its contents:
 
-> slowkey output show --output ~/output.enc
+> slowkey output show --path ~/output.enc
 
 ```sh
 Output:
@@ -791,7 +819,7 @@ Fingerprint: E5E61F417790448A
 
 The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
 
-> slowkey output show --output ~/output.enc --verify
+> slowkey output show --path ~/output.enc --verify
 
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix

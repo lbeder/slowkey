@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 #[derive(PartialEq, Debug, Clone)]
@@ -128,7 +128,7 @@ impl Output {
         }
     }
 
-    pub fn get(opts: &OpenOutputOptions) -> OutputData {
+    pub fn open(opts: &OpenOutputOptions) -> OutputData {
         if !opts.path.exists() {
             panic!("Output file \"{}\" does not exist", opts.path.to_str().unwrap());
         }
@@ -180,6 +180,49 @@ impl Output {
         let encrypted_data = self.cipher.encrypt(Nonce::Random, &output.data);
 
         writer.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
+        writer.flush().unwrap();
+    }
+
+    pub fn reencrypt(input_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
+        if !input_path.exists() {
+            panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
+        }
+
+        if input_path.is_dir() {
+            panic!("Input path \"{}\" is a directory", input_path.to_string_lossy());
+        }
+
+        if output_path.exists() {
+            panic!("Output path \"{}\" already exists", output_path.to_string_lossy());
+        }
+
+        let output_file = File::open(input_path).unwrap();
+        let mut reader = BufReader::new(output_file);
+
+        // Read the first byte (version)
+        let mut version_byte = [0u8; 1];
+        reader.read_exact(&mut version_byte).unwrap();
+
+        // Read the rest of the data
+        let mut encrypted_data = Vec::new();
+        reader.read_to_end(&mut encrypted_data).unwrap();
+
+        // Decrypt tje data
+        let cipher = ChaCha20Poly1305::new(&key);
+        let data: SlowKeyData = cipher.decrypt(&hex::decode(encrypted_data).unwrap());
+
+        // Reencrypt the data
+        let new_cipher = ChaCha20Poly1305::new(&new_key);
+        let reencrypted_data = new_cipher.encrypt(Nonce::Random, &data);
+
+        let output_file = File::create(output_path).unwrap();
+        let mut writer = BufWriter::new(output_file);
+
+        // Write the first byte (version)
+        writer.write_all(&version_byte).unwrap();
+
+        // Write the rest of the data
+        writer.write_all(hex::encode(reencrypted_data).as_bytes()).unwrap();
         writer.flush().unwrap();
     }
 }

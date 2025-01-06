@@ -205,7 +205,7 @@ enum CheckpointCommands {
     #[command(about = "Print a checkpoint", arg_required_else_help = true)]
     Show {
         #[arg(long, help = "Path to an existing checkpoint")]
-        checkpoint: PathBuf,
+        path: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the checkpoint")]
         verify: bool,
@@ -266,7 +266,7 @@ enum CheckpointCommands {
             long,
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
-        checkpoint: Option<PathBuf>,
+        path: Option<PathBuf>,
 
         #[arg(
             long,
@@ -303,7 +303,7 @@ enum CheckpointCommands {
     #[command(about = "Reencrypt a checkpoint", arg_required_else_help = true)]
     Reencrypt {
         #[arg(long, help = "Path to an existing checkpoint")]
-        checkpoint: PathBuf,
+        input: PathBuf,
 
         #[arg(long, help = "Path to the new checkpoint")]
         output: PathBuf,
@@ -315,7 +315,7 @@ enum OutputCommands {
     #[command(about = "Print an output file", arg_required_else_help = true)]
     Show {
         #[arg(long, help = "Path to an existing output")]
-        output: PathBuf,
+        path: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the output")]
         verify: bool,
@@ -333,6 +333,15 @@ enum OutputCommands {
             help = "Show the result in Base58 (in addition to hex)"
         )]
         base58: bool,
+    },
+
+    #[command(about = "Reencrypt an output file", arg_required_else_help = true)]
+    Reencrypt {
+        #[arg(long, help = "Path to an existing output")]
+        input: PathBuf,
+
+        #[arg(long, help = "Path to the new checkpoint")]
+        output: PathBuf,
     },
 }
 
@@ -1033,7 +1042,7 @@ fn main() {
 
         Commands::Checkpoint(cmd) => match cmd {
             CheckpointCommands::Show {
-                checkpoint,
+                path,
                 verify,
                 base64,
                 base58,
@@ -1041,10 +1050,7 @@ fn main() {
                 print_input_instructions();
 
                 let file_key = get_file_key();
-                let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions {
-                    key: file_key,
-                    path: checkpoint,
-                });
+                let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions { key: file_key, path });
 
                 checkpoint_data.print(DisplayOptions {
                     base64,
@@ -1072,7 +1078,7 @@ fn main() {
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
-                checkpoint,
+                path,
                 interactive,
                 base64,
                 base58,
@@ -1083,7 +1089,7 @@ fn main() {
 
                 let mut file_key: Option<Vec<u8>> = None;
 
-                let checkpoint_data = match checkpoint {
+                let checkpoint_data = match path {
                     Some(path) => {
                         let key = get_file_key();
                         file_key = Some(key.clone());
@@ -1127,7 +1133,7 @@ fn main() {
                 });
             },
 
-            CheckpointCommands::Reencrypt { checkpoint, output } => {
+            CheckpointCommands::Reencrypt { input, output } => {
                 print_input_instructions();
 
                 let key = get_file_key();
@@ -1136,19 +1142,15 @@ fn main() {
 
                 let new_key = get_file_key();
 
-                Checkpoint::reencrypt(&checkpoint, key, &output, new_key);
+                Checkpoint::reencrypt(&input, key, &output, new_key);
 
-                println!(
-                    "Reencrypted checkpoint at \"{}\" and saved at \"{}\"",
-                    checkpoint.to_string_lossy(),
-                    output.to_string_lossy()
-                );
+                println!("Saved new checkpoint at \"{}\"", output.to_string_lossy());
             },
         },
 
         Commands::Output(cmd) => match cmd {
             OutputCommands::Show {
-                output,
+                path,
                 verify,
                 base64,
                 base58,
@@ -1156,10 +1158,7 @@ fn main() {
                 print_input_instructions();
 
                 let file_key = get_file_key();
-                let output_data = Output::get(&OpenOutputOptions {
-                    key: file_key,
-                    path: output,
-                });
+                let output_data = Output::open(&OpenOutputOptions { key: file_key, path });
 
                 output_data.print(DisplayOptions {
                     base64,
@@ -1179,6 +1178,20 @@ fn main() {
 
                     println!("The password, salt and internal data are correct\n");
                 }
+            },
+
+            OutputCommands::Reencrypt { input, output } => {
+                print_input_instructions();
+
+                let key = get_file_key();
+
+                println!("Please provide the new file encryption key:\n");
+
+                let new_key = get_file_key();
+
+                Output::reencrypt(&input, key, &output, new_key);
+
+                println!("Saved new output at \"{}\"", output.to_string_lossy());
             },
         },
 
