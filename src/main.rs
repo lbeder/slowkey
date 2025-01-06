@@ -299,6 +299,15 @@ enum CheckpointCommands {
         )]
         sanity: bool,
     },
+
+    #[command(about = "Reencrypt a checkpoint", arg_required_else_help = true)]
+    Reencrypt {
+        #[arg(long, help = "Path to an existing checkpoint")]
+        checkpoint: PathBuf,
+
+        #[arg(long, help = "Path to the new checkpoint")]
+        output: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -711,14 +720,14 @@ fn derive(derive_options: DeriveOptions) {
 
     let mut _output_lock: Option<FileLock> = None;
     let mut out: Option<Output> = None;
-    if let Some(path) = derive_options.output {
-        if path.exists() {
-            panic!("Output file \"{}\" already exists", path.to_string_lossy());
+    if let Some(output_path) = derive_options.output {
+        if output_path.exists() {
+            panic!("Output file \"{}\" already exists", output_path.to_string_lossy());
         }
 
-        _output_lock = match FileLock::try_lock(&path) {
+        _output_lock = match FileLock::try_lock(&output_path) {
             Ok(lock) => Some(lock),
-            Err(_) => panic!("Unable to lock {}", path.to_string_lossy()),
+            Err(_) => panic!("Unable to lock {}", output_path.to_string_lossy()),
         };
 
         if file_key.is_none() {
@@ -726,7 +735,7 @@ fn derive(derive_options: DeriveOptions) {
         }
 
         out = Some(Output::new(&OutputOptions {
-            path,
+            path: output_path,
             key: file_key.clone().unwrap(),
             slowkey: options.clone(),
         }))
@@ -859,9 +868,9 @@ fn derive(derive_options: DeriveOptions) {
                     let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
 
                     if let Some(checkpoint) = &mut checkpoint {
-                        checkpoint.create_checkpoint(current_iteration, current_data, prev_data);
+                        checkpoint.create(current_iteration, current_data, prev_data);
 
-                        let hash = Checkpoint::hash_checkpoint(current_iteration, current_data, prev_data);
+                        let hash = Checkpoint::hash(current_iteration, current_data, prev_data);
 
                         checkpoint_info = format!(
                             "\nCreated checkpoint #{} with data hash {}",
@@ -1032,7 +1041,7 @@ fn main() {
                 print_input_instructions();
 
                 let file_key = get_file_key();
-                let checkpoint_data = Checkpoint::get_checkpoint(&OpenCheckpointOptions {
+                let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions {
                     key: file_key,
                     path: checkpoint,
                 });
@@ -1079,7 +1088,7 @@ fn main() {
                         let key = get_file_key();
                         file_key = Some(key.clone());
 
-                        Checkpoint::get_checkpoint(&OpenCheckpointOptions { key: key.clone(), path })
+                        Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
                     },
                     None => match interactive {
                         true => get_checkpoint_data(),
@@ -1116,6 +1125,24 @@ fn main() {
                     iteration_moving_window,
                     sanity,
                 });
+            },
+
+            CheckpointCommands::Reencrypt { checkpoint, output } => {
+                print_input_instructions();
+
+                let key = get_file_key();
+
+                println!("Please provide the new file encryption key:\n");
+
+                let new_key = get_file_key();
+
+                Checkpoint::reencrypt(&checkpoint, key, &output, new_key);
+
+                println!(
+                    "Reencrypted checkpoint at \"{}\" and saved at \"{}\"",
+                    checkpoint.to_string_lossy(),
+                    output.to_string_lossy()
+                );
             },
         },
 

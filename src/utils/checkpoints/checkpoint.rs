@@ -236,8 +236,8 @@ impl Checkpoint {
         }
     }
 
-    pub fn create_checkpoint(&mut self, iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
-        let hash = Self::hash_checkpoint(iteration, data, prev_data);
+    pub fn create(&mut self, iteration: usize, data: &[u8], prev_data: Option<&[u8]>) {
+        let hash = Self::hash(iteration, data, prev_data);
         let padding = self.checkpoint_extension_padding;
         let checkpoint_path = Path::new(&self.dir)
             .join(Self::CHECKPOINT_PREFIX)
@@ -253,7 +253,7 @@ impl Checkpoint {
             },
         };
 
-        self.store_checkpoint(&checkpoint_path, &checkpoint);
+        self.store(&checkpoint_path, &checkpoint);
 
         self.data = CheckpointData {
             version: Version::V2,
@@ -261,7 +261,7 @@ impl Checkpoint {
         }
     }
 
-    pub fn hash_checkpoint(iteration: usize, data: &[u8], prev_data: Option<&[u8]>) -> Vec<u8> {
+    pub fn hash(iteration: usize, data: &[u8], prev_data: Option<&[u8]>) -> Vec<u8> {
         let mut hash_data = data.to_vec();
         hash_data.extend_from_slice(&iteration.to_be_bytes());
 
@@ -274,7 +274,7 @@ impl Checkpoint {
         sha256.finalize().to_vec()
     }
 
-    pub fn get_checkpoint(opts: &OpenCheckpointOptions) -> CheckpointData {
+    pub fn open(opts: &OpenCheckpointOptions) -> CheckpointData {
         if opts.path.is_dir() {
             panic!("Checkpoint file \"{}\" is a directory", opts.path.to_str().unwrap());
         }
@@ -305,7 +305,7 @@ impl Checkpoint {
         }
     }
 
-    fn store_checkpoint(&mut self, checkpoint_path: &Path, checkpoint: &CheckpointData) {
+    fn store(&mut self, checkpoint_path: &Path, checkpoint: &CheckpointData) {
         let file = File::create(checkpoint_path).unwrap();
         let mut writer = BufWriter::new(file);
 
@@ -326,5 +326,57 @@ impl Checkpoint {
         }
 
         self.checkpoint_paths.push_back(checkpoint_path.to_path_buf());
+    }
+
+    pub fn reencrypt(checkpoint_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
+        if !checkpoint_path.exists() {
+            panic!(
+                "Input checkpoint path \"{}\" does not exist",
+                checkpoint_path.to_string_lossy()
+            );
+        }
+
+        if checkpoint_path.is_dir() {
+            panic!(
+                "Input checkpoint path \"{}\" is a directory",
+                checkpoint_path.to_string_lossy()
+            );
+        }
+
+        if output_path.exists() {
+            panic!(
+                "Output checkpoint path \"{}\" already exists",
+                output_path.to_string_lossy()
+            );
+        }
+
+        let checkpoint_file = File::open(checkpoint_path).unwrap();
+        let mut reader = BufReader::new(checkpoint_file);
+
+        // Read the first byte (version)
+        let mut version_byte = [0u8; 1];
+        reader.read_exact(&mut version_byte).unwrap();
+
+        // Read the rest of the data
+        let mut encrypted_data = Vec::new();
+        reader.read_to_end(&mut encrypted_data).unwrap();
+
+        // Decrypt tje data
+        let cipher = ChaCha20Poly1305::new(&key);
+        let data: SlowKeyData = cipher.decrypt(&hex::decode(encrypted_data).unwrap());
+
+        // Reencrypt the data
+        let new_cipher = ChaCha20Poly1305::new(&new_key);
+        let reencrypted_data = new_cipher.encrypt(Nonce::Random, &data);
+
+        let output_file = File::create(output_path).unwrap();
+        let mut writer = BufWriter::new(output_file);
+
+        // Write the first byte (version)
+        writer.write_all(&version_byte).unwrap();
+
+        // Write the rest of the data
+        writer.write_all(hex::encode(reencrypted_data).as_bytes()).unwrap();
+        writer.flush().unwrap();
     }
 }
