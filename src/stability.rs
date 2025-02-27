@@ -16,7 +16,7 @@ use std::{
 const TEST_SALT: &str = "saltsaltsaltsalt";
 const TEST_PASSWORD: &str = "password";
 pub const STABILITY_TEST_ITERATIONS: usize = 2000;
-const EXPECTED: [&str; STABILITY_TEST_ITERATIONS] = [
+static EXPECTED: [&str; STABILITY_TEST_ITERATIONS] = [
     "392ddd7c90c91ca9ec1814f50a69ed82e489da4a4eb064dee8029a1a9baafc8e",
     "9e337dd977ddba27adafb52c4209a2f8aa002494432063a642b4547fde14e1d8",
     "b7520f0d5a2b09f1ca04e95db78dfc7be9fc081dbbbd5b9d9bf229cbea2f8799",
