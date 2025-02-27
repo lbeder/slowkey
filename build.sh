@@ -17,14 +17,12 @@ cargo test --release
 # Build for different architectures
 build_target() {
     echo "Building v${VERSION} for $1..."
-    if [ "$2" = "linux-musl" ]; then
-        # Set up Linux MUSL environment variables
-        export CC_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-gcc
-        export CXX_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-g++
-        export AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar
-        export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-unknown-linux-musl-gcc
+    if [ "$2" = "x86_64-unknown-linux-musl" ]; then
+        CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target="$2"
+    else
+        cargo build --release --target="$2"
     fi
-    cargo build --release --target=$2
+
 }
 
 # Build for each target platform
