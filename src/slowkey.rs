@@ -28,6 +28,7 @@ impl SlowKeyOptions {
     pub const MAX_KEY_SIZE: usize = 64;
     pub const DEFAULT_OUTPUT_SIZE: usize = 32;
 
+    #[inline]
     pub fn new(
         iterations: usize, length: usize, scrypt: &ScryptOptions, argon2id: &Argon2idOptions,
         balloon_hash: &BalloonHashOptions,
@@ -101,6 +102,7 @@ impl SlowKey<'_> {
     pub const SALT_SIZE: usize = 16;
     pub const DEFAULT_SALT: [u8; SlowKey::SALT_SIZE] = [0; SlowKey::SALT_SIZE];
 
+    #[inline]
     pub fn new(opts: &SlowKeyOptions) -> Self {
         if opts.iterations == 0 {
             panic!("Invalid iterations number");
@@ -115,6 +117,7 @@ impl SlowKey<'_> {
         }
     }
 
+    #[inline]
     pub fn derive_key_with_callback<F: FnMut(usize, &Vec<u8>)>(
         &self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize, sanity: bool, mut callback: F,
     ) -> Vec<u8> {
@@ -175,14 +178,22 @@ impl SlowKey<'_> {
                 });
             }
 
+            // Pre-allocate total capacity needed
+            let total_len = scrypt_output.len()
+                + argon2_output.len()
+                + balloon_hash_output.len()
+                + salt.len()
+                + password.len()
+                + std::mem::size_of::<u64>();
+            res = Vec::with_capacity(total_len);
+
             // Concatenate all the results and the inputs
-            res = [
-                scrypt_output,
-                argon2_output,
-                balloon_hash_output,
-                [salt, password, &iteration.to_le_bytes()].concat(),
-            ]
-            .concat();
+            res.extend_from_slice(&scrypt_output);
+            res.extend_from_slice(&argon2_output);
+            res.extend_from_slice(&balloon_hash_output);
+            res.extend_from_slice(salt);
+            res.extend_from_slice(password);
+            res.extend_from_slice(&iteration.to_le_bytes());
 
             // Calculate the SHA2 and SHA3 hashes of the result and the inputs
             let hash_output = self.double_hash(salt, password, Some(iteration), &res);
@@ -200,14 +211,16 @@ impl SlowKey<'_> {
         res
     }
 
+    #[inline]
     pub fn derive_key(&self, salt: &[u8], password: &[u8], offset_data: &[u8], offset: usize) -> Vec<u8> {
         self.derive_key_with_callback(salt, password, offset_data, offset, false, |_, _| {})
     }
 
+    #[inline]
     fn double_hash(&self, salt: &[u8], password: &[u8], iteration: Option<u64>, input: &[u8]) -> Vec<u8> {
-        let mut res: Vec<u8> = input.to_vec();
-
-        // Calculate the SHA2 hash of the result and the inputs
+        let total_len = input.len() + salt.len() + password.len() + iteration.map_or(0, |_| std::mem::size_of::<u64>());
+        let mut res = Vec::with_capacity(total_len);
+        res.extend_from_slice(input);
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
 
@@ -217,9 +230,12 @@ impl SlowKey<'_> {
 
         let mut sha512 = Sha512::new();
         sha512.update(&res);
-        res = sha512.finalize().to_vec();
+        let sha_result = sha512.finalize();
 
-        // Calculate the SHA3 hash of the result and the inputs
+        let total_len =
+            sha_result.len() + salt.len() + password.len() + iteration.map_or(0, |_| std::mem::size_of::<u64>());
+        res = Vec::with_capacity(total_len);
+        res.extend_from_slice(&sha_result);
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
 
@@ -229,13 +245,14 @@ impl SlowKey<'_> {
 
         let mut keccack512 = Keccak512::new();
         keccack512.update(&res);
-
         keccack512.finalize().to_vec()
     }
 
+    #[inline]
     fn scrypt(&self, salt: &[u8], password: &[u8], iteration: u64, input: &[u8]) -> Vec<u8> {
-        let mut res: Vec<u8> = input.to_vec();
-
+        let total_len = input.len() + salt.len() + password.len() + std::mem::size_of::<u64>();
+        let mut res = Vec::with_capacity(total_len);
+        res.extend_from_slice(input);
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
@@ -243,9 +260,11 @@ impl SlowKey<'_> {
         self.scrypt.hash(salt, &res)
     }
 
+    #[inline]
     fn argon2id(&self, salt: &[u8], password: &[u8], iteration: u64, input: &[u8]) -> Vec<u8> {
-        let mut res: Vec<u8> = input.to_vec();
-
+        let total_len = input.len() + salt.len() + password.len() + std::mem::size_of::<u64>();
+        let mut res = Vec::with_capacity(total_len);
+        res.extend_from_slice(input);
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
@@ -253,11 +272,13 @@ impl SlowKey<'_> {
         self.argon2id.hash(salt, &res)
     }
 
+    #[inline]
     fn balloon_hash(
         &self, salt: &[u8], salt_string: &SaltString, password: &[u8], iteration: u64, input: &[u8],
     ) -> Vec<u8> {
-        let mut res: Vec<u8> = input.to_vec();
-
+        let total_len = input.len() + salt.len() + password.len() + std::mem::size_of::<u64>();
+        let mut res = Vec::with_capacity(total_len);
+        res.extend_from_slice(input);
         res.extend_from_slice(salt);
         res.extend_from_slice(password);
         res.extend_from_slice(&iteration.to_le_bytes());
