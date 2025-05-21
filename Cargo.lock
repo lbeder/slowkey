@@ -1727,7 +1727,7 @@ dependencies = [
 
 [[package]]
 name = "slowkey"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = [
  "balloon-hash",
  "base64 0.21.7",
