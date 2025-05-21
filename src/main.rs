@@ -13,7 +13,25 @@ mod stability;
 use crate::stability::stability_test;
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
-    utils::sodium_init::initialize,
+    utils::{
+        algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
+        chacha20poly1305::ChaCha20Poly1305,
+        checkpoints::{
+            checkpoint::{
+                Checkpoint, CheckpointData, CheckpointOptions, CheckpointSlowKeyOptions, OpenCheckpointOptions,
+                SlowKeyData,
+            },
+            version::Version,
+        },
+        color_hash::color_hash,
+        file_lock::FileLock,
+        inputs::secret::{Secret, SecretData, SecretOptions},
+        outputs::{
+            fingerprint::Fingerprint,
+            output::{OpenOutputOptions, Output, OutputOptions},
+        },
+        sodium_init::initialize,
+    },
 };
 use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Local};
@@ -25,33 +43,16 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
 use rand::rngs::StdRng;
 use rand::{thread_rng, Rng, SeedableRng};
-use serde_json::json;
 use sha2::{Digest, Sha512};
 use stability::STABILITY_TEST_ITERATIONS;
 use std::{
     cmp::Ordering,
     collections::VecDeque,
-    env, fs,
+    env,
     path::PathBuf,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant, SystemTime},
-};
-use utils::{
-    algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
-    chacha20poly1305::ChaCha20Poly1305,
-    checkpoints::{
-        checkpoint::{
-            Checkpoint, CheckpointData, CheckpointOptions, CheckpointSlowKeyOptions, OpenCheckpointOptions, SlowKeyData,
-        },
-        version::Version,
-    },
-    color_hash::color_hash,
-    file_lock::FileLock,
-    outputs::{
-        fingerprint::Fingerprint,
-        output::{OpenOutputOptions, Output, OutputOptions},
-    },
 };
 
 #[global_allocator]
@@ -353,7 +354,7 @@ enum OutputCommands {
 
 #[derive(Subcommand)]
 enum SecretsCommands {
-    #[command(about = "Generate multiple secrets with optional encryption")]
+    #[command(about = "Generate multiple secrets", arg_required_else_help = true)]
     Generate {
         #[arg(short, long, help = "Number of secrets to generate")]
         count: usize,
@@ -666,7 +667,7 @@ fn get_checkpoint_data() -> CheckpointData {
         );
     } else if length > SlowKeyOptions::MAX_KEY_SIZE {
         panic!(
-            ":ength {} is greater than the max value of {}",
+            "Length {} is greater than the max value of {}",
             length,
             SlowKeyOptions::MAX_KEY_SIZE
         );
@@ -1060,43 +1061,53 @@ fn generate_random_secret() -> (Vec<u8>, Vec<u8>) {
 }
 
 fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: bool) {
-    // Create output directory if it doesn't exist
-    fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+    if output_dir.exists() {
+        panic!("Output directory \"{}\" already exists", output_dir.to_string_lossy());
+    }
 
     for i in 1..=count {
         let (password, salt) = if random {
-            println!("\nPlease provide some extra entropy for secret number {i} (this will be mixed into the random number generator):");
+            println!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
 
             generate_random_secret()
         } else {
-            println!("\nPlease provide the salt and the password for secret number {i}:");
+            println!("Please provide the salt and the password for secret number {i}:\n");
 
             (get_password(), get_salt())
         };
 
-        let secret_data = json!({
-            "encrypted": false,
-            "password": hex::encode(&password),
-            "salt": hex::encode(&salt)
-        });
-
-        let filename = format!("{}{}.dat", prefix, i);
+        let filename = format!(
+            "{}{:0width$}.dat",
+            prefix,
+            i,
+            width = (count as f64).log10().ceil() as usize
+        );
         let filepath = output_dir.join(filename);
 
-        fs::write(&filepath, secret_data.to_string())
-            .unwrap_or_else(|_| panic!("Failed to write secret file: {}", filepath.display()));
+        let secret = Secret::new(&SecretOptions {
+            path: filepath.clone(),
+            key: None,
+        });
+
+        let secret_data = SecretData {
+            encrypted: false,
+            password: password.clone(),
+            salt: salt.clone(),
+        };
+
+        secret.save(&secret_data);
 
         println!(
-            "\n\nGenerated salt for secret number {i} is (please highlight to see): {}",
+            "Generated salt for secret number {i} is (please highlight to see): {}",
             format!("0x{}", hex::encode(&salt)).black().on_black()
         );
 
         println!(
-            "\n\nGenerated password for secret number {i} is (please highlight to see): {}",
+            "Generated password for secret number {i} is (please highlight to see): {}",
             format!("0x{}", hex::encode(&password)).black().on_black()
         );
 
-        println!("Stored secret number{} at: {}", i, filepath.display());
+        println!("Stored secret number {i} at: {}\n", filepath.display());
     }
 }
 
