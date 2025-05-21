@@ -24,7 +24,9 @@
   - [Running Stability Tests](#running-stability-tests)
 - [Build](#build)
   - [Mac OS ARM64](#mac-os-arm64)
+  - [Mac OS x64](#mac-os-x64)
   - [Linux x64](#linux-x64)
+  - [Linux ARM64](#linux-arm64)
 - [Examples](#examples)
   - [Checkpoint Operations](#checkpoint-operations)
   - [Output Commands](#output-commands)
@@ -317,28 +319,18 @@ Options:
 ### Mac OS ARM64
 
 ```sh
-git clone https://github.com/lbeder/slowkey
-cd slowkey
-
-cargo build --release
+cargo build --release --target aarch64-apple-darwin
 ```
 
-Depending on whether you are using x64 or arm64, you might need to add either the `x86_64-apple-darwin` or the `aarch64-apple-darwin` target accordingly:
+### Mac OS x64
 
 ```sh
-rustup target add x86_64-apple-darwin
-rustup target add aarch64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
 ```
 
 ### Linux x64
 
-In order to get stuff working later, use the `nightly` branch of Rust:
-
-```sh
-rustup override set nightly
-```
-
-Install a standard Linux target on a Mac (note, that the opposite is currently impossible):
+Install a standard Linux target on a Mac:
 
 ```sh
 rustup target add x86_64-unknown-linux-musl
@@ -351,15 +343,31 @@ brew tap messense/macos-cross-toolchains
 brew install x86_64-unknown-linux-musl
 ```
 
-Now you can build it:
+```sh
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target=x86_64-unknown-linux-musl
+```
+
+### Linux ARM64
+
+Install the ARM64 Linux target on a Mac:
 
 ```sh
-export CC_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-gcc
-export CXX_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-g++
-export AR_x86_64_unknown_linux_musl=x86_64-unknown-linux-musl-ar
-export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-unknown-linux-musl-gcc
-CROSS_COMPILE=x86_64-linux-musl- cargo build --target=x86_64-unknown-linux-musl
-cargo build --target=x86_64-unknown-linux-musl
+rustup target add aarch64-unknown-linux-gnu
+```
+
+Use `homebrew` to install a community-provided macOS cross-compiler toolchains:
+
+```sh
+brew tap messense/macos-cross-toolchains
+brew install aarch64-unknown-linux-gnu
+```
+
+```sh
+export CC_aarch64_unknown_linux_gnu=aarch64-unknown-linux-gnu-gcc
+export CXX_aarch64_unknown_linux_gnu=aarch64-unknown-linux-gnu-g++
+export AR_aarch64_unknown_linux_gnu=aarch64-unknown-linux-gnu-ar
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-unknown-linux-gnu-gcc
+cargo build --release --target aarch64-unknown-linux-gnu
 ```
 
 ## Examples
