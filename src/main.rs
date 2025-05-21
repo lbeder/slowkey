@@ -23,12 +23,15 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
+use rand::rngs::StdRng;
+use rand::{thread_rng, Rng, SeedableRng};
+use serde_json::json;
 use sha2::{Digest, Sha512};
 use stability::STABILITY_TEST_ITERATIONS;
 use std::{
     cmp::Ordering,
     collections::VecDeque,
-    env,
+    env, fs,
     path::PathBuf,
     sync::{Arc, Mutex},
     thread,
@@ -182,6 +185,9 @@ enum Commands {
 
     #[command(subcommand, about = "Output operations", arg_required_else_help = true)]
     Output(OutputCommands),
+
+    #[command(subcommand, about = "Secret operations", arg_required_else_help = true)]
+    Secrets(SecretsCommands),
 
     #[command(about = "Run benchmarks")]
     Bench {},
@@ -345,6 +351,24 @@ enum OutputCommands {
     },
 }
 
+#[derive(Subcommand)]
+enum SecretsCommands {
+    #[command(about = "Generate multiple secrets with optional encryption")]
+    Generate {
+        #[arg(short, long, help = "Number of secrets to generate")]
+        count: usize,
+
+        #[arg(short, long, help = "Output directory for the secrets")]
+        output_dir: PathBuf,
+
+        #[arg(short, long, help = "Prefix for the secret files")]
+        prefix: String,
+
+        #[arg(short, long, help = "Generate random secrets instead of prompting for each")]
+        random: bool,
+    },
+}
+
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
 const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
@@ -472,6 +496,27 @@ fn get_password() -> Vec<u8> {
     println!();
 
     password
+}
+
+fn get_entropy() -> Vec<u8> {
+    let input_entropy = Password::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter your extra entropy")
+        .interact()
+        .unwrap();
+
+    let mut hex = false;
+    let entropy = if input_entropy.starts_with(HEX_PREFIX) {
+        hex = true;
+        hex::decode(input_entropy.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        input_entropy.as_bytes().to_vec()
+    };
+
+    show_hint(&input_entropy, "Entropy", hex);
+
+    println!();
+
+    entropy
 }
 
 fn get_file_key() -> Vec<u8> {
@@ -986,6 +1031,75 @@ fn print_input_instructions() {
     );
 }
 
+fn generate_random_secret() -> (Vec<u8>, Vec<u8>) {
+    let mut rng = thread_rng();
+
+    let entropy = get_entropy();
+
+    // Mix the entropy into the RNG
+    let mut entropy_bytes = entropy;
+    entropy_bytes.extend_from_slice(&[rng.gen::<u8>()]); // Add one more random byte
+    let mut hasher = Sha512::new();
+    hasher.update(&entropy_bytes);
+    let entropy_hash = hasher.finalize();
+
+    // Convert the first 32 bytes of the hash to a seed array
+    let mut seed = [0u8; 32];
+    seed.copy_from_slice(&entropy_hash[..32]);
+
+    // Use the entropy hash to seed the RNG
+    let mut rng = StdRng::from_seed(seed);
+
+    // Generate random password (32 bytes)
+    let password: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+
+    // Generate random salt (32 bytes)
+    let salt: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+
+    (password, salt)
+}
+
+fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: bool) {
+    // Create output directory if it doesn't exist
+    fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+
+    for i in 1..=count {
+        let (password, salt) = if random {
+            println!("\nPlease provide some extra entropy for secret number {i} (this will be mixed into the random number generator):");
+
+            generate_random_secret()
+        } else {
+            println!("\nPlease provide the salt and the password for secret number {i}:");
+
+            (get_password(), get_salt())
+        };
+
+        let secret_data = json!({
+            "encrypted": false,
+            "password": hex::encode(&password),
+            "salt": hex::encode(&salt)
+        });
+
+        let filename = format!("{}{}.dat", prefix, i);
+        let filepath = output_dir.join(filename);
+
+        fs::write(&filepath, secret_data.to_string())
+            .unwrap_or_else(|_| panic!("Failed to write secret file: {}", filepath.display()));
+
+        println!(
+            "\n\nGenerated salt for secret number {i} is (please highlight to see): {}",
+            format!("0x{}", hex::encode(&salt)).black().on_black()
+        );
+
+        println!(
+            "\n\nGenerated password for secret number {i} is (please highlight to see): {}",
+            format!("0x{}", hex::encode(&password)).black().on_black()
+        );
+
+        println!("Stored secret number{} at: {}", i, filepath.display());
+    }
+}
+
 fn main() {
     better_panic::install();
     color_backtrace::install();
@@ -1192,6 +1306,17 @@ fn main() {
                 Output::reencrypt(&input, key, &output, new_key);
 
                 println!("Saved new output at \"{}\"", output.to_string_lossy());
+            },
+        },
+
+        Commands::Secrets(cmd) => match cmd {
+            SecretsCommands::Generate {
+                count,
+                output_dir,
+                prefix,
+                random,
+            } => {
+                generate_secrets(count, output_dir, prefix, random);
             },
         },
 
