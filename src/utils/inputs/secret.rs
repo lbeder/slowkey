@@ -66,6 +66,7 @@ impl Secret {
         }
     }
 
+    #[allow(dead_code)]
     pub fn open(opts: &OpenSecretOptions) -> SecretData {
         if !opts.path.exists() {
             panic!("Secret file \"{}\" does not exist", opts.path.to_str().unwrap());
@@ -128,6 +129,7 @@ impl Secret {
         writer.flush().unwrap();
     }
 
+    #[allow(dead_code)]
     pub fn reencrypt(input_path: &Path, key: Option<Vec<u8>>, output_path: &Path, new_key: Option<Vec<u8>>) {
         if !input_path.exists() {
             panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
