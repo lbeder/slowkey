@@ -1150,12 +1150,12 @@ fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: b
 
         // Display the secret differently based on whether it has 0x prefix
         println!(
-            "Generated salt for secret number {i} is (please highlight to see): {}",
+            "Salt for secret number {i} is (please highlight to see): {}",
             salt.black().on_black()
         );
 
         println!(
-            "Generated password for secret number {i} is (please highlight to see): {}",
+            "Password for secret number {i} is (please highlight to see): {}",
             password.black().on_black()
         );
 
@@ -1421,16 +1421,16 @@ fn main() {
 
                 let secret_data = secret.open();
 
-                // Display password based on its format
-                println!(
-                    "Password is (please highlight to see): {}",
-                    secret_data.password.black().on_black()
-                );
-
                 // Display salt based on its format
                 println!(
                     "Salt is (please highlight to see): {}",
                     secret_data.salt.black().on_black()
+                );
+
+                // Display password based on its format
+                println!(
+                    "Password is (please highlight to see): {}",
+                    secret_data.password.black().on_black()
                 );
             },
 

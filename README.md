@@ -488,7 +488,7 @@ Salt is: s...t
 
 Password is: p...d
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 ████████████████████████████████████████████████████████████████░░░░░░░░░░░░░░░░       5/10      80%    (10s)
 
@@ -505,7 +505,7 @@ Let's use the `checkpoint show` command to decrypt its contents and verify the p
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -527,7 +527,7 @@ We can also verify that the password and salt match the checkpoint by passing th
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -561,7 +561,7 @@ Let's continue the derivation process from this checkpoint and verify that we ar
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -617,7 +617,7 @@ In addition to the above, you can use a checkpoint while specifying a larger ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 Checkpoint:
   Version: 2:
@@ -671,7 +671,7 @@ You can also provide checkpoint data in an interactive way by specifying the `--
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your checkpoint encryption key · ********
 
 Please enter the checkpoint data manually:
 
@@ -778,7 +778,7 @@ In addition to the above, the tool also supports saving the output to be encrypt
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your output encryption key · ********
 
 SlowKey Parameters:
   Iterations: 10
@@ -838,7 +838,7 @@ The output file checkpoint, except for the one that coincides with the first ite
 ```sh
 Please input all data either in raw or hex format starting with the 0x prefix
 
-✔ Enter your file encryption key · ********
+✔ Enter your output encryption key · ********
 
 Output:
   Version: 2:
