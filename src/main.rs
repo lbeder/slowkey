@@ -48,7 +48,7 @@ use stability::STABILITY_TEST_ITERATIONS;
 use std::{
     cmp::Ordering,
     collections::VecDeque,
-    env,
+    env, fs,
     path::PathBuf,
     sync::{Arc, Mutex},
     thread,
@@ -354,7 +354,7 @@ enum OutputCommands {
 
 #[derive(Subcommand)]
 enum SecretsCommands {
-    #[command(about = "Generate multiple secrets", arg_required_else_help = true)]
+    #[command(about = "Generate and encrypt multiple secrets", arg_required_else_help = true)]
     Generate {
         #[arg(short, long, help = "Number of secrets to generate")]
         count: usize,
@@ -367,6 +367,24 @@ enum SecretsCommands {
 
         #[arg(short, long, help = "Generate random secrets instead of prompting for each")]
         random: bool,
+    },
+
+    #[command(
+        about = "Show the contents of an encrypted secret file",
+        arg_required_else_help = true
+    )]
+    Show {
+        #[arg(long, help = "Path to the secret file")]
+        path: PathBuf,
+    },
+
+    #[command(about = "Reencrypt a secret file with a new key", arg_required_else_help = true)]
+    Reencrypt {
+        #[arg(long, help = "Path to an existing secret file")]
+        input: PathBuf,
+
+        #[arg(long, help = "Path to the new secret file")]
+        output: PathBuf,
     },
 }
 
@@ -381,7 +399,7 @@ pub struct DisplayOptions {
     pub options: bool,
 }
 
-fn get_salt() -> Vec<u8> {
+fn get_salt() -> String {
     let input_salt = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
         .with_confirmation("Enter your salt again", "Error: salts don't match")
@@ -390,7 +408,7 @@ fn get_salt() -> Vec<u8> {
         .unwrap();
 
     let mut hex = false;
-    let mut salt = if input_salt.starts_with(HEX_PREFIX) {
+    let salt_bytes = if input_salt.starts_with(HEX_PREFIX) {
         hex = true;
         hex::decode(input_salt.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
     } else {
@@ -399,7 +417,7 @@ fn get_salt() -> Vec<u8> {
 
     show_hint(&input_salt, "Salt", hex);
 
-    let salt_len = salt.len();
+    let salt_len = salt_bytes.len();
     match salt_len {
         0 => {
             println!(
@@ -414,7 +432,9 @@ fn get_salt() -> Vec<u8> {
                 .unwrap();
 
             if confirmation {
-                salt = SlowKey::DEFAULT_SALT.to_vec();
+                println!();
+
+                format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
             } else {
                 panic!("Aborting");
             }
@@ -436,10 +456,15 @@ fn get_salt() -> Vec<u8> {
 
                 if confirmation {
                     let mut sha512 = Sha512::new();
-                    sha512.update(&salt);
-                    salt = sha512.finalize().to_vec();
+                    sha512.update(&salt_bytes);
+                    let mut salt_bytes = sha512.finalize().to_vec();
 
-                    salt.truncate(SlowKey::SALT_SIZE);
+                    salt_bytes.truncate(SlowKey::SALT_SIZE);
+
+                    println!();
+
+                    // Return as hex since it was modified
+                    format!("0x{}", hex::encode(salt_bytes))
                 } else {
                     panic!("Aborting");
                 }
@@ -460,43 +485,38 @@ fn get_salt() -> Vec<u8> {
 
                 if confirmation {
                     let mut sha512 = Sha512::new();
-                    sha512.update(&salt);
-                    salt = sha512.finalize().to_vec();
+                    sha512.update(&salt_bytes);
+                    let mut salt_bytes = sha512.finalize().to_vec();
 
-                    salt.truncate(SlowKey::SALT_SIZE);
+                    salt_bytes.truncate(SlowKey::SALT_SIZE);
+
+                    println!();
+
+                    // Return as hex since it was modified
+                    format!("0x{}", hex::encode(salt_bytes))
                 } else {
                     panic!("Aborting");
                 }
             },
-            Ordering::Equal => {},
+            Ordering::Equal => input_salt,
         },
     }
-
-    println!();
-
-    salt
 }
 
-fn get_password() -> Vec<u8> {
+fn get_password() -> String {
     let input_password = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your password")
         .with_confirmation("Enter your password again", "Error: passwords don't match")
         .interact()
         .unwrap();
 
-    let mut hex = false;
-    let password = if input_password.starts_with(HEX_PREFIX) {
-        hex = true;
-        hex::decode(input_password.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        input_password.as_bytes().to_vec()
-    };
+    let hex = input_password.starts_with(HEX_PREFIX);
 
     show_hint(&input_password, "Password", hex);
 
     println!();
 
-    password
+    input_password
 }
 
 fn get_entropy() -> Vec<u8> {
@@ -520,10 +540,13 @@ fn get_entropy() -> Vec<u8> {
     entropy
 }
 
-fn get_file_key() -> Vec<u8> {
+fn get_encryption_key(name: &str) -> Vec<u8> {
     let input = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your file encryption key")
-        .with_confirmation("Enter your file encryption key again", "Error: keys don't match")
+        .with_prompt(format!("Enter your {} encryption key", name))
+        .with_confirmation(
+            format!("Enter your {} encryption key again", name),
+            "Error: keys don't match",
+        )
         .interact()
         .unwrap();
 
@@ -535,13 +558,15 @@ fn get_file_key() -> Vec<u8> {
         input.as_bytes().to_vec()
     };
 
-    show_hint(&input, "File encryption key", hex);
+    show_hint(&input, &format!("{} encryption key", name), hex);
 
     let key_len = key.len();
+    let capitalized = name.chars().next().unwrap().to_uppercase().collect::<String>() + &name[1..];
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
             println!(
-                "\nFile encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\n{} encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -565,7 +590,8 @@ fn get_file_key() -> Vec<u8> {
         },
         Ordering::Greater => {
             println!(
-                "\nFile encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\n{} encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
@@ -786,7 +812,7 @@ fn derive(derive_options: DeriveOptions) {
         };
 
         if file_key.is_none() {
-            file_key = Some(get_file_key());
+            file_key = Some(get_encryption_key("output"));
         }
 
         out = Some(Output::new(&OutputOptions {
@@ -802,8 +828,22 @@ fn derive(derive_options: DeriveOptions) {
 
     options.print();
 
-    let salt = get_salt();
-    let password = get_password();
+    let salt_str = get_salt();
+    let password_str = get_password();
+
+    // Convert salt string to bytes
+    let salt = if salt_str.starts_with(HEX_PREFIX) {
+        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        salt_str.as_bytes().to_vec()
+    };
+
+    // Convert password string to bytes
+    let password = if password_str.starts_with(HEX_PREFIX) {
+        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        password_str.as_bytes().to_vec()
+    };
 
     let mut offset: usize = 0;
     let mut offset_data = Vec::new();
@@ -831,7 +871,7 @@ fn derive(derive_options: DeriveOptions) {
 
     if let Some(dir) = derive_options.checkpoint_dir {
         if file_key.is_none() {
-            file_key = Some(get_file_key());
+            file_key = Some(get_encryption_key("checkpoint"));
         }
 
         checkpoint = Some(Checkpoint::new(&CheckpointOptions {
@@ -1032,7 +1072,7 @@ fn print_input_instructions() {
     );
 }
 
-fn generate_random_secret() -> (Vec<u8>, Vec<u8>) {
+fn generate_random_secret() -> (String, String) {
     let mut rng = thread_rng();
 
     let entropy = get_entropy();
@@ -1057,13 +1097,25 @@ fn generate_random_secret() -> (Vec<u8>, Vec<u8>) {
     // Generate random salt (32 bytes)
     let salt: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
 
-    (password, salt)
+    // Return as hex strings with 0x prefix since they're randomly generated
+    (
+        format!("0x{}", hex::encode(&password)),
+        format!("0x{}", hex::encode(&salt)),
+    )
 }
 
 fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: bool) {
     if output_dir.exists() {
         panic!("Output directory \"{}\" already exists", output_dir.to_string_lossy());
     }
+
+    // Create the output directory
+    fs::create_dir_all(&output_dir).unwrap();
+
+    // Ask for an encryption key
+    println!("Please provide an encryption key for the secret files:\n");
+
+    let encryption_key = get_encryption_key("secrets");
 
     for i in 1..=count {
         let (password, salt) = if random {
@@ -1086,28 +1138,28 @@ fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: b
 
         let secret = Secret::new(&SecretOptions {
             path: filepath.clone(),
-            key: None,
+            key: encryption_key.clone(),
         });
 
         let secret_data = SecretData {
-            encrypted: false,
             password: password.clone(),
             salt: salt.clone(),
         };
 
         secret.save(&secret_data);
 
+        // Display the secret differently based on whether it has 0x prefix
         println!(
             "Generated salt for secret number {i} is (please highlight to see): {}",
-            format!("0x{}", hex::encode(&salt)).black().on_black()
+            salt.black().on_black()
         );
 
         println!(
             "Generated password for secret number {i} is (please highlight to see): {}",
-            format!("0x{}", hex::encode(&password)).black().on_black()
+            password.black().on_black()
         );
 
-        println!("Stored secret number {i} at: {}\n", filepath.display());
+        println!("Stored encrypted secret number {i} at: {}\n", filepath.display());
     }
 }
 
@@ -1174,7 +1226,7 @@ fn main() {
             } => {
                 print_input_instructions();
 
-                let file_key = get_file_key();
+                let file_key = get_encryption_key("checkpoint");
                 let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions { key: file_key, path });
 
                 checkpoint_data.print(DisplayOptions {
@@ -1184,8 +1236,21 @@ fn main() {
                 });
 
                 if verify {
-                    let salt = get_salt();
-                    let password = get_password();
+                    let salt_str = get_salt();
+                    let password_str = get_password();
+
+                    // Convert to bytes
+                    let salt = if salt_str.starts_with(HEX_PREFIX) {
+                        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    } else {
+                        salt_str.as_bytes().to_vec()
+                    };
+
+                    let password = if password_str.starts_with(HEX_PREFIX) {
+                        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    } else {
+                        password_str.as_bytes().to_vec()
+                    };
 
                     println!("Verifying the checkpoint...\n");
 
@@ -1216,7 +1281,7 @@ fn main() {
 
                 let checkpoint_data = match path {
                     Some(path) => {
-                        let key = get_file_key();
+                        let key = get_encryption_key("checkpoint");
                         file_key = Some(key.clone());
 
                         Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
@@ -1261,11 +1326,11 @@ fn main() {
             CheckpointCommands::Reencrypt { input, output } => {
                 print_input_instructions();
 
-                let key = get_file_key();
+                let key = get_encryption_key("checkpoint");
 
                 println!("Please provide the new file encryption key:\n");
 
-                let new_key = get_file_key();
+                let new_key = get_encryption_key("checkpoint");
 
                 Checkpoint::reencrypt(&input, key, &output, new_key);
 
@@ -1282,7 +1347,7 @@ fn main() {
             } => {
                 print_input_instructions();
 
-                let file_key = get_file_key();
+                let file_key = get_encryption_key("output");
                 let output_data = Output::open(&OpenOutputOptions { key: file_key, path });
 
                 output_data.print(DisplayOptions {
@@ -1292,8 +1357,21 @@ fn main() {
                 });
 
                 if verify {
-                    let salt = get_salt();
-                    let password = get_password();
+                    let salt_str = get_salt();
+                    let password_str = get_password();
+
+                    // Convert to bytes
+                    let salt = if salt_str.starts_with(HEX_PREFIX) {
+                        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    } else {
+                        salt_str.as_bytes().to_vec()
+                    };
+
+                    let password = if password_str.starts_with(HEX_PREFIX) {
+                        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    } else {
+                        password_str.as_bytes().to_vec()
+                    };
 
                     println!("Verifying the output...\n");
 
@@ -1308,11 +1386,11 @@ fn main() {
             OutputCommands::Reencrypt { input, output } => {
                 print_input_instructions();
 
-                let key = get_file_key();
+                let key = get_encryption_key("output");
 
                 println!("Please provide the new file encryption key:\n");
 
-                let new_key = get_file_key();
+                let new_key = get_encryption_key("output");
 
                 Output::reencrypt(&input, key, &output, new_key);
 
@@ -1328,6 +1406,46 @@ fn main() {
                 random,
             } => {
                 generate_secrets(count, output_dir, prefix, random);
+            },
+
+            SecretsCommands::Show { path } => {
+                print_input_instructions();
+
+                println!("Please provide the encryption key for the secret file:\n");
+                let key = get_encryption_key("secret");
+
+                let secret = Secret::new(&SecretOptions {
+                    path: path.clone(),
+                    key,
+                });
+
+                let secret_data = secret.open();
+
+                // Display password based on its format
+                println!(
+                    "Password is (please highlight to see): {}",
+                    secret_data.password.black().on_black()
+                );
+
+                // Display salt based on its format
+                println!(
+                    "Salt is (please highlight to see): {}",
+                    secret_data.salt.black().on_black()
+                );
+            },
+
+            SecretsCommands::Reencrypt { input, output } => {
+                print_input_instructions();
+
+                println!("Please provide the current encryption key:\n");
+                let key = get_encryption_key("secret");
+
+                println!("Please provide the new encryption key:\n");
+                let new_key = get_encryption_key("secret");
+
+                Secret::reencrypt(&input, key, &output, new_key);
+
+                println!("Saved reencrypted secret at \"{}\"", output.to_string_lossy());
             },
         },
 
