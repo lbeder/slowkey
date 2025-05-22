@@ -769,7 +769,7 @@ fn show_hint(data: &str, description: &str, hex: bool) {
 
     if len < MIN_SECRET_LENGTH_TO_REVEAL {
         println!(
-            "\n{}: {} is too short, therefore hints won't be shown",
+            "\n{}: {} is too short, therefore password hint won't be shown",
             "Warning".dark_yellow(),
             description,
         );
