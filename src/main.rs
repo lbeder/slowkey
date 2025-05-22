@@ -418,7 +418,7 @@ fn get_salt() -> String {
     show_hint(&input_salt, "Salt", hex);
 
     let salt_len = salt_bytes.len();
-    match salt_len {
+    let salt = match salt_len {
         0 => {
             println!(
                 "\nSalt is empty; a default {}-byte zero-filled salt will be used.",
@@ -432,8 +432,6 @@ fn get_salt() -> String {
                 .unwrap();
 
             if confirmation {
-                println!();
-
                 format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
             } else {
                 panic!("Aborting");
@@ -460,8 +458,6 @@ fn get_salt() -> String {
                     let mut salt_bytes = sha512.finalize().to_vec();
 
                     salt_bytes.truncate(SlowKey::SALT_SIZE);
-
-                    println!();
 
                     // Return as hex since it was modified
                     format!("0x{}", hex::encode(salt_bytes))
@@ -490,8 +486,6 @@ fn get_salt() -> String {
 
                     salt_bytes.truncate(SlowKey::SALT_SIZE);
 
-                    println!();
-
                     // Return as hex since it was modified
                     format!("0x{}", hex::encode(salt_bytes))
                 } else {
@@ -500,7 +494,11 @@ fn get_salt() -> String {
             },
             Ordering::Equal => input_salt,
         },
-    }
+    };
+
+    println!();
+
+    salt
 }
 
 fn get_password() -> String {
