@@ -1099,12 +1099,16 @@ fn generate_random_secret() -> (String, String) {
 
     // Return as hex strings with 0x prefix since they're randomly generated
     (
-        format!("0x{}", hex::encode(&password)),
         format!("0x{}", hex::encode(&salt)),
+        format!("0x{}", hex::encode(&password)),
     )
 }
 
 fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: bool) {
+    if count == 0 {
+        panic!("Count cannot be 0");
+    }
+
     if output_dir.exists() {
         panic!("Output directory \"{}\" already exists", output_dir.to_string_lossy());
     }
@@ -1118,14 +1122,14 @@ fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: b
     let encryption_key = get_encryption_key("secrets");
 
     for i in 1..=count {
-        let (password, salt) = if random {
+        let (salt, password) = if random {
             println!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
 
             generate_random_secret()
         } else {
             println!("Please provide the salt and the password for secret number {i}:\n");
 
-            (get_password(), get_salt())
+            (get_salt(), get_password())
         };
 
         let filename = format!(
