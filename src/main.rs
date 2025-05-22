@@ -179,6 +179,9 @@ enum Commands {
             help = "Perform an optional sanity check by computing the algorithm twice and verifying the results"
         )]
         sanity: bool,
+
+        #[arg(long, help = "Optional path to a secret file containing password and salt")]
+        secret: Option<PathBuf>,
     },
 
     #[command(subcommand, about = "Checkpoint operations", arg_required_else_help = true)]
@@ -305,6 +308,9 @@ enum CheckpointCommands {
             help = "Perform an optional sanity check by computing the algorithm twice and verifying the results"
         )]
         sanity: bool,
+
+        #[arg(long, help = "Optional path to a secret file containing password and salt")]
+        secret: Option<PathBuf>,
     },
 
     #[command(about = "Reencrypt a checkpoint", arg_required_else_help = true)]
@@ -790,6 +796,7 @@ struct DeriveOptions {
     base58: bool,
     iteration_moving_window: u32,
     sanity: bool,
+    secret_path: Option<PathBuf>,
 }
 
 fn derive(derive_options: DeriveOptions) {
@@ -826,8 +833,23 @@ fn derive(derive_options: DeriveOptions) {
 
     options.print();
 
-    let salt_str = get_salt();
-    let password_str = get_password();
+    let (salt_str, password_str) = if let Some(secret_path) = &derive_options.secret_path {
+        println!(
+            "Loading password and salt from secret file: {}\n",
+            secret_path.display()
+        );
+
+        let secret_key = get_encryption_key("secret");
+        let secret = Secret::new(&SecretOptions {
+            path: secret_path.clone(),
+            key: secret_key,
+        });
+
+        let secret_data = secret.open();
+        (secret_data.salt, secret_data.password)
+    } else {
+        (get_salt(), get_password())
+    };
 
     // Convert salt string to bytes
     let salt = if salt_str.starts_with(HEX_PREFIX) {
@@ -1195,6 +1217,7 @@ fn main() {
             base58,
             iteration_moving_window,
             sanity,
+            secret,
         } => {
             print_input_instructions();
 
@@ -1216,6 +1239,7 @@ fn main() {
                 base58,
                 iteration_moving_window,
                 sanity,
+                secret_path: secret,
             });
         },
 
@@ -1276,6 +1300,7 @@ fn main() {
                 base58,
                 iteration_moving_window,
                 sanity,
+                secret,
             } => {
                 print_input_instructions();
 
@@ -1322,6 +1347,7 @@ fn main() {
                     base58,
                     iteration_moving_window,
                     sanity,
+                    secret_path: secret,
                 });
             },
 
