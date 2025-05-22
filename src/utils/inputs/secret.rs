@@ -1,4 +1,6 @@
+use super::version::Version;
 use crate::utils::chacha20poly1305::{ChaCha20Poly1305, Nonce};
+use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -13,9 +15,32 @@ pub struct SecretOptions {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct SecretData {
+pub struct SecretInnerData {
     pub password: String,
     pub salt: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SecretData {
+    pub version: Version,
+    pub data: SecretInnerData,
+}
+
+impl SecretData {
+    pub fn print(&self) {
+        let output = format!(
+            "{}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
+            "Secret".yellow(),
+            "Version".green(),
+            u8::from(self.version.clone()),
+            "Salt".green(),
+            self.data.salt.as_str().black().on_black(),
+            "Password".green(),
+            self.data.password.as_str().black().on_black()
+        );
+
+        println!("{}\n", output);
+    }
 }
 
 pub struct Secret {
@@ -43,14 +68,22 @@ impl Secret {
         let file = File::open(&self.path).unwrap();
         let mut reader = BufReader::new(file);
 
-        let mut encrypted_data = Vec::new();
-        reader.read_to_end(&mut encrypted_data).unwrap();
+        // Read the first byte (version)
+        let mut version_byte = [0u8; 1];
+        reader.read_exact(&mut version_byte).unwrap();
+        let version = Version::from(version_byte[0]);
 
-        // Decrypt the entire file content
-        let decrypted_data = self.cipher.decrypt_raw(&encrypted_data);
+        // Return the struct based on the version
+        match version {
+            Version::V1 => {
+                let mut encrypted_data = Vec::new();
+                reader.read_to_end(&mut encrypted_data).unwrap();
 
-        // Deserialize the decrypted data
-        serde_json::from_slice(&decrypted_data).unwrap()
+                let data = self.cipher.decrypt(&hex::decode(encrypted_data).unwrap());
+
+                SecretData { version, data }
+            },
+        }
     }
 
     pub fn save(&self, data: &SecretData) {
@@ -67,14 +100,13 @@ impl Secret {
         let file = File::create(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
-        // Serialize the data to JSON
-        let json_data = serde_json::to_string_pretty(&data).unwrap();
+        // Write the version as u8 first
+        let version_byte: u8 = data.version.clone().into();
+        writer.write_all(&[version_byte]).unwrap();
 
-        // Encrypt the entire JSON data
-        let encrypted_data = self.cipher.encrypt_raw(Nonce::Random, json_data.as_bytes());
+        let encrypted_data = self.cipher.encrypt(Nonce::Random, &data.data);
 
-        // Write the encrypted data to the file
-        writer.write_all(&encrypted_data).unwrap();
+        writer.write_all(hex::encode(encrypted_data).as_bytes()).unwrap();
         writer.flush().unwrap();
     }
 

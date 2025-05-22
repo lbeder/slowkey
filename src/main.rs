@@ -25,7 +25,10 @@ use crate::{
         },
         color_hash::color_hash,
         file_lock::FileLock,
-        inputs::secret::{Secret, SecretData, SecretOptions},
+        inputs::{
+            secret::{Secret, SecretData, SecretInnerData, SecretOptions},
+            version::Version as SecretVersion,
+        },
         outputs::{
             fingerprint::Fingerprint,
             output::{OpenOutputOptions, Output, OutputOptions},
@@ -846,7 +849,7 @@ fn derive(derive_options: DeriveOptions) {
         });
 
         let secret_data = secret.open();
-        (secret_data.salt, secret_data.password)
+        (secret_data.data.salt, secret_data.data.password)
     } else {
         (get_salt(), get_password())
     };
@@ -1166,8 +1169,11 @@ fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: b
         });
 
         let secret_data = SecretData {
-            password: password.clone(),
-            salt: salt.clone(),
+            version: SecretVersion::V1,
+            data: SecretInnerData {
+                password: password.clone(),
+                salt: salt.clone(),
+            },
         };
 
         secret.save(&secret_data);
@@ -1449,17 +1455,7 @@ fn main() {
 
                 let secret_data = secret.open();
 
-                // Display salt based on its format
-                println!(
-                    "Salt is (please highlight to see): {}",
-                    secret_data.salt.black().on_black()
-                );
-
-                // Display password based on its format
-                println!(
-                    "Password is (please highlight to see): {}",
-                    secret_data.password.black().on_black()
-                );
+                secret_data.print();
             },
 
             SecretsCommands::Reencrypt { input, output } => {
