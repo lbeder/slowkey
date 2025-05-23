@@ -1117,8 +1117,8 @@ fn generate_random_secret() -> (String, String) {
     // Generate random password (32 bytes)
     let password: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
 
-    // Generate random salt (32 bytes)
-    let salt: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+    // Generate random salt (16 bytes)
+    let salt: Vec<u8> = (0..SlowKey::SALT_SIZE).map(|_| rng.gen()).collect();
 
     // Return as hex strings with 0x prefix since they're randomly generated
     (
