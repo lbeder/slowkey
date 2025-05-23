@@ -20,6 +20,10 @@
   - [Outputs](#outputs)
     - [Showing an Output](#showing-an-output)
     - [Reencrypting an Output](#reencrypting-an-output)
+  - [Secrets](#secrets)
+    - [Generating Secrets](#generating-secrets)
+    - [Showing a Secret](#showing-a-secret)
+    - [Reencrypting a Secret](#reencrypting-a-secret)
   - [Running Benchmarks](#running-benchmarks)
   - [Running Stability Tests](#running-stability-tests)
 - [Build](#build)
@@ -115,6 +119,7 @@ Commands:
   derive          Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
   checkpoint      Checkpoint operations
   output          Output operations
+  secrets         Secret operations
   bench           Run benchmarks
   stability-test  Run stability tests
 
@@ -165,6 +170,8 @@ Options:
           Iteration time sampling moving window size [default: 10]
       --sanity
           Perform an optional sanity check by computing the algorithm twice and verifying the results
+      --secret <SECRET>
+          Optional path to a secret file containing password and salt
   -h, --help
           Print help
 ```
@@ -230,6 +237,8 @@ Options:
           Iteration time sampling moving window size [default: 10]
       --sanity
           Perform an optional sanity check by computing the algorithm twice and verifying the results
+      --secret <SECRET>
+          Optional path to a secret file containing password and salt
   -h, --help
           Print help
 ```
@@ -287,6 +296,64 @@ Usage: slowkey output reencrypt --input <INPUT> --output <OUTPUT>
 Options:
       --input <INPUT>    Path to an existing output
       --output <OUTPUT>  Path to the new checkpoint
+  -h, --help             Print help
+```
+
+### Secrets
+
+The secrets functionality provides a more secure way for inputting the salt and password since both are encrypted and stored in files, avoiding the need to input them directly through the console/keyboard. This approach reduces the risk of sensitive data being exposed through command history, shoulder surfing, or other forms of input monitoring. By encrypting and storing these secrets in files, users can maintain better security practices while still being able to use their passwords and salts for key derivation operations.
+
+```sh
+Secret operations
+
+Usage: slowkey secrets <COMMAND>
+
+Commands:
+  generate   Generate and encrypt multiple secrets
+  show       Show the contents of an encrypted secret file
+  reencrypt  Reencrypt a secret file with a new key
+
+Options:
+  -h, --help  Print help
+```
+
+#### Generating Secrets
+
+```sh
+Generate and encrypt multiple secrets
+
+Usage: slowkey secrets generate [OPTIONS] --count <COUNT> --output-dir <OUTPUT_DIR> --prefix <PREFIX>
+
+Options:
+  -c, --count <COUNT>            Number of secrets to generate
+  -o, --output-dir <OUTPUT_DIR>  Output directory for the secrets
+  -p, --prefix <PREFIX>          Prefix for the secret files
+  -r, --random                   Generate random secrets instead of prompting for each
+  -h, --help                     Print help
+```
+
+#### Showing a Secret
+
+```sh
+Show the contents of an encrypted secret file
+
+Usage: slowkey secrets show --path <PATH>
+
+Options:
+      --path <PATH>  Path to the secret file
+  -h, --help         Print help
+```
+
+#### Reencrypting a Secret
+
+```sh
+Reencrypt a secret file with a new key
+
+Usage: slowkey secrets reencrypt --input <INPUT> --output <OUTPUT>
+
+Options:
+      --input <INPUT>    Path to an existing secret file
+      --output <OUTPUT>  Path to the new secret file
   -h, --help             Print help
 ```
 
