@@ -45,7 +45,7 @@ use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
 use rand::rngs::StdRng;
-use rand::{thread_rng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
 use sha2::{Digest, Sha512};
 use stability::STABILITY_TEST_ITERATIONS;
 use std::{
@@ -1096,15 +1096,10 @@ fn print_input_instructions() {
 }
 
 fn generate_random_secret() -> (String, String) {
-    let mut rng = thread_rng();
-
     let entropy = get_entropy();
 
-    // Mix the entropy into the RNG
-    let mut entropy_bytes = entropy.clone();
-    entropy_bytes.extend_from_slice(&[rng.gen::<u8>()]); // Add one more random byte
     let mut hasher = Sha512::new();
-    hasher.update(&entropy_bytes);
+    hasher.update(&entropy);
     let entropy_hash = hasher.finalize();
 
     // Convert the first 32 bytes of the hash to a seed array
