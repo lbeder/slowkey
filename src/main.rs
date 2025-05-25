@@ -1101,7 +1101,7 @@ fn generate_random_secret() -> (String, String) {
     let entropy = get_entropy();
 
     // Mix the entropy into the RNG
-    let mut entropy_bytes = entropy;
+    let mut entropy_bytes = entropy.clone();
     entropy_bytes.extend_from_slice(&[rng.gen::<u8>()]); // Add one more random byte
     let mut hasher = Sha512::new();
     hasher.update(&entropy_bytes);
@@ -1114,11 +1114,21 @@ fn generate_random_secret() -> (String, String) {
     // Use the entropy hash to seed the RNG
     let mut rng = StdRng::from_seed(seed);
 
-    // Generate random password (32 bytes)
-    let password: Vec<u8> = (0..32).map(|_| rng.gen()).collect();
+    // Generate random entropy bytes (64 bytes)
+    let rng_entropy: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
 
-    // Generate random salt (16 bytes)
-    let salt: Vec<u8> = (0..SlowKey::SALT_SIZE).map(|_| rng.gen()).collect();
+    // Append manual entropy to the RNG-generated entropy
+    let mut combined_entropy = rng_entropy;
+    combined_entropy.extend_from_slice(&entropy);
+
+    // Hash the combined entropy
+    let mut final_hasher = Sha512::new();
+    final_hasher.update(&combined_entropy);
+    let final_entropy_hash = final_hasher.finalize();
+
+    // Use the first 32 bytes for password and next 16 bytes for salt
+    let password = final_entropy_hash[0..32].to_vec();
+    let salt = final_entropy_hash[32..32 + SlowKey::SALT_SIZE].to_vec();
 
     // Return as hex strings with 0x prefix since they're randomly generated
     (
