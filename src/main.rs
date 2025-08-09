@@ -1031,14 +1031,14 @@ fn derive(derive_options: DeriveOptions) {
 
     if derive_options.base64 {
         println!(
-            "nOutput (base64) is (please highlight to see): {}",
+            "\nOutput (base64) is (please highlight to see): {}",
             general_purpose::STANDARD.encode(&key).black().on_black()
         );
     }
 
     if derive_options.base58 {
         println!(
-            "nOutput (base58) is (please highlight to see): {}",
+            "\nOutput (base58) is (please highlight to see): {}",
             bs58::encode(&key).into_string().black().on_black()
         );
     }
