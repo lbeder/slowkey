@@ -1,3 +1,4 @@
+mod cli;
 mod utils;
 
 extern crate chacha20poly1305;
@@ -15,20 +16,10 @@ use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::{
         algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
-        chacha20poly1305::ChaCha20Poly1305,
-        checkpoints::{
-            checkpoint::{
-                Checkpoint, CheckpointData, CheckpointOptions, CheckpointSlowKeyOptions, OpenCheckpointOptions,
-                SlowKeyData,
-            },
-            version::Version,
-        },
+        checkpoints::checkpoint::{Checkpoint, CheckpointData, CheckpointOptions, OpenCheckpointOptions},
         color_hash::color_hash,
         file_lock::FileLock,
-        inputs::{
-            secret::{Secret, SecretData, SecretInnerData, SecretOptions},
-            version::Version as SecretVersion,
-        },
+        inputs::secret::{Secret, SecretOptions},
         outputs::{
             fingerprint::Fingerprint,
             output::{OpenOutputOptions, Output, OutputOptions},
@@ -40,17 +31,13 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::{DateTime, Local};
 use clap::{Parser, Subcommand};
 use crossterm::style::Stylize;
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use rand::Rng;
-use sha2::{Digest, Sha512};
 use stability::STABILITY_TEST_ITERATIONS;
 use std::{
-    cmp::Ordering,
     collections::VecDeque,
-    env, fs,
+    env,
     path::PathBuf,
     sync::{Arc, Mutex},
     thread,
@@ -397,394 +384,12 @@ enum SecretsCommands {
 }
 
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
-const HEX_PREFIX: &str = "0x";
-const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
-const RANDOM_PASSWORD_SIZE: usize = 32;
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub struct DisplayOptions {
     pub base64: bool,
     pub base58: bool,
     pub options: bool,
-}
-
-fn get_salt() -> String {
-    let input_salt = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your salt")
-        .with_confirmation("Enter your salt again", "Error: salts don't match")
-        .allow_empty_password(true)
-        .interact()
-        .unwrap();
-
-    let mut hex = false;
-    let salt_bytes = if input_salt.starts_with(HEX_PREFIX) {
-        hex = true;
-        hex::decode(input_salt.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        input_salt.as_bytes().to_vec()
-    };
-
-    show_hint(&input_salt, "Salt", hex);
-
-    let salt_len = salt_bytes.len();
-    let salt = match salt_len {
-        0 => {
-            println!(
-                "\nSalt is empty; a default {}-byte zero-filled salt will be used.",
-                SlowKey::SALT_SIZE
-            );
-
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
-
-            if confirmation {
-                format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
-            } else {
-                panic!("Aborting");
-            }
-        },
-        _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
-            Ordering::Less => {
-                println!(
-                    "\nSalt's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
-                    salt_len,
-                    SlowKey::SALT_SIZE,
-                    SlowKey::SALT_SIZE
-                );
-
-                let confirmation = Confirm::new()
-                    .with_prompt("Do you want to continue?")
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
-
-                if confirmation {
-                    let mut sha512 = Sha512::new();
-                    sha512.update(&salt_bytes);
-                    let mut salt_bytes = sha512.finalize().to_vec();
-
-                    salt_bytes.truncate(SlowKey::SALT_SIZE);
-
-                    // Return as hex since it was modified
-                    format!("0x{}", hex::encode(salt_bytes))
-                } else {
-                    panic!("Aborting");
-                }
-            },
-            Ordering::Greater => {
-                println!(
-                    "\nSalt's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
-                    salt_len,
-                    SlowKey::SALT_SIZE,
-                    SlowKey::SALT_SIZE
-                );
-
-                let confirmation = Confirm::new()
-                    .with_prompt("Do you want to continue?")
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
-
-                if confirmation {
-                    let mut sha512 = Sha512::new();
-                    sha512.update(&salt_bytes);
-                    let mut salt_bytes = sha512.finalize().to_vec();
-
-                    salt_bytes.truncate(SlowKey::SALT_SIZE);
-
-                    // Return as hex since it was modified
-                    format!("0x{}", hex::encode(salt_bytes))
-                } else {
-                    panic!("Aborting");
-                }
-            },
-            Ordering::Equal => input_salt,
-        },
-    };
-
-    println!();
-
-    salt
-}
-
-fn get_password() -> String {
-    let input_password = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your password")
-        .with_confirmation("Enter your password again", "Error: passwords don't match")
-        .interact()
-        .unwrap();
-
-    let hex = input_password.starts_with(HEX_PREFIX);
-
-    show_hint(&input_password, "Password", hex);
-
-    println!();
-
-    input_password
-}
-
-fn get_entropy() -> Vec<u8> {
-    let input_entropy = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt("Enter your extra entropy")
-        .interact()
-        .unwrap();
-
-    let mut hex = false;
-    let entropy = if input_entropy.starts_with(HEX_PREFIX) {
-        hex = true;
-        hex::decode(input_entropy.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        input_entropy.as_bytes().to_vec()
-    };
-
-    show_hint(&input_entropy, "Entropy", hex);
-
-    println!();
-
-    entropy
-}
-
-fn get_encryption_key(name: &str) -> Vec<u8> {
-    let input = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt(format!("Enter your {} encryption key", name))
-        .with_confirmation(
-            format!("Enter your {} encryption key again", name),
-            "Error: keys don't match",
-        )
-        .interact()
-        .unwrap();
-
-    let mut hex = false;
-    let mut key = if input.starts_with(HEX_PREFIX) {
-        hex = true;
-        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        input.as_bytes().to_vec()
-    };
-
-    show_hint(&input, &format!("{} encryption key", name), hex);
-
-    let key_len = key.len();
-    let capitalized = name.chars().next().unwrap().to_uppercase().collect::<String>() + &name[1..];
-    match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
-        Ordering::Less => {
-            println!(
-                "\n{} encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
-                capitalized,
-                key_len,
-                ChaCha20Poly1305::KEY_SIZE,
-                ChaCha20Poly1305::KEY_SIZE
-            );
-
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
-
-            if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&key);
-                key = sha512.finalize().to_vec();
-
-                key.truncate(ChaCha20Poly1305::KEY_SIZE);
-            } else {
-                panic!("Aborting");
-            }
-        },
-        Ordering::Greater => {
-            println!(
-                "\n{} encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
-                capitalized,
-                key_len,
-                ChaCha20Poly1305::KEY_SIZE,
-                ChaCha20Poly1305::KEY_SIZE
-            );
-
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
-
-            if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&key);
-                key = sha512.finalize().to_vec();
-
-                key.truncate(ChaCha20Poly1305::KEY_SIZE);
-            } else {
-                panic!("Aborting");
-            }
-        },
-        Ordering::Equal => {},
-    }
-
-    println!();
-
-    key
-}
-
-fn get_checkpoint_data() -> CheckpointData {
-    println!("Please enter the checkpoint data manually:\n");
-
-    let version: u8 = Input::new()
-        .with_prompt("Version")
-        .default(Version::V2 as u8)
-        .interact_text()
-        .unwrap();
-    let version = Version::from(version);
-
-    let iteration: usize = Input::new().with_prompt("Iteration").interact_text().unwrap();
-    if iteration < SlowKeyOptions::MIN_ITERATIONS {
-        panic!(
-            "Iteration {} is shorter than the min value of {}",
-            iteration,
-            SlowKeyOptions::MIN_ITERATIONS,
-        );
-    } else if iteration > SlowKeyOptions::MAX_ITERATIONS {
-        panic!(
-            "Iteration {} is greater than the max value of {}",
-            iteration,
-            SlowKeyOptions::MAX_ITERATIONS,
-        );
-    }
-
-    let data: String = Input::new().with_prompt("Data").interact_text().unwrap();
-    let data = if data.starts_with(HEX_PREFIX) {
-        hex::decode(data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        data.as_bytes().to_vec()
-    };
-
-    if data.is_empty() {
-        panic!("Invalid data");
-    }
-
-    let prev_data = if iteration > 1 {
-        let prev_data: String = Input::new()
-            .with_prompt("Previous data")
-            .allow_empty(true)
-            .interact_text()
-            .unwrap();
-        let prev_data = if prev_data.starts_with(HEX_PREFIX) {
-            hex::decode(prev_data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-        } else {
-            prev_data.as_bytes().to_vec()
-        };
-
-        if prev_data.len() != data.len() {
-            panic!("Invalid previous data's length");
-        }
-
-        Some(prev_data)
-    } else {
-        None
-    };
-
-    println!();
-
-    let length: usize = Input::new()
-        .with_prompt("Length")
-        .default(SlowKeyOptions::DEFAULT_OUTPUT_SIZE)
-        .interact_text()
-        .unwrap();
-    if length < SlowKeyOptions::MIN_KEY_SIZE {
-        panic!(
-            "Length {} is shorter than the min value of {}",
-            length,
-            SlowKeyOptions::MIN_KEY_SIZE
-        );
-    } else if length > SlowKeyOptions::MAX_KEY_SIZE {
-        panic!(
-            "Length {} is greater than the max value of {}",
-            length,
-            SlowKeyOptions::MAX_KEY_SIZE
-        );
-    }
-
-    println!();
-
-    let scrypt_n: u64 = Input::new()
-        .with_prompt("Scrypt n")
-        .default(ScryptOptions::DEFAULT_N)
-        .interact_text()
-        .unwrap();
-    let scrypt_r: u32 = Input::new()
-        .with_prompt("Scrypt r")
-        .default(ScryptOptions::DEFAULT_R)
-        .interact_text()
-        .unwrap();
-    let scrypt_p: u32 = Input::new()
-        .with_prompt("Scrypt p")
-        .default(ScryptOptions::DEFAULT_P)
-        .interact_text()
-        .unwrap();
-    let scrypt = ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p);
-
-    println!();
-
-    let argon2id_m_cost: u32 = Input::new()
-        .with_prompt("Argon2id m_cost")
-        .default(Argon2idOptions::DEFAULT_M_COST)
-        .interact_text()
-        .unwrap();
-    let argon2id_t_cost: u32 = Input::new()
-        .with_prompt("Argon2id t_cost")
-        .default(Argon2idOptions::DEFAULT_T_COST)
-        .interact_text()
-        .unwrap();
-    let argon2id = Argon2idOptions::new(argon2id_m_cost, argon2id_t_cost);
-
-    println!();
-
-    let balloon_s_cost: u32 = Input::new()
-        .with_prompt("Balloon Hash s_cost")
-        .default(BalloonHashOptions::DEFAULT_S_COST)
-        .interact_text()
-        .unwrap();
-    let balloon_t_cost: u32 = Input::new()
-        .with_prompt("Balloon Hash t_cost")
-        .default(BalloonHashOptions::DEFAULT_T_COST)
-        .interact_text()
-        .unwrap();
-    let balloon_hash = BalloonHashOptions::new(balloon_s_cost, balloon_t_cost);
-
-    println!();
-
-    CheckpointData {
-        version,
-        data: SlowKeyData {
-            iteration: iteration - 1,
-            data,
-            prev_data,
-            slowkey: CheckpointSlowKeyOptions {
-                length,
-                scrypt,
-                argon2id,
-                balloon_hash,
-            },
-        },
-    }
-}
-
-fn show_hint(data: &str, description: &str, hex: bool) {
-    let len = data.len();
-
-    if len < MIN_SECRET_LENGTH_TO_REVEAL {
-        println!(
-            "\n{}: {} is too short, therefore password hint won't be shown",
-            "Warning".dark_yellow(),
-            description,
-        );
-    } else {
-        let prefix_len = if hex { 3 } else { 1 };
-
-        println!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
-    }
 }
 
 struct DeriveOptions {
@@ -820,7 +425,7 @@ fn derive(derive_options: DeriveOptions) {
         };
 
         if file_key.is_none() {
-            file_key = Some(get_encryption_key("output"));
+            file_key = Some(cli::get_encryption_key("output"));
         }
 
         out = Some(Output::new(&OutputOptions {
@@ -842,7 +447,7 @@ fn derive(derive_options: DeriveOptions) {
             secret_path.display()
         );
 
-        let secret_key = get_encryption_key("secret");
+        let secret_key = cli::get_encryption_key("secret");
         let secret = Secret::new(&SecretOptions {
             path: secret_path.clone(),
             key: secret_key,
@@ -851,19 +456,19 @@ fn derive(derive_options: DeriveOptions) {
         let secret_data = secret.open();
         (secret_data.data.salt, secret_data.data.password)
     } else {
-        (get_salt(), get_password())
+        (cli::get_salt(), cli::get_password())
     };
 
     // Convert salt string to bytes
-    let salt = if salt_str.starts_with(HEX_PREFIX) {
-        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
+        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
     } else {
         salt_str.as_bytes().to_vec()
     };
 
     // Convert password string to bytes
-    let password = if password_str.starts_with(HEX_PREFIX) {
-        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    let password = if password_str.starts_with(cli::HEX_PREFIX) {
+        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
     } else {
         password_str.as_bytes().to_vec()
     };
@@ -894,7 +499,7 @@ fn derive(derive_options: DeriveOptions) {
 
     if let Some(dir) = derive_options.checkpoint_dir {
         if file_key.is_none() {
-            file_key = Some(get_encryption_key("checkpoint"));
+            file_key = Some(cli::get_encryption_key("checkpoint"));
         }
 
         checkpoint = Some(Checkpoint::new(&CheckpointOptions {
@@ -1091,101 +696,8 @@ fn derive(derive_options: DeriveOptions) {
 fn print_input_instructions() {
     println!(
         "Please input all data either in raw or hex format starting with the {} prefix\n",
-        HEX_PREFIX
+        cli::HEX_PREFIX
     );
-}
-
-fn generate_random_secret() -> (String, String) {
-    let entropy = get_entropy();
-
-    // Generate truly random data using the system's secure random number generator
-    let mut rng = rand::thread_rng();
-    let random_data: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
-
-    // Append the user-provided entropy to the randomly generated data
-    let mut combined_data = random_data;
-    combined_data.extend_from_slice(&entropy);
-
-    // Hash the combined data
-    let mut hasher = Sha512::new();
-    hasher.update(&combined_data);
-    let final_hash = hasher.finalize();
-
-    // Use the first 32 bytes for password and next 16 bytes for salt
-    let password = final_hash[0..RANDOM_PASSWORD_SIZE].to_vec();
-    let salt = final_hash[RANDOM_PASSWORD_SIZE..RANDOM_PASSWORD_SIZE + SlowKey::SALT_SIZE].to_vec();
-
-    // Return as hex strings with 0x prefix since they're randomly generated
-    (
-        format!("0x{}", hex::encode(&salt)),
-        format!("0x{}", hex::encode(&password)),
-    )
-}
-
-fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, random: bool) {
-    if count == 0 {
-        panic!("Count cannot be 0");
-    }
-
-    if output_dir.exists() {
-        panic!("Output directory \"{}\" already exists", output_dir.to_string_lossy());
-    }
-
-    // Create the output directory
-    fs::create_dir_all(&output_dir).unwrap();
-
-    // Ask for an encryption key
-    println!("Please provide an encryption key for the secret files:\n");
-
-    let encryption_key = get_encryption_key("secrets");
-
-    for i in 1..=count {
-        let (salt, password) = if random {
-            println!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
-
-            generate_random_secret()
-        } else {
-            println!("Please provide the salt and the password for secret number {i}:\n");
-
-            (get_salt(), get_password())
-        };
-
-        let filename = format!(
-            "{}{:0width$}.dat",
-            prefix,
-            i,
-            width = (count as f64).log10().ceil() as usize
-        );
-        let filepath = output_dir.join(filename);
-
-        let secret = Secret::new(&SecretOptions {
-            path: filepath.clone(),
-            key: encryption_key.clone(),
-        });
-
-        let secret_data = SecretData {
-            version: SecretVersion::V1,
-            data: SecretInnerData {
-                password: password.clone(),
-                salt: salt.clone(),
-            },
-        };
-
-        secret.save(&secret_data);
-
-        // Display the secret differently based on whether it has 0x prefix
-        println!(
-            "Salt for secret number {i} is (please highlight to see): {}",
-            salt.black().on_black()
-        );
-
-        println!(
-            "Password for secret number {i} is (please highlight to see): {}",
-            password.black().on_black()
-        );
-
-        println!("Stored encrypted secret number {i} at: {}\n", filepath.display());
-    }
 }
 
 fn main() {
@@ -1253,7 +765,7 @@ fn main() {
             } => {
                 print_input_instructions();
 
-                let file_key = get_encryption_key("checkpoint");
+                let file_key = cli::get_encryption_key("checkpoint");
                 let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions { key: file_key, path });
 
                 checkpoint_data.print(DisplayOptions {
@@ -1263,18 +775,18 @@ fn main() {
                 });
 
                 if verify {
-                    let salt_str = get_salt();
-                    let password_str = get_password();
+                    let salt_str = cli::get_salt();
+                    let password_str = cli::get_password();
 
                     // Convert to bytes
-                    let salt = if salt_str.starts_with(HEX_PREFIX) {
-                        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
+                        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
                     } else {
                         salt_str.as_bytes().to_vec()
                     };
 
-                    let password = if password_str.starts_with(HEX_PREFIX) {
-                        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    let password = if password_str.starts_with(cli::HEX_PREFIX) {
+                        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
                     } else {
                         password_str.as_bytes().to_vec()
                     };
@@ -1309,13 +821,13 @@ fn main() {
 
                 let checkpoint_data = match path {
                     Some(path) => {
-                        let key = get_encryption_key("checkpoint");
+                        let key = cli::get_encryption_key("checkpoint");
                         file_key = Some(key.clone());
 
                         Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
                     },
                     None => match interactive {
-                        true => get_checkpoint_data(),
+                        true => cli::get_checkpoint_data(),
                         false => panic!("Missing checkpoint path"),
                     },
                 };
@@ -1355,11 +867,11 @@ fn main() {
             CheckpointCommands::Reencrypt { input, output } => {
                 print_input_instructions();
 
-                let key = get_encryption_key("checkpoint");
+                let key = cli::get_encryption_key("checkpoint");
 
                 println!("Please provide the new file encryption key:\n");
 
-                let new_key = get_encryption_key("checkpoint");
+                let new_key = cli::get_encryption_key("checkpoint");
 
                 Checkpoint::reencrypt(&input, key, &output, new_key);
 
@@ -1376,7 +888,7 @@ fn main() {
             } => {
                 print_input_instructions();
 
-                let file_key = get_encryption_key("output");
+                let file_key = cli::get_encryption_key("output");
                 let output_data = Output::open(&OpenOutputOptions { key: file_key, path });
 
                 output_data.print(DisplayOptions {
@@ -1386,18 +898,18 @@ fn main() {
                 });
 
                 if verify {
-                    let salt_str = get_salt();
-                    let password_str = get_password();
+                    let salt_str = cli::get_salt();
+                    let password_str = cli::get_password();
 
                     // Convert to bytes
-                    let salt = if salt_str.starts_with(HEX_PREFIX) {
-                        hex::decode(salt_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
+                        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
                     } else {
                         salt_str.as_bytes().to_vec()
                     };
 
-                    let password = if password_str.starts_with(HEX_PREFIX) {
-                        hex::decode(password_str.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+                    let password = if password_str.starts_with(cli::HEX_PREFIX) {
+                        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
                     } else {
                         password_str.as_bytes().to_vec()
                     };
@@ -1415,11 +927,11 @@ fn main() {
             OutputCommands::Reencrypt { input, output } => {
                 print_input_instructions();
 
-                let key = get_encryption_key("output");
+                let key = cli::get_encryption_key("output");
 
                 println!("Please provide the new file encryption key:\n");
 
-                let new_key = get_encryption_key("output");
+                let new_key = cli::get_encryption_key("output");
 
                 Output::reencrypt(&input, key, &output, new_key);
 
@@ -1434,14 +946,14 @@ fn main() {
                 prefix,
                 random,
             } => {
-                generate_secrets(count, output_dir, prefix, random);
+                cli::generate_secrets(count, output_dir, prefix, random);
             },
 
             SecretsCommands::Show { path } => {
                 print_input_instructions();
 
                 println!("Please provide the encryption key for the secret file:\n");
-                let key = get_encryption_key("secret");
+                let key = cli::get_encryption_key("secret");
 
                 let secret = Secret::new(&SecretOptions {
                     path: path.clone(),
@@ -1457,10 +969,10 @@ fn main() {
                 print_input_instructions();
 
                 println!("Please provide the current encryption key:\n");
-                let key = get_encryption_key("secret");
+                let key = cli::get_encryption_key("secret");
 
                 println!("Please provide the new encryption key:\n");
-                let new_key = get_encryption_key("secret");
+                let new_key = cli::get_encryption_key("secret");
 
                 Secret::reencrypt(&input, key, &output, new_key);
 
