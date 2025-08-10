@@ -26,7 +26,6 @@ use sha2::{Digest, Sha512};
 use std::{
     cmp::Ordering,
     collections::VecDeque,
-    fs,
     path::PathBuf,
     sync::{Arc, Mutex},
     thread,
@@ -47,15 +46,9 @@ pub fn get_salt() -> String {
         .interact()
         .unwrap();
 
-    let mut hex = false;
-    let salt_bytes = if input_salt.starts_with(HEX_PREFIX) {
-        hex = true;
-        input_to_bytes(&input_salt)
-    } else {
-        input_salt.as_bytes().to_vec()
-    };
+    let salt_bytes = input_to_bytes(&input_salt);
 
-    show_hint(&input_salt, "Salt", hex);
+    show_hint(&input_salt, "Salt");
 
     let salt_len = salt_bytes.len();
     let salt = match salt_len {
@@ -148,9 +141,7 @@ pub fn get_password() -> String {
         .interact()
         .unwrap();
 
-    let hex = input_password.starts_with(HEX_PREFIX);
-
-    show_hint(&input_password, "Password", hex);
+    show_hint(&input_password, "Password");
 
     println!();
 
@@ -163,15 +154,9 @@ pub fn get_entropy() -> Vec<u8> {
         .interact()
         .unwrap();
 
-    let mut hex = false;
-    let entropy = if input_entropy.starts_with(HEX_PREFIX) {
-        hex = true;
-        input_to_bytes(&input_entropy)
-    } else {
-        input_entropy.as_bytes().to_vec()
-    };
+    let entropy = input_to_bytes(&input_entropy);
 
-    show_hint(&input_entropy, "Entropy", hex);
+    show_hint(&input_entropy, "Entropy");
 
     println!();
 
@@ -188,15 +173,9 @@ pub fn get_encryption_key(name: &str) -> Vec<u8> {
         .interact()
         .unwrap();
 
-    let mut hex = false;
-    let mut key = if input.starts_with(HEX_PREFIX) {
-        hex = true;
-        input_to_bytes(&input)
-    } else {
-        input.as_bytes().to_vec()
-    };
+    let mut key = input_to_bytes(&input);
 
-    show_hint(&input, &format!("{} encryption key", name), hex);
+    show_hint(&input, &format!("{} encryption key", name));
 
     let key_len = key.len();
     let capitalized = name.chars().next().unwrap().to_uppercase().collect::<String>() + &name[1..];
@@ -404,7 +383,7 @@ pub fn input_to_bytes(input: &str) -> Vec<u8> {
     }
 }
 
-fn show_hint(data: &str, description: &str, hex: bool) {
+fn show_hint(data: &str, description: &str) {
     let len = data.len();
 
     if len < MIN_SECRET_LENGTH_TO_REVEAL {
@@ -414,7 +393,8 @@ fn show_hint(data: &str, description: &str, hex: bool) {
             description,
         );
     } else {
-        let prefix_len = if hex { 3 } else { 1 };
+        let is_hex = data.starts_with(HEX_PREFIX);
+        let prefix_len = if is_hex { 3 } else { 1 };
 
         println!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
     }
