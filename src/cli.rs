@@ -457,7 +457,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
     }
 
     // Ask for an encryption key
-    println!("Please provide an encryption key for the secret files:\n");
+    println!("Please provide an encryption key for the secrets files:\n");
 
     let encryption_key = get_encryption_key("secrets");
 
@@ -723,6 +723,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
     print_input_instructions();
 
     println!("Please provide the encryption key for the secret file:\n");
+
     let key = get_encryption_key("secret");
 
     let secret = Secret::new(&SecretOptions {
@@ -811,7 +812,7 @@ pub fn derive(derive_options: DeriveOptions) {
 
     let (salt_str, password_str) = if let Some(secret_path) = &derive_options.secret_path {
         println!(
-            "Loading password and salt from secret file: {}\n",
+            "Loading password and salt from a secret file: {}\n",
             secret_path.display()
         );
 
