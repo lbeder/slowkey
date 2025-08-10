@@ -693,13 +693,6 @@ fn derive(derive_options: DeriveOptions) {
     );
 }
 
-fn print_input_instructions() {
-    println!(
-        "Please input all data either in raw or hex format starting with the {} prefix\n",
-        cli::HEX_PREFIX
-    );
-}
-
 fn main() {
     better_panic::install();
     color_backtrace::install();
@@ -732,7 +725,7 @@ fn main() {
             sanity,
             secret,
         } => {
-            print_input_instructions();
+            cli::print_input_instructions();
 
             derive(DeriveOptions {
                 options: SlowKeyOptions::new(
@@ -763,7 +756,7 @@ fn main() {
                 base64,
                 base58,
             } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 let file_key = cli::get_encryption_key("checkpoint");
                 let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions { key: file_key, path });
@@ -815,7 +808,7 @@ fn main() {
                 sanity,
                 secret,
             } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 let mut file_key: Option<Vec<u8>> = None;
 
@@ -865,7 +858,7 @@ fn main() {
             },
 
             CheckpointCommands::Reencrypt { input, output } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 let key = cli::get_encryption_key("checkpoint");
 
@@ -886,7 +879,7 @@ fn main() {
                 base64,
                 base58,
             } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 let file_key = cli::get_encryption_key("output");
                 let output_data = Output::open(&OpenOutputOptions { key: file_key, path });
@@ -925,7 +918,7 @@ fn main() {
             },
 
             OutputCommands::Reencrypt { input, output } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 let key = cli::get_encryption_key("output");
 
@@ -950,7 +943,7 @@ fn main() {
             },
 
             SecretsCommands::Show { path } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 println!("Please provide the encryption key for the secret file:\n");
                 let key = cli::get_encryption_key("secret");
@@ -966,7 +959,7 @@ fn main() {
             },
 
             SecretsCommands::Reencrypt { input, output } => {
-                print_input_instructions();
+                cli::print_input_instructions();
 
                 println!("Please provide the current encryption key:\n");
                 let key = cli::get_encryption_key("secret");

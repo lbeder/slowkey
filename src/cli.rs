@@ -493,3 +493,10 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         println!("Stored encrypted secret number {i} at: {}\n", filepath.display());
     }
 }
+
+pub fn print_input_instructions() {
+    println!(
+        "Please input all data either in raw or hex format starting with the {} prefix\n",
+        HEX_PREFIX
+    );
+}
