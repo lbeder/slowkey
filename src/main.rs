@@ -162,7 +162,7 @@ enum Commands {
     #[command(subcommand, about = "Output operations", arg_required_else_help = true)]
     Output(OutputCommands),
 
-    #[command(subcommand, about = "Secret operations", arg_required_else_help = true)]
+    #[command(subcommand, about = "Secrets operations", arg_required_else_help = true)]
     Secrets(SecretsCommands),
 
     #[command(about = "Run benchmarks")]

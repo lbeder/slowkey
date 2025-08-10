@@ -119,7 +119,7 @@ Commands:
   derive          Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
   checkpoint      Checkpoint operations
   output          Output operations
-  secrets         Secret operations
+  secrets         Secrets operations
   bench           Run benchmarks
   stability-test  Run stability tests
 
@@ -304,7 +304,7 @@ Options:
 The secrets functionality provides a more secure way for inputting the salt and password since both are encrypted and stored in files, avoiding the need to input them directly through the console/keyboard. This approach reduces the risk of sensitive data being exposed through command history, shoulder surfing, or other forms of input monitoring. By encrypting and storing these secrets in files, users can maintain better security practices while still being able to use their passwords and salts for key derivation operations.
 
 ```sh
-Secret operations
+Secrets operations
 
 Usage: slowkey secrets <COMMAND>
 
