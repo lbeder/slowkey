@@ -33,7 +33,7 @@ pub fn get_salt() -> String {
     let mut hex = false;
     let salt_bytes = if input_salt.starts_with(HEX_PREFIX) {
         hex = true;
-        hex::decode(input_salt.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+        input_to_bytes(&input_salt)
     } else {
         input_salt.as_bytes().to_vec()
     };
@@ -149,7 +149,7 @@ pub fn get_entropy() -> Vec<u8> {
     let mut hex = false;
     let entropy = if input_entropy.starts_with(HEX_PREFIX) {
         hex = true;
-        hex::decode(input_entropy.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+        input_to_bytes(&input_entropy)
     } else {
         input_entropy.as_bytes().to_vec()
     };
@@ -174,7 +174,7 @@ pub fn get_encryption_key(name: &str) -> Vec<u8> {
     let mut hex = false;
     let mut key = if input.starts_with(HEX_PREFIX) {
         hex = true;
-        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+        input_to_bytes(&input)
     } else {
         input.as_bytes().to_vec()
     };
@@ -268,11 +268,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
     }
 
     let data: String = Input::new().with_prompt("Data").interact_text().unwrap();
-    let data = if data.starts_with(HEX_PREFIX) {
-        hex::decode(data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        data.as_bytes().to_vec()
-    };
+    let data = input_to_bytes(&data);
 
     if data.is_empty() {
         panic!("Invalid data");
@@ -284,11 +280,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
             .allow_empty(true)
             .interact_text()
             .unwrap();
-        let prev_data = if prev_data.starts_with(HEX_PREFIX) {
-            hex::decode(prev_data.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
-        } else {
-            prev_data.as_bytes().to_vec()
-        };
+        let prev_data = input_to_bytes(&prev_data);
 
         if prev_data.len() != data.len() {
             panic!("Invalid previous data's length");
@@ -382,6 +374,16 @@ pub fn get_checkpoint_data() -> CheckpointData {
                 balloon_hash,
             },
         },
+    }
+}
+
+/// Convert hex or raw input to bytes
+/// If the input starts with HEX_PREFIX, it's decoded as hex, otherwise treated as raw bytes
+pub fn input_to_bytes(input: &str) -> Vec<u8> {
+    if input.starts_with(HEX_PREFIX) {
+        hex::decode(input.strip_prefix(HEX_PREFIX).unwrap()).unwrap()
+    } else {
+        input.as_bytes().to_vec()
     }
 }
 

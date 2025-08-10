@@ -460,18 +460,10 @@ fn derive(derive_options: DeriveOptions) {
     };
 
     // Convert salt string to bytes
-    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
-        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        salt_str.as_bytes().to_vec()
-    };
+    let salt = cli::input_to_bytes(&salt_str);
 
     // Convert password string to bytes
-    let password = if password_str.starts_with(cli::HEX_PREFIX) {
-        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-    } else {
-        password_str.as_bytes().to_vec()
-    };
+    let password = cli::input_to_bytes(&password_str);
 
     let mut offset: usize = 0;
     let mut offset_data = Vec::new();
@@ -772,17 +764,8 @@ fn main() {
                     let password_str = cli::get_password();
 
                     // Convert to bytes
-                    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
-                        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-                    } else {
-                        salt_str.as_bytes().to_vec()
-                    };
-
-                    let password = if password_str.starts_with(cli::HEX_PREFIX) {
-                        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-                    } else {
-                        password_str.as_bytes().to_vec()
-                    };
+                    let salt = cli::input_to_bytes(&salt_str);
+                    let password = cli::input_to_bytes(&password_str);
 
                     println!("Verifying the checkpoint...\n");
 
@@ -895,17 +878,8 @@ fn main() {
                     let password_str = cli::get_password();
 
                     // Convert to bytes
-                    let salt = if salt_str.starts_with(cli::HEX_PREFIX) {
-                        hex::decode(salt_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-                    } else {
-                        salt_str.as_bytes().to_vec()
-                    };
-
-                    let password = if password_str.starts_with(cli::HEX_PREFIX) {
-                        hex::decode(password_str.strip_prefix(cli::HEX_PREFIX).unwrap()).unwrap()
-                    } else {
-                        password_str.as_bytes().to_vec()
-                    };
+                    let salt = cli::input_to_bytes(&salt_str);
+                    let password = cli::input_to_bytes(&password_str);
 
                     println!("Verifying the output...\n");
 
