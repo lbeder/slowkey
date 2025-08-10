@@ -1,20 +1,37 @@
 use crate::utils::{
     algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
     chacha20poly1305::ChaCha20Poly1305,
-    checkpoints::{
-        checkpoint::{CheckpointData, CheckpointSlowKeyOptions, SlowKeyData},
-        version::Version,
+    checkpoints::checkpoint::{
+        Checkpoint, CheckpointData, CheckpointSlowKeyOptions, OpenCheckpointOptions, SlowKeyData,
     },
+    checkpoints::version::Version,
+    file_lock::FileLock,
     inputs::{
         secret::{Secret, SecretData, SecretInnerData, SecretOptions},
         version::Version as SecretVersion,
     },
+    outputs::{
+        fingerprint::Fingerprint,
+        output::{OpenOutputOptions, Output},
+    },
 };
+use base64::{engine::general_purpose, Engine};
+use chrono::{DateTime, Local};
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
+use humantime::format_duration;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rand::Rng;
 use sha2::{Digest, Sha512};
-use std::{cmp::Ordering, fs, path::PathBuf};
+use std::{
+    cmp::Ordering,
+    collections::VecDeque,
+    fs,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    thread,
+    time::{Instant, SystemTime},
+};
 
 use crate::slowkey::{SlowKey, SlowKeyOptions};
 
@@ -500,5 +517,539 @@ pub fn print_input_instructions() {
     println!(
         "Please input all data either in raw or hex format starting with the {} prefix\n",
         HEX_PREFIX
+    );
+}
+
+// Handlers options for other commands
+pub struct CheckpointShowOptions {
+    pub path: PathBuf,
+    pub verify: bool,
+    pub base64: bool,
+    pub base58: bool,
+}
+
+pub fn handle_checkpoint_show(opts: CheckpointShowOptions) {
+    print_input_instructions();
+
+    let file_key = get_encryption_key("checkpoint");
+    let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions {
+        key: file_key,
+        path: opts.path,
+    });
+
+    checkpoint_data.print(crate::DisplayOptions {
+        base64: opts.base64,
+        base58: opts.base58,
+        options: true,
+    });
+
+    if opts.verify {
+        let salt_str = get_salt();
+        let password_str = get_password();
+
+        // Convert to bytes
+        let salt = input_to_bytes(&salt_str);
+        let password = input_to_bytes(&password_str);
+
+        println!("Verifying the checkpoint...\n");
+
+        if !checkpoint_data.verify(&salt, &password) {
+            panic!("The password, salt, or internal data is incorrect!");
+        }
+
+        println!("The password, salt and internal data are correct\n");
+    }
+}
+
+pub struct CheckpointRestoreOptions {
+    pub iterations: usize,
+    pub output: Option<PathBuf>,
+    pub checkpoint_dir: Option<PathBuf>,
+    pub checkpoint_interval: usize,
+    pub max_checkpoints_to_keep: usize,
+    pub path: Option<PathBuf>,
+    pub interactive: bool,
+    pub base64: bool,
+    pub base58: bool,
+    pub iteration_moving_window: u32,
+    pub sanity: bool,
+    pub secret: Option<PathBuf>,
+}
+
+pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
+    print_input_instructions();
+
+    let mut file_key: Option<Vec<u8>> = None;
+
+    let checkpoint_data = match opts.path {
+        Some(path) => {
+            let key = get_encryption_key("checkpoint");
+            file_key = Some(key.clone());
+
+            Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
+        },
+        None => match opts.interactive {
+            true => get_checkpoint_data(),
+            false => panic!("Missing checkpoint path"),
+        },
+    };
+
+    if opts.iterations <= checkpoint_data.data.iteration {
+        panic!(
+            "Invalid iterations number {} for checkpoint {}",
+            opts.iterations, checkpoint_data.data.iteration
+        );
+    }
+
+    let ck_opts = &checkpoint_data.data.slowkey;
+    let options = SlowKeyOptions {
+        iterations: opts.iterations,
+        length: ck_opts.length,
+        scrypt: ck_opts.scrypt,
+        argon2id: ck_opts.argon2id,
+        balloon_hash: ck_opts.balloon_hash,
+    };
+
+    derive(DeriveOptions {
+        options,
+        checkpoint_data: Some(checkpoint_data),
+        file_key,
+        checkpoint_dir: opts.checkpoint_dir,
+        checkpoint_interval: opts.checkpoint_interval,
+        max_checkpoints_to_keep: opts.max_checkpoints_to_keep,
+        output: opts.output,
+        base64: opts.base64,
+        base58: opts.base58,
+        iteration_moving_window: opts.iteration_moving_window,
+        sanity: opts.sanity,
+        secret_path: opts.secret,
+    });
+}
+
+pub struct CheckpointReencryptOptions {
+    pub input: PathBuf,
+    pub output: PathBuf,
+}
+
+pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
+    print_input_instructions();
+
+    let key = get_encryption_key("checkpoint");
+
+    println!("Please provide the new file encryption key:\n");
+
+    let new_key = get_encryption_key("checkpoint");
+
+    Checkpoint::reencrypt(&opts.input, key, &opts.output, new_key);
+
+    println!("Saved new checkpoint at \"{}\"", opts.output.to_string_lossy());
+}
+
+pub struct OutputShowOptions {
+    pub path: PathBuf,
+    pub verify: bool,
+    pub base64: bool,
+    pub base58: bool,
+}
+
+pub fn handle_output_show(opts: OutputShowOptions) {
+    print_input_instructions();
+
+    let file_key = get_encryption_key("output");
+    let output_data = Output::open(&OpenOutputOptions {
+        key: file_key,
+        path: opts.path,
+    });
+
+    output_data.print(crate::DisplayOptions {
+        base64: opts.base64,
+        base58: opts.base58,
+        options: true,
+    });
+
+    if opts.verify {
+        let salt_str = get_salt();
+        let password_str = get_password();
+
+        let salt = input_to_bytes(&salt_str);
+        let password = input_to_bytes(&password_str);
+
+        println!("Verifying the output...\n");
+
+        if !output_data.verify(&salt, &password) {
+            panic!("The password, salt, or internal data is incorrect!");
+        }
+
+        println!("The password, salt and internal data are correct\n");
+    }
+}
+
+pub struct OutputReencryptOptions {
+    pub input: PathBuf,
+    pub output: PathBuf,
+}
+
+pub fn handle_output_reencrypt(opts: OutputReencryptOptions) {
+    print_input_instructions();
+
+    let key = get_encryption_key("output");
+
+    println!("Please provide the new file encryption key:\n");
+
+    let new_key = get_encryption_key("output");
+
+    Output::reencrypt(&opts.input, key, &opts.output, new_key);
+
+    println!("Saved new output at \"{}\"", opts.output.to_string_lossy());
+}
+
+pub struct SecretsGenerateOptions {
+    pub count: usize,
+    pub output_dir: PathBuf,
+    pub prefix: String,
+    pub random: bool,
+}
+
+pub fn handle_secrets_generate(opts: SecretsGenerateOptions) {
+    generate_secrets(opts.count, opts.output_dir, opts.prefix, opts.random);
+}
+
+pub struct SecretsShowOptions {
+    pub path: PathBuf,
+}
+
+pub fn handle_secrets_show(opts: SecretsShowOptions) {
+    print_input_instructions();
+
+    println!("Please provide the encryption key for the secret file:\n");
+    let key = get_encryption_key("secret");
+
+    let secret = Secret::new(&SecretOptions {
+        path: opts.path.clone(),
+        key,
+    });
+
+    let secret_data = secret.open();
+
+    secret_data.print();
+}
+
+pub struct SecretsReencryptOptions {
+    pub input: PathBuf,
+    pub output: PathBuf,
+}
+
+pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
+    print_input_instructions();
+
+    println!("Please provide the current encryption key:\n");
+    let key = get_encryption_key("secret");
+
+    println!("Please provide the new encryption key:\n");
+    let new_key = get_encryption_key("secret");
+
+    Secret::reencrypt(&opts.input, key, &opts.output, new_key);
+
+    println!("Saved reencrypted secret at \"{}\"", opts.output.to_string_lossy());
+}
+
+pub struct DeriveOptions {
+    pub options: SlowKeyOptions,
+    pub checkpoint_data: Option<CheckpointData>,
+    pub file_key: Option<Vec<u8>>,
+    pub checkpoint_dir: Option<PathBuf>,
+    pub checkpoint_interval: usize,
+    pub max_checkpoints_to_keep: usize,
+    pub output: Option<PathBuf>,
+    pub base64: bool,
+    pub base58: bool,
+    pub iteration_moving_window: u32,
+    pub sanity: bool,
+    pub secret_path: Option<PathBuf>,
+}
+
+pub fn handle_derive(options: DeriveOptions) {
+    print_input_instructions();
+
+    derive(options);
+}
+
+pub fn derive(derive_options: DeriveOptions) {
+    let options = derive_options.options;
+    let mut file_key = derive_options.file_key;
+    let mut checkpoint: Option<Checkpoint> = None;
+
+    let mut _output_lock: Option<FileLock> = None;
+    let mut out: Option<Output> = None;
+    if let Some(output_path) = derive_options.output {
+        if output_path.exists() {
+            panic!("Output file \"{}\" already exists", output_path.to_string_lossy());
+        }
+
+        _output_lock = match FileLock::try_lock(&output_path) {
+            Ok(lock) => Some(lock),
+            Err(_) => panic!("Unable to lock {}", output_path.to_string_lossy()),
+        };
+
+        if file_key.is_none() {
+            file_key = Some(get_encryption_key("output"));
+        }
+
+        out = Some(Output::new(&crate::utils::outputs::output::OutputOptions {
+            path: output_path,
+            key: file_key.clone().unwrap(),
+            slowkey: options.clone(),
+        }))
+    }
+
+    if let Some(checkpoint_data) = &derive_options.checkpoint_data {
+        checkpoint_data.print(crate::DisplayOptions::default());
+    }
+
+    options.print();
+
+    let (salt_str, password_str) = if let Some(secret_path) = &derive_options.secret_path {
+        println!(
+            "Loading password and salt from secret file: {}\n",
+            secret_path.display()
+        );
+
+        let secret_key = get_encryption_key("secret");
+        let secret = Secret::new(&SecretOptions {
+            path: secret_path.clone(),
+            key: secret_key,
+        });
+
+        let secret_data = secret.open();
+        (secret_data.data.salt, secret_data.data.password)
+    } else {
+        (get_salt(), get_password())
+    };
+
+    // Convert salt string to bytes
+    let salt = input_to_bytes(&salt_str);
+
+    // Convert password string to bytes
+    let password = input_to_bytes(&password_str);
+
+    let mut offset: usize = 0;
+    let mut offset_data = Vec::new();
+    let mut prev_data = Vec::new();
+
+    if let Some(checkpoint_data) = &derive_options.checkpoint_data {
+        println!("Verifying the checkpoint...\n");
+
+        if !checkpoint_data.verify(&salt, &password) {
+            panic!("The password, salt, or internal data is incorrect!");
+        }
+
+        println!("The password, salt and internal data are correct\n");
+
+        offset = checkpoint_data.data.iteration + 1;
+        offset_data.clone_from(&checkpoint_data.data.data);
+
+        // Since we are starting from this checkpoint, set the rolling previous data to its data
+        prev_data = checkpoint_data.data.data.clone();
+    }
+
+    // Print the colored hash fingerprint of the parameters
+    let fingerprint = Fingerprint::from_data(&options, &salt, &password);
+    fingerprint.print();
+
+    if let Some(dir) = derive_options.checkpoint_dir {
+        if file_key.is_none() {
+            file_key = Some(get_encryption_key("checkpoint"));
+        }
+
+        checkpoint = Some(Checkpoint::new(
+            &crate::utils::checkpoints::checkpoint::CheckpointOptions {
+                iterations: options.iterations,
+                dir: dir.to_owned(),
+                key: file_key.clone().unwrap(),
+                max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
+                slowkey: options.clone(),
+            },
+        ));
+
+        println!(
+            "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
+            derive_options.checkpoint_interval.to_string().cyan(),
+            &dir.to_string_lossy().cyan()
+        );
+    }
+
+    let mb = MultiProgress::new();
+
+    // Create the main progress bar. Please note that we are using a custom message, instead of percents, since
+    // we want a higher resolution that the default one
+    let pb = mb
+        .add(ProgressBar::new(options.iterations as u64))
+        .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap());
+
+    pb.set_position(offset as u64);
+    pb.reset_eta();
+    pb.enable_steady_tick(std::time::Duration::from_secs(1));
+
+    // Set the percent using a custom message
+    pb.set_message(format!("{}", (offset * 100) as f64 / options.iterations as f64));
+
+    // Create a progress bar to track iteration times and checkpoints
+    let ipb = mb
+        .add(ProgressBar::new(options.iterations as u64))
+        .with_style(ProgressStyle::with_template("{msg}").unwrap());
+
+    let start_time = SystemTime::now();
+    let running_time = Instant::now();
+    let mut iteration_time = Instant::now();
+    let mut samples: VecDeque<u128> = VecDeque::new();
+
+    let slowkey = SlowKey::new(&options);
+
+    let mut checkpoint_info = String::new();
+
+    let prev_data_mutex = Arc::new(Mutex::new(prev_data));
+    let prev_data_thread = Arc::clone(&prev_data_mutex);
+
+    let handle = thread::spawn(move || {
+        let key = slowkey.derive_key_with_callback(
+            &salt,
+            &password,
+            &offset_data,
+            offset,
+            derive_options.sanity,
+            |current_iteration, current_data| {
+                // Track iteration times
+                let last_iteration_time = iteration_time.elapsed().as_millis();
+                iteration_time = Instant::now();
+
+                samples.push_back(last_iteration_time);
+
+                // If we have more than the required samples, remove the oldest one
+                if samples.len() > derive_options.iteration_moving_window as usize {
+                    samples.pop_front();
+                }
+
+                // Calculate the moving average
+                let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
+
+                let iteration_info = format!(
+                    "\nIteration time moving average ({}): {}, last iteration time: {}",
+                    derive_options.iteration_moving_window.to_string().cyan(),
+                    format_duration(std::time::Duration::from_millis(moving_average as u64))
+                        .to_string()
+                        .cyan(),
+                    format_duration(std::time::Duration::from_millis(last_iteration_time as u64))
+                        .to_string()
+                        .cyan(),
+                );
+
+                let mut prev_data = prev_data_thread.lock().unwrap();
+
+                // Create a checkpoint if we've reached the checkpoint interval
+                if derive_options.checkpoint_interval != 0
+                    && (current_iteration + 1) % derive_options.checkpoint_interval == 0
+                {
+                    let prev_data: Option<&[u8]> = if current_iteration == 0 { None } else { Some(&prev_data) };
+
+                    if let Some(checkpoint) = &mut checkpoint {
+                        checkpoint.create(current_iteration, current_data, prev_data);
+
+                        let hash = Checkpoint::hash(current_iteration, current_data, prev_data);
+
+                        checkpoint_info = format!(
+                            "\nCreated checkpoint #{} with data hash {}",
+                            (current_iteration + 1).to_string().cyan(),
+                            format!("0x{}", hex::encode(hash)).cyan()
+                        );
+                    }
+                }
+
+                // Store the current  data in order to store it in the checkpoint for future verification of the
+                // parameters
+                if current_iteration < options.iterations - 1 {
+                    prev_data.clone_from(current_data);
+                }
+
+                pb.inc(1);
+
+                // Set the percent using a custom message
+                pb.set_message(format!(
+                    "{}",
+                    ((current_iteration + 1) * 100) as f64 / options.iterations as f64
+                ));
+
+                ipb.set_message(format!("{}{}", iteration_info, checkpoint_info));
+            },
+        );
+
+        pb.finish();
+        ipb.finish();
+
+        key
+    });
+
+    let key = handle.join().unwrap();
+
+    println!(
+        "\n\nOutput is (please highlight to see): {}",
+        format!("0x{}", hex::encode(&key)).black().on_black()
+    );
+
+    if derive_options.base64 {
+        println!(
+            "\nOutput (base64) is (please highlight to see): {}",
+            general_purpose::STANDARD.encode(&key).black().on_black()
+        );
+    }
+
+    if derive_options.base58 {
+        println!(
+            "\nOutput (base58) is (please highlight to see): {}",
+            bs58::encode(&key).into_string().black().on_black()
+        );
+    }
+
+    println!();
+
+    if let Some(out) = out {
+        let prev_data_guard = prev_data_mutex.lock().unwrap();
+        let prev_data_option: Option<&[u8]> = if prev_data_guard.is_empty() {
+            None
+        } else {
+            Some(&prev_data_guard[..])
+        };
+
+        out.save(&key, prev_data_option, &fingerprint);
+
+        println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
+    }
+
+    println!(
+        "Start time: {}",
+        DateTime::<Local>::from(start_time)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "End time: {}",
+        DateTime::<Local>::from(SystemTime::now())
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "Total running time: {}",
+        format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
+            .to_string()
+            .cyan()
+    );
+    println!(
+        "Average iteration time: {}",
+        format_duration(std::time::Duration::from_millis(
+            (running_time.elapsed().as_millis() as f64 / options.iterations as f64).round() as u64
+        ))
+        .to_string()
+        .cyan()
     );
 }
