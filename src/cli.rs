@@ -18,7 +18,7 @@ use crate::utils::{
 use base64::{engine::general_purpose, Engine};
 use chrono::{DateTime, Local};
 use crossterm::style::Stylize;
-use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
+use dialoguer::{theme::ColorfulTheme, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rand::Rng;
@@ -54,76 +54,48 @@ pub fn get_salt() -> String {
     let salt = match salt_len {
         0 => {
             println!(
-                "\nSalt is empty; a default {}-byte zero-filled salt will be used.",
+                "\n{}: Salt is empty; using default zero-filled salt of {} bytes",
+                "Warning".dark_yellow(),
                 SlowKey::SALT_SIZE
             );
-
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
-
-            if confirmation {
-                format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
-            } else {
-                panic!("Aborting");
-            }
+            format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
         },
         _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
             Ordering::Less => {
                 println!(
-                    "\nSalt's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                    "\n{}: Salt's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
+                    "Warning".dark_yellow(),
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
                 );
 
-                let confirmation = Confirm::new()
-                    .with_prompt("Do you want to continue?")
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
+                let mut sha512 = Sha512::new();
+                sha512.update(&salt_bytes);
+                let mut salt_bytes = sha512.finalize().to_vec();
 
-                if confirmation {
-                    let mut sha512 = Sha512::new();
-                    sha512.update(&salt_bytes);
-                    let mut salt_bytes = sha512.finalize().to_vec();
+                salt_bytes.truncate(SlowKey::SALT_SIZE);
 
-                    salt_bytes.truncate(SlowKey::SALT_SIZE);
-
-                    // Return as hex since it was modified
-                    format!("0x{}", hex::encode(salt_bytes))
-                } else {
-                    panic!("Aborting");
-                }
+                // Return as hex since it was modified
+                format!("0x{}", hex::encode(salt_bytes))
             },
             Ordering::Greater => {
                 println!(
-                    "\nSalt's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                    "\n{}: Salt's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
+                    "Warning".dark_yellow(),
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
                 );
 
-                let confirmation = Confirm::new()
-                    .with_prompt("Do you want to continue?")
-                    .wait_for_newline(true)
-                    .interact()
-                    .unwrap();
+                let mut sha512 = Sha512::new();
+                sha512.update(&salt_bytes);
+                let mut salt_bytes = sha512.finalize().to_vec();
 
-                if confirmation {
-                    let mut sha512 = Sha512::new();
-                    sha512.update(&salt_bytes);
-                    let mut salt_bytes = sha512.finalize().to_vec();
+                salt_bytes.truncate(SlowKey::SALT_SIZE);
 
-                    salt_bytes.truncate(SlowKey::SALT_SIZE);
-
-                    // Return as hex since it was modified
-                    format!("0x{}", hex::encode(salt_bytes))
-                } else {
-                    panic!("Aborting");
-                }
+                // Return as hex since it was modified
+                format!("0x{}", hex::encode(salt_bytes))
             },
             Ordering::Equal => input_salt,
         },
@@ -182,53 +154,35 @@ pub fn get_encryption_key(name: &str) -> Vec<u8> {
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
             println!(
-                "\n{} encryption key's length {} is shorter than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\n{}: {} encryption key's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
+                "Warning".dark_yellow(),
                 capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
             );
 
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
+            let mut sha512 = Sha512::new();
+            sha512.update(&key);
+            key = sha512.finalize().to_vec();
 
-            if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&key);
-                key = sha512.finalize().to_vec();
-
-                key.truncate(ChaCha20Poly1305::KEY_SIZE);
-            } else {
-                panic!("Aborting");
-            }
+            key.truncate(ChaCha20Poly1305::KEY_SIZE);
         },
         Ordering::Greater => {
             println!(
-                "\n{} encryption key's length {} is longer than {} and will be SHA512 hashed and then truncated into {} bytes.",
+                "\n{}: {} encryption key's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
+                "Warning".dark_yellow(),
                 capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
                 ChaCha20Poly1305::KEY_SIZE
             );
 
-            let confirmation = Confirm::new()
-                .with_prompt("Do you want to continue?")
-                .wait_for_newline(true)
-                .interact()
-                .unwrap();
+            let mut sha512 = Sha512::new();
+            sha512.update(&key);
+            key = sha512.finalize().to_vec();
 
-            if confirmation {
-                let mut sha512 = Sha512::new();
-                sha512.update(&key);
-                key = sha512.finalize().to_vec();
-
-                key.truncate(ChaCha20Poly1305::KEY_SIZE);
-            } else {
-                panic!("Aborting");
-            }
+            key.truncate(ChaCha20Poly1305::KEY_SIZE);
         },
         Ordering::Equal => {},
     }
@@ -390,7 +344,7 @@ fn show_hint(data: &str, description: &str) {
         println!(
             "\n{}: {} is too short, therefore password hint won't be shown",
             "Warning".dark_yellow(),
-            description,
+            description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..],
         );
     } else {
         let is_hex = data.starts_with(HEX_PREFIX);
