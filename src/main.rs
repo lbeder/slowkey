@@ -44,8 +44,7 @@ use dialoguer::{theme::ColorfulTheme, Confirm, Input, Password};
 use humantime::format_duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use mimalloc::MiMalloc;
-use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::Rng;
 use sha2::{Digest, Sha512};
 use stability::STABILITY_TEST_ITERATIONS;
 use std::{
@@ -400,6 +399,7 @@ enum SecretsCommands {
 const BENCHMARKS_DIRECTORY: &str = "benchmarks";
 const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
+const RANDOM_PASSWORD_SIZE: usize = 32;
 
 #[derive(PartialEq, Debug, Clone, Default)]
 pub struct DisplayOptions {
@@ -1098,32 +1098,22 @@ fn print_input_instructions() {
 fn generate_random_secret() -> (String, String) {
     let entropy = get_entropy();
 
+    // Generate truly random data using the system's secure random number generator
+    let mut rng = rand::thread_rng();
+    let random_data: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
+
+    // Append the user-provided entropy to the randomly generated data
+    let mut combined_data = random_data;
+    combined_data.extend_from_slice(&entropy);
+
+    // Hash the combined data
     let mut hasher = Sha512::new();
-    hasher.update(&entropy);
-    let entropy_hash = hasher.finalize();
-
-    // Convert the first 32 bytes of the hash to a seed array
-    let mut seed = [0u8; 32];
-    seed.copy_from_slice(&entropy_hash[..32]);
-
-    // Use the entropy hash to seed the RNG
-    let mut rng = StdRng::from_seed(seed);
-
-    // Generate random entropy bytes (64 bytes)
-    let rng_entropy: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
-
-    // Append manual entropy to the RNG-generated entropy
-    let mut combined_entropy = rng_entropy;
-    combined_entropy.extend_from_slice(&entropy);
-
-    // Hash the combined entropy
-    let mut final_hasher = Sha512::new();
-    final_hasher.update(&combined_entropy);
-    let final_entropy_hash = final_hasher.finalize();
+    hasher.update(&combined_data);
+    let final_hash = hasher.finalize();
 
     // Use the first 32 bytes for password and next 16 bytes for salt
-    let password = final_entropy_hash[0..32].to_vec();
-    let salt = final_entropy_hash[32..32 + SlowKey::SALT_SIZE].to_vec();
+    let password = final_hash[0..RANDOM_PASSWORD_SIZE].to_vec();
+    let salt = final_hash[RANDOM_PASSWORD_SIZE..RANDOM_PASSWORD_SIZE + SlowKey::SALT_SIZE].to_vec();
 
     // Return as hex strings with 0x prefix since they're randomly generated
     (
