@@ -452,12 +452,9 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         panic!("Count cannot be 0");
     }
 
-    if output_dir.exists() {
-        panic!("Output directory \"{}\" already exists", output_dir.to_string_lossy());
+    if !output_dir.exists() {
+        panic!("Output directory \"{}\" doesn't exist", output_dir.to_string_lossy());
     }
-
-    // Create the output directory
-    fs::create_dir_all(&output_dir).unwrap();
 
     // Ask for an encryption key
     println!("Please provide an encryption key for the secret files:\n");
@@ -465,6 +462,18 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
     let encryption_key = get_encryption_key("secrets");
 
     for i in 1..=count {
+        let filename = format!(
+            "{}{:0width$}.dat",
+            prefix,
+            i,
+            width = (count as f64).log10().ceil() as usize
+        );
+        let filepath = output_dir.join(filename);
+
+        if filepath.exists() {
+            panic!("Output file \"{}\" already exists", filepath.to_string_lossy());
+        }
+
         let (salt, password) = if random {
             println!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
 
@@ -474,14 +483,6 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
 
             (get_salt(), get_password())
         };
-
-        let filename = format!(
-            "{}{:0width$}.dat",
-            prefix,
-            i,
-            width = (count as f64).log10().ceil() as usize
-        );
-        let filepath = output_dir.join(filename);
 
         let secret = Secret::new(&SecretOptions {
             path: filepath.clone(),
