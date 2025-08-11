@@ -397,21 +397,8 @@ cargo build --release --target x86_64-apple-darwin
 
 ### Linux x64
 
-Install a standard Linux target on a Mac:
-
 ```sh
-rustup target add x86_64-unknown-linux-musl
-```
-
-Use `homebrew` to install a community-provided macOS cross-compiler toolchains:
-
-```sh
-brew tap messense/macos-cross-toolchains
-brew install x86_64-unknown-linux-musl
-```
-
-```sh
-CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target=x86_64-unknown-linux-musl
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target=x86_64-unknown-linux-gnu
 ```
 
 ### Linux ARM64

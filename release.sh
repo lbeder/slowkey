@@ -28,7 +28,7 @@ create_bundle() {
 # Create bundles
 create_bundle "Mac OS" "ARM64" "aarch64-apple-darwin"
 create_bundle "Mac OS" "x64" "x86_64-apple-darwin"
-create_bundle "Linux" "X64" "x86_64-unknown-linux-musl"
+create_bundle "Linux" "X64" "x86_64-unknown-linux-gnu"
 create_bundle "Linux" "ARM64" "aarch64-unknown-linux-gnu"
 
 RELEASE_NOTES="target/release.md"
