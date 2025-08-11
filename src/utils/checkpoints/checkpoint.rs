@@ -1,4 +1,5 @@
 use super::version::Version;
+use crate::log;
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::{
@@ -13,7 +14,6 @@ use crate::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
-use crate::log;
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -184,17 +184,11 @@ impl Checkpoint {
 
     pub fn new(opts: &CheckpointOptions) -> Self {
         if !opts.dir.exists() {
-            panic!(
-                "Checkpoints directory \"{}\" does not exist",
-                opts.dir.to_str().unwrap()
-            );
+            panic!("Checkpoints directory \"{}\" does not exist", opts.dir.display());
         }
 
         if !opts.dir.is_dir() {
-            panic!(
-                "Checkpoints directory \"{}\" is not a directory",
-                opts.dir.to_str().unwrap()
-            );
+            panic!("Checkpoints directory \"{}\" is not a directory", opts.dir.display());
         }
 
         if opts.max_checkpoints_to_keep == 0 {
@@ -216,7 +210,7 @@ impl Checkpoint {
         {
             panic!(
                 "Checkpoints directory \"{}\" is not empty and contains existing checkpoint files",
-                opts.dir.to_str().unwrap()
+                opts.dir.display()
             );
         }
 
@@ -277,11 +271,11 @@ impl Checkpoint {
 
     pub fn open(opts: &OpenCheckpointOptions) -> CheckpointData {
         if opts.path.is_dir() {
-            panic!("Checkpoint file \"{}\" is a directory", opts.path.to_str().unwrap());
+            panic!("Checkpoint file \"{}\" is a directory", opts.path.display());
         }
 
         if !opts.path.exists() {
-            panic!("Checkpoint file \"{}\" does not exist", opts.path.to_str().unwrap());
+            panic!("Checkpoint file \"{}\" does not exist", opts.path.display());
         }
 
         let file = File::open(&opts.path).unwrap();
@@ -331,15 +325,15 @@ impl Checkpoint {
 
     pub fn reencrypt(input_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
         if !input_path.exists() {
-            panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
+            panic!("Input path \"{}\" does not exist", input_path.display());
         }
 
         if input_path.is_dir() {
-            panic!("Input path \"{}\" is a directory", input_path.to_string_lossy());
+            panic!("Input path \"{}\" is a directory", input_path.display());
         }
 
         if output_path.exists() {
-            panic!("Output path \"{}\" already exists", output_path.to_string_lossy());
+            panic!("Output path \"{}\" already exists", output_path.display());
         }
 
         let checkpoint_file = File::open(input_path).unwrap();

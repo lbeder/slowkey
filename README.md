@@ -200,11 +200,12 @@ Print a checkpoint
 Usage: slowkey checkpoint show [OPTIONS] --path <PATH>
 
 Options:
-      --path <PATH>  Path to an existing checkpoint
-      --verify       Verify that the password and salt match the checkpoint
-      --base64       Show the result in Base64 (in addition to hex)
-      --base58       Show the result in Base58 (in addition to hex)
-  -h, --help         Print help
+      --path <PATH>        Path to an existing checkpoint
+      --verify             Verify that the password and salt match the checkpoint
+      --secrets <SECRETS>  Optional path to a secrets file containing password and salt
+      --base64             Show the result in Base64 (in addition to hex)
+      --base58             Show the result in Base58 (in addition to hex)
+  -h, --help               Print help
 ```
 
 #### Restoring from a Checkpoint
@@ -279,11 +280,12 @@ Print an output file
 Usage: slowkey output show [OPTIONS] --path <PATH>
 
 Options:
-      --path <PATH>  Path to an existing output
-      --verify       Verify that the password and salt match the output
-      --base64       Show the result in Base64 (in addition to hex)
-      --base58       Show the result in Base58 (in addition to hex)
-  -h, --help         Print help
+      --path <PATH>        Path to an existing output
+      --verify             Verify that the password and salt match the output
+      --secrets <SECRETS>  Optional path to a secrets file containing password and salt
+      --base64             Show the result in Base64 (in addition to hex)
+      --base58             Show the result in Base58 (in addition to hex)
+  -h, --help               Print help
 ```
 
 #### Reencrypting an Output

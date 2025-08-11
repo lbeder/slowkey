@@ -131,11 +131,11 @@ impl Output {
 
     pub fn open(opts: &OpenOutputOptions) -> OutputData {
         if !opts.path.exists() {
-            panic!("Output file \"{}\" does not exist", opts.path.to_str().unwrap());
+            panic!("Output file \"{}\" does not exist", opts.path.display());
         }
 
         if !opts.path.is_file() {
-            panic!("Output file \"{}\" is not a file", opts.path.to_str().unwrap());
+            panic!("Output file \"{}\" is not a file", opts.path.display());
         }
 
         let file = File::open(&opts.path).unwrap();
@@ -186,15 +186,15 @@ impl Output {
 
     pub fn reencrypt(input_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
         if !input_path.exists() {
-            panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
+            panic!("Input path \"{}\" does not exist", input_path.display());
         }
 
         if input_path.is_dir() {
-            panic!("Input path \"{}\" is a directory", input_path.to_string_lossy());
+            panic!("Input path \"{}\" is a directory", input_path.display());
         }
 
         if output_path.exists() {
-            panic!("Output path \"{}\" already exists", output_path.to_string_lossy());
+            panic!("Output path \"{}\" already exists", output_path.display());
         }
 
         let output_file = File::open(input_path).unwrap();

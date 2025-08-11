@@ -410,7 +410,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
     }
 
     if !output_dir.exists() {
-        panic!("Output directory \"{}\" doesn't exist", output_dir.to_string_lossy());
+        panic!("Output directory \"{}\" doesn't exist", output_dir.display());
     }
 
     // Ask for an encryption key
@@ -428,7 +428,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         let filepath = output_dir.join(filename);
 
         if filepath.exists() {
-            panic!("Output file \"{}\" already exists", filepath.to_string_lossy());
+            panic!("Output file \"{}\" already exists", filepath.display());
         }
 
         let (salt, password) = if random {
@@ -482,6 +482,7 @@ pub fn print_input_instructions() {
 pub struct CheckpointShowOptions {
     pub path: PathBuf,
     pub verify: bool,
+    pub secrets: Option<PathBuf>,
     pub base64: bool,
     pub base58: bool,
 }
@@ -502,8 +503,23 @@ pub fn handle_checkpoint_show(opts: CheckpointShowOptions) {
     });
 
     if opts.verify {
-        let salt_str = get_salt();
-        let password_str = get_password();
+        let (salt_str, password_str) = if let Some(secrets_path) = &opts.secrets {
+            log!(
+                "Loading password and salt from a secrets file: {}\n",
+                secrets_path.display()
+            );
+
+            let secret_key = get_encryption_key_with_confirm("secrets", false);
+            let secret = Secret::new(&SecretOptions {
+                path: secrets_path.clone(),
+                key: secret_key,
+            });
+
+            let secret_data = secret.open();
+            (secret_data.data.salt, secret_data.data.password)
+        } else {
+            (get_salt(), get_password())
+        };
 
         // Convert to bytes
         let salt = input_to_bytes(&salt_str);
@@ -600,12 +616,13 @@ pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
 
     Checkpoint::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    log!("Saved new checkpoint at \"{}\"", opts.output.to_string_lossy());
+    log!("Saved new checkpoint at \"{}\"", opts.output.display());
 }
 
 pub struct OutputShowOptions {
     pub path: PathBuf,
     pub verify: bool,
+    pub secrets: Option<PathBuf>,
     pub base64: bool,
     pub base58: bool,
 }
@@ -626,8 +643,23 @@ pub fn handle_output_show(opts: OutputShowOptions) {
     });
 
     if opts.verify {
-        let salt_str = get_salt();
-        let password_str = get_password();
+        let (salt_str, password_str) = if let Some(secrets_path) = &opts.secrets {
+            log!(
+                "Loading password and salt from a secrets file: {}\n",
+                secrets_path.display()
+            );
+
+            let secret_key = get_encryption_key_with_confirm("secrets", false);
+            let secret = Secret::new(&SecretOptions {
+                path: secrets_path.clone(),
+                key: secret_key,
+            });
+
+            let secret_data = secret.open();
+            (secret_data.data.salt, secret_data.data.password)
+        } else {
+            (get_salt(), get_password())
+        };
 
         let salt = input_to_bytes(&salt_str);
         let password = input_to_bytes(&password_str);
@@ -658,7 +690,7 @@ pub fn handle_output_reencrypt(opts: OutputReencryptOptions) {
 
     Output::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    log!("Saved new output at \"{}\"", opts.output.to_string_lossy());
+    log!("Saved new output at \"{}\"", opts.output.display());
 }
 
 pub struct SecretsGenerateOptions {
@@ -711,10 +743,7 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
 
     Secret::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    log!(
-        "Saved reencrypted secrets file at \"{}\"",
-        opts.output.to_string_lossy()
-    );
+    log!("Saved reencrypted secrets file at \"{}\"", opts.output.display());
 }
 
 pub struct DeriveOptions {
@@ -747,12 +776,12 @@ pub fn derive(derive_options: DeriveOptions) {
     let mut out: Option<Output> = None;
     if let Some(output_path) = derive_options.output {
         if output_path.exists() {
-            panic!("Output file \"{}\" already exists", output_path.to_string_lossy());
+            panic!("Output file \"{}\" already exists", output_path.display());
         }
 
         _output_lock = match FileLock::try_lock(&output_path) {
             Ok(lock) => Some(lock),
-            Err(_) => panic!("Unable to lock {}", output_path.to_string_lossy()),
+            Err(_) => panic!("Unable to lock {}", output_path.display()),
         };
 
         if file_key.is_none() {
@@ -838,7 +867,7 @@ pub fn derive(derive_options: DeriveOptions) {
         log!(
             "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
             derive_options.checkpoint_interval.to_string().cyan(),
-            &dir.to_string_lossy().cyan()
+            &dir.display().to_string().cyan()
         );
     }
 

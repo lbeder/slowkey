@@ -192,6 +192,9 @@ enum CheckpointCommands {
         #[arg(long, help = "Verify that the password and salt match the checkpoint")]
         verify: bool,
 
+        #[arg(long, help = "Optional path to a secrets file containing password and salt")]
+        secrets: Option<PathBuf>,
+
         #[arg(
             long,
             action = clap::ArgAction::SetTrue,
@@ -304,6 +307,9 @@ enum OutputCommands {
 
         #[arg(long, help = "Verify that the password and salt match the output")]
         verify: bool,
+
+        #[arg(long, help = "Optional path to a secrets file containing password and salt")]
+        secrets: Option<PathBuf>,
 
         #[arg(
             long,
@@ -433,12 +439,14 @@ fn main() {
             CheckpointCommands::Show {
                 path,
                 verify,
+                secrets,
                 base64,
                 base58,
             } => {
                 cli::handle_checkpoint_show(cli::CheckpointShowOptions {
                     path,
                     verify,
+                    secrets,
                     base64,
                     base58,
                 });
@@ -483,12 +491,14 @@ fn main() {
             OutputCommands::Show {
                 path,
                 verify,
+                secrets,
                 base64,
                 base58,
             } => {
                 cli::handle_output_show(cli::OutputShowOptions {
                     path,
                     verify,
+                    secrets,
                     base64,
                     base58,
                 });
@@ -528,7 +538,7 @@ fn main() {
 
             SlowKey::benchmark(&output_path);
 
-            log!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
+            log!("Saved benchmark reports to: \"{}\"", output_path.display());
         },
 
         Commands::StabilityTest { tasks, iterations } => {

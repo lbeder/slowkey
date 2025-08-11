@@ -113,15 +113,15 @@ impl Secret {
 
     pub fn reencrypt(input_path: &Path, key: Vec<u8>, output_path: &Path, new_key: Vec<u8>) {
         if !input_path.exists() {
-            panic!("Input path \"{}\" does not exist", input_path.to_string_lossy());
+            panic!("Input path \"{}\" does not exist", input_path.display());
         }
 
         if input_path.is_dir() {
-            panic!("Input path \"{}\" is a directory", input_path.to_string_lossy());
+            panic!("Input path \"{}\" is a directory", input_path.display());
         }
 
         if output_path.exists() {
-            panic!("Output path \"{}\" already exists", output_path.to_string_lossy());
+            panic!("Output path \"{}\" already exists", output_path.display());
         }
 
         let input_secret = Secret::new(&SecretOptions {
