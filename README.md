@@ -332,7 +332,7 @@ Options:
   -h, --help                     Print help
 ```
 
-Note about entropy input: When using the `--random` option, the tool prompts for extra entropy. Some terminals limit the maximum input line length (for example, 4095 characters). After you press Enter, SlowKey echoes the provided entropy and prints its length ("Entropy (please highlight to see): … (length: N)"). Please verify the printed entropy and its length to ensure your input was not truncated by the terminal.
+Note about entropy input: When using the `--random` option, the tool prompts for extra entropy. Some terminals limit the maximum input line length (for example, 4095 characters). After you press Enter, SlowKey echoes the provided entropy and prints its length ("Entropy (please highlight to see): ... Length: N"). Please verify the printed entropy and its length to ensure your input was not truncated by the terminal.
 
 #### Showing a Secret
 

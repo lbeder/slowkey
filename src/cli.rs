@@ -136,7 +136,7 @@ pub fn get_entropy() -> Vec<u8> {
         .unwrap();
 
     log!(
-        "\nEntropy (please highlight to see): {} (length: {})\n",
+        "\nEntropy (please highlight to see): {}\nLength: {}\n",
         &input_entropy.to_string().black().on_black(),
         &input_entropy.len()
     );
