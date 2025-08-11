@@ -524,7 +524,7 @@ pub struct CheckpointRestoreOptions {
     pub base58: bool,
     pub iteration_moving_window: u32,
     pub sanity: bool,
-    pub secret: Option<PathBuf>,
+    pub secrets: Option<PathBuf>,
 }
 
 pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
@@ -573,7 +573,7 @@ pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
         base58: opts.base58,
         iteration_moving_window: opts.iteration_moving_window,
         sanity: opts.sanity,
-        secret_path: opts.secret,
+        secrets_path: opts.secrets,
     });
 }
 
@@ -717,7 +717,7 @@ pub struct DeriveOptions {
     pub base58: bool,
     pub iteration_moving_window: u32,
     pub sanity: bool,
-    pub secret_path: Option<PathBuf>,
+    pub secrets_path: Option<PathBuf>,
 }
 
 pub fn handle_derive(options: DeriveOptions) {
@@ -760,15 +760,15 @@ pub fn derive(derive_options: DeriveOptions) {
 
     options.print();
 
-    let (salt_str, password_str) = if let Some(secret_path) = &derive_options.secret_path {
+    let (salt_str, password_str) = if let Some(secrets_path) = &derive_options.secrets_path {
         log!(
-            "Loading password and salt from a secret file: {}\n",
-            secret_path.display()
+            "Loading password and salt from a secrets file: {}\n",
+            secrets_path.display()
         );
 
-        let secret_key = get_encryption_key_with_confirm("secret", false);
+        let secret_key = get_encryption_key_with_confirm("secrets", false);
         let secret = Secret::new(&SecretOptions {
-            path: secret_path.clone(),
+            path: secrets_path.clone(),
             key: secret_key,
         });
 

@@ -152,8 +152,8 @@ enum Commands {
         )]
         sanity: bool,
 
-        #[arg(long, help = "Optional path to a secret file containing password and salt")]
-        secret: Option<PathBuf>,
+        #[arg(long, help = "Optional path to a secrets file containing password and salt")]
+        secrets: Option<PathBuf>,
     },
 
     #[command(subcommand, about = "Checkpoint operations", arg_required_else_help = true)]
@@ -281,8 +281,8 @@ enum CheckpointCommands {
         )]
         sanity: bool,
 
-        #[arg(long, help = "Optional path to a secret file containing password and salt")]
-        secret: Option<PathBuf>,
+        #[arg(long, help = "Optional path to a secrets file containing password and salt")]
+        secrets: Option<PathBuf>,
     },
 
     #[command(about = "Reencrypt a checkpoint", arg_required_else_help = true)]
@@ -405,7 +405,7 @@ fn main() {
             base58,
             iteration_moving_window,
             sanity,
-            secret,
+            secrets,
         } => {
             cli::handle_derive(DeriveOptions {
                 options: SlowKeyOptions::new(
@@ -425,7 +425,7 @@ fn main() {
                 base58,
                 iteration_moving_window,
                 sanity,
-                secret_path: secret,
+                secrets_path: secrets,
             });
         },
 
@@ -456,7 +456,7 @@ fn main() {
                 base58,
                 iteration_moving_window,
                 sanity,
-                secret,
+                secrets,
             } => {
                 cli::handle_checkpoint_restore(cli::CheckpointRestoreOptions {
                     iterations,
@@ -470,7 +470,7 @@ fn main() {
                     base58,
                     iteration_moving_window,
                     sanity,
-                    secret,
+                    secrets,
                 });
             },
 

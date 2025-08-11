@@ -170,8 +170,8 @@ Options:
           Iteration time sampling moving window size [default: 10]
       --sanity
           Perform an optional sanity check by computing the algorithm twice and verifying the results
-      --secret <SECRET>
-          Optional path to a secret file containing password and salt
+      --secrets <SECRET>
+          Optional path to a secrets file containing password and salt
   -h, --help
           Print help
 ```
@@ -237,8 +237,8 @@ Options:
           Iteration time sampling moving window size [default: 10]
       --sanity
           Perform an optional sanity check by computing the algorithm twice and verifying the results
-      --secret <SECRET>
-          Optional path to a secret file containing password and salt
+      --secrets <SECRET>
+          Optional path to a secrets file containing password and salt
   -h, --help
           Print help
 ```
