@@ -42,6 +42,9 @@ impl ScryptOptions {
     pub fn p(&self) -> u32 {
         self.p
     }
+
+    // Fixed parameters matching current defaults used for file key hardening
+    pub const HARDENING_DEFAULT: ScryptOptions = ScryptOptions { n: 1 << 20, r: 8, p: 1 };
 }
 
 impl Default for ScryptOptions {

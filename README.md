@@ -506,8 +506,7 @@ Despite the text being invisible, it's important to note that the text remains p
 
 Salt is: s...t
 
-Salt's size 4 is shorter than 16 and will be SHA512 hashed and then truncated into 16 bytes.
-Do you want to continue? [y/n]
+Warning: Salt's length 4 is shorter than 16; hashing with SHA512 and truncating to 16 bytes
 ```
 
 ```sh
@@ -515,8 +514,7 @@ Do you want to continue? [y/n]
 
 Salt is: s...t
 
-Salt's size 20 is longer than 16 and will be SHA512 hashed and then truncated into 16 bytes.
-Do you want to continue? [y/n]
+Warning: Salt's length 20 is longer than 16; hashing with SHA512 and truncating to 16 byte
 ```
 
 ### Checkpoint Operations
@@ -529,7 +527,16 @@ Each checkpoint, except for the one that coincides with the first iteration, als
 
 Please exercise caution when using this feature. Resuming computation from a compromised checkpoint may undermine your expectations regarding the duration of the key stretching process.
 
-Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated into `32` bytes:
+Please note that encryption key must be `32` bytes long, therefore shorter/longer will be first SHA512 hashed and then truncated into `32` bytes. In addition, the entered encryption key is further hardened by running a single SlowKey iteration with fixed parameters (independent of future defaults):
+
+- iterations: 1
+- length: 32
+- Scrypt: n = 1,048,576 (2^20), r = 8, p = 1
+- Argon2id: m_cost = 2,097,152 KiB (2^21), t_cost = 2
+- Balloon Hash: s_cost = 131,072 KiB (2^17), t_cost = 1
+- Salt: 16 zero bytes (`0x00000000000000000000000000000000`)
+
+This hardening applies to all prompts for file encryption keys (e.g., checkpoint, output, and secrets files) and is intentionally constant over time so changes to global defaults do not affect file key derivation.
 
 For instance, to elaborate on the previous example, suppose we want to create a checkpoint every `5` iterations forcefully terminate the execution at the `8th` iteration:
 

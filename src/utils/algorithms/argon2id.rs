@@ -49,6 +49,12 @@ impl Argon2idOptions {
     pub fn t_cost(&self) -> u32 {
         self.t_cost
     }
+
+    // Fixed parameters matching current defaults used for file key hardening
+    pub const HARDENING_DEFAULT: Argon2idOptions = Argon2idOptions {
+        m_cost: 1 << 21,
+        t_cost: 2,
+    };
 }
 
 impl Default for Argon2idOptions {

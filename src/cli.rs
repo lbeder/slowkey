@@ -38,6 +38,16 @@ pub const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 const RANDOM_PASSWORD_SIZE: usize = 32;
 
+// Fixed SlowKey parameters for encryption key hardening. Intentionally hard-coded so future default changes do not
+// affect this behavior.
+const ENCRYPTION_KEY_HARDENING_OPTIONS: SlowKeyOptions = SlowKeyOptions {
+    iterations: 1,
+    length: ChaCha20Poly1305::KEY_SIZE,
+    scrypt: ScryptOptions::HARDENING_DEFAULT,
+    argon2id: Argon2idOptions::HARDENING_DEFAULT,
+    balloon_hash: BalloonHashOptions::HARDENING_DEFAULT,
+};
+
 pub fn get_salt() -> String {
     let input_salt = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
@@ -190,9 +200,14 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
         Ordering::Equal => {},
     }
 
-    println!();
+    // Stretch and harden the encryption key with a single SlowKey iteration using fixed parameters
+    println!(
+        "\nHardening the {} encryption key using SlowKey with fixed parameters:\n",
+        capitalized
+    );
+    ENCRYPTION_KEY_HARDENING_OPTIONS.print();
 
-    key
+    SlowKey::new(&ENCRYPTION_KEY_HARDENING_OPTIONS).derive_key(&SlowKey::DEFAULT_SALT, &key, &[], 0)
 }
 
 pub fn get_encryption_key(name: &str) -> Vec<u8> {

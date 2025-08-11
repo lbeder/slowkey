@@ -48,6 +48,12 @@ impl BalloonHashOptions {
     pub fn t_cost(&self) -> u32 {
         self.t_cost
     }
+
+    // Fixed parameters matching current defaults used for file key hardening
+    pub const HARDENING_DEFAULT: BalloonHashOptions = BalloonHashOptions {
+        s_cost: 1 << 17,
+        t_cost: 1,
+    };
 }
 
 impl Default for BalloonHashOptions {
