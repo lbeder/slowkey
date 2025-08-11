@@ -135,15 +135,18 @@ pub fn get_entropy() -> Vec<u8> {
     entropy
 }
 
-pub fn get_encryption_key(name: &str) -> Vec<u8> {
-    let input = Password::with_theme(&ColorfulTheme::default())
-        .with_prompt(format!("Enter your {} encryption key", name))
-        .with_confirmation(
+pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
+    let theme = ColorfulTheme::default();
+    let mut prompt = Password::with_theme(&theme).with_prompt(format!("Enter your {} encryption key", name));
+
+    if confirm {
+        prompt = prompt.with_confirmation(
             format!("Enter your {} encryption key again", name),
             "Error: keys don't match",
-        )
-        .interact()
-        .unwrap();
+        );
+    }
+
+    let input = prompt.interact().unwrap();
 
     let mut key = input_to_bytes(&input);
 
@@ -190,6 +193,10 @@ pub fn get_encryption_key(name: &str) -> Vec<u8> {
     println!();
 
     key
+}
+
+pub fn get_encryption_key(name: &str) -> Vec<u8> {
+    get_encryption_key_with_confirm(name, true)
 }
 
 pub fn get_checkpoint_data() -> CheckpointData {
@@ -466,7 +473,7 @@ pub struct CheckpointShowOptions {
 pub fn handle_checkpoint_show(opts: CheckpointShowOptions) {
     print_input_instructions();
 
-    let file_key = get_encryption_key("checkpoint");
+    let file_key = get_encryption_key_with_confirm("checkpoint", false);
     let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions {
         key: file_key,
         path: opts.path,
@@ -518,7 +525,7 @@ pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
 
     let checkpoint_data = match opts.path {
         Some(path) => {
-            let key = get_encryption_key("checkpoint");
+            let key = get_encryption_key_with_confirm("checkpoint", false);
             file_key = Some(key.clone());
 
             Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
@@ -569,7 +576,7 @@ pub struct CheckpointReencryptOptions {
 pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
     print_input_instructions();
 
-    let key = get_encryption_key("checkpoint");
+    let key = get_encryption_key_with_confirm("checkpoint", false);
 
     println!("Please provide the new file encryption key:\n");
 
@@ -590,7 +597,7 @@ pub struct OutputShowOptions {
 pub fn handle_output_show(opts: OutputShowOptions) {
     print_input_instructions();
 
-    let file_key = get_encryption_key("output");
+    let file_key = get_encryption_key_with_confirm("output", false);
     let output_data = Output::open(&OpenOutputOptions {
         key: file_key,
         path: opts.path,
@@ -627,7 +634,7 @@ pub struct OutputReencryptOptions {
 pub fn handle_output_reencrypt(opts: OutputReencryptOptions) {
     print_input_instructions();
 
-    let key = get_encryption_key("output");
+    let key = get_encryption_key_with_confirm("output", false);
 
     println!("Please provide the new file encryption key:\n");
 
@@ -658,7 +665,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
 
     println!("Please provide the encryption key for the secret file:\n");
 
-    let key = get_encryption_key("secret");
+    let key = get_encryption_key_with_confirm("secret", false);
 
     let secret = Secret::new(&SecretOptions {
         path: opts.path.clone(),
@@ -679,7 +686,7 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
     print_input_instructions();
 
     println!("Please provide the current encryption key:\n");
-    let key = get_encryption_key("secret");
+    let key = get_encryption_key_with_confirm("secret", false);
 
     println!("Please provide the new encryption key:\n");
     let new_key = get_encryption_key("secret");
@@ -750,7 +757,7 @@ pub fn derive(derive_options: DeriveOptions) {
             secret_path.display()
         );
 
-        let secret_key = get_encryption_key("secret");
+        let secret_key = get_encryption_key_with_confirm("secret", false);
         let secret = Secret::new(&SecretOptions {
             path: secret_path.clone(),
             key: secret_key,
