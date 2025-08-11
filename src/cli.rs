@@ -361,12 +361,19 @@ fn show_hint(data: &str, description: &str) {
 
     if len < MIN_SECRET_LENGTH_TO_REVEAL {
         let capitalized = description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..];
+
         warning!("{} is too short, therefore password hint won't be shown", capitalized);
     } else {
         let is_hex = data.starts_with(HEX_PREFIX);
-        let prefix_len = if is_hex { 3 } else { 1 };
+        let prefix_len = if is_hex { 2 } else { 0 };
 
-        log!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
+        log!(
+            "\n{} is: {}...{} (length: {})",
+            description,
+            &data[..prefix_len + 1],
+            &data[len - 1..],
+            len - prefix_len
+        );
     }
 }
 
