@@ -135,13 +135,13 @@ pub fn get_entropy() -> Vec<u8> {
         .interact()
         .unwrap();
 
-    let entropy = input_to_bytes(&input_entropy);
+    log!(
+        "\nEntropy (please highlight to see): {} (length: {})\n",
+        &input_entropy.to_string().black().on_black(),
+        &input_entropy.len()
+    );
 
-    show_hint(&input_entropy, "Entropy");
-
-    log!();
-
-    entropy
+    input_to_bytes(&input_entropy)
 }
 
 pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
