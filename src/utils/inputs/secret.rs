@@ -31,7 +31,7 @@ impl SecretData {
     pub fn print(&self) {
         let output = format!(
             "{}:\n  {}: {}\n  {} (please highlight to see): {}\n  {} (please highlight to see): {}",
-            "Secret".yellow(),
+            "Secrets".yellow(),
             "Version".green(),
             u8::from(self.version.clone()),
             "Salt".green(),
@@ -59,11 +59,11 @@ impl Secret {
 
     pub fn open(&self) -> SecretData {
         if !self.path.exists() {
-            panic!("Secret file \"{}\" does not exist", self.path.to_str().unwrap());
+            panic!("Secrets file \"{}\" does not exist", self.path.to_str().unwrap());
         }
 
         if !self.path.is_file() {
-            panic!("Secret file \"{}\" is not a file", self.path.to_str().unwrap());
+            panic!("Secrets file \"{}\" is not a file", self.path.to_str().unwrap());
         }
 
         let file = File::open(&self.path).unwrap();
@@ -95,7 +95,7 @@ impl Secret {
         }
 
         if self.path.exists() {
-            panic!("Secret file \"{}\" already exists", self.path.to_str().unwrap());
+            panic!("Secrets file \"{}\" already exists", self.path.to_str().unwrap());
         }
 
         let file = File::create(&self.path).unwrap();

@@ -425,11 +425,11 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         }
 
         let (salt, password) = if random {
-            log!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
+            log!("Please provide some extra entropy for secrets number {i} (this will be mixed into the random number generator):\n");
 
             generate_random_secret()
         } else {
-            log!("Please provide the salt and the password for secret number {i}:\n");
+            log!("Please provide the salt and the password for secrets number {i}:\n");
 
             (get_salt(), get_password())
         };
@@ -451,16 +451,16 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
 
         // Display the secret differently based on whether it has 0x prefix
         log!(
-            "Salt for secret number {i} is (please highlight to see): {}",
+            "Salt for secrets file number {i} is (please highlight to see): {}",
             salt.black().on_black()
         );
 
         log!(
-            "Password for secret number {i} is (please highlight to see): {}",
+            "Password for secrets file number {i} is (please highlight to see): {}",
             password.black().on_black()
         );
 
-        log!("Stored encrypted secret number {i} at: {}\n", filepath.display());
+        log!("Stored encrypted secrets file number {i} at: {}\n", filepath.display());
     }
 }
 
@@ -672,9 +672,9 @@ pub struct SecretsShowOptions {
 pub fn handle_secrets_show(opts: SecretsShowOptions) {
     print_input_instructions();
 
-    log!("Please provide the encryption key for the secret file:\n");
+    log!("Please provide the encryption key for the secrets file:\n");
 
-    let key = get_encryption_key_with_confirm("secret", false);
+    let key = get_encryption_key_with_confirm("secrets", false);
 
     let secret = Secret::new(&SecretOptions {
         path: opts.path.clone(),
@@ -694,15 +694,20 @@ pub struct SecretsReencryptOptions {
 pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
     print_input_instructions();
 
-    log!("Please provide the current encryption key:\n");
-    let key = get_encryption_key_with_confirm("secret", false);
+    log!("Please provide the current encryption key for the secrets file:\n");
 
-    log!("Please provide the new encryption key:\n");
-    let new_key = get_encryption_key("secret");
+    let key = get_encryption_key_with_confirm("secrets", false);
+
+    log!("Please provide the new encryption key for the secrets file:\n");
+
+    let new_key = get_encryption_key("secrets");
 
     Secret::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    log!("Saved reencrypted secret at \"{}\"", opts.output.to_string_lossy());
+    log!(
+        "Saved reencrypted secrets file at \"{}\"",
+        opts.output.to_string_lossy()
+    );
 }
 
 pub struct DeriveOptions {

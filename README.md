@@ -310,8 +310,8 @@ Usage: slowkey secrets <COMMAND>
 
 Commands:
   generate   Generate and encrypt multiple secrets
-  show       Show the contents of an encrypted secret file
-  reencrypt  Reencrypt a secret file with a new key
+  show       Show the contents of an encrypted secrets file
+  reencrypt  Reencrypt a secrets file with a new key
 
 Options:
   -h, --help  Print help
@@ -327,7 +327,7 @@ Usage: slowkey secrets generate [OPTIONS] --count <COUNT> --output-dir <OUTPUT_D
 Options:
   -c, --count <COUNT>            Number of secrets to generate
   -o, --output-dir <OUTPUT_DIR>  Output directory for the secrets
-  -p, --prefix <PREFIX>          Prefix for the secret files
+  -p, --prefix <PREFIX>          Prefix for the secrets files
   -r, --random                   Generate random secrets instead of prompting for each
   -h, --help                     Print help
 ```
@@ -335,25 +335,25 @@ Options:
 #### Showing a Secret
 
 ```sh
-Show the contents of an encrypted secret file
+Show the contents of an encrypted secrets file
 
 Usage: slowkey secrets show --path <PATH>
 
 Options:
-      --path <PATH>  Path to the secret file
+      --path <PATH>  Path to the secrets   file
   -h, --help         Print help
 ```
 
 #### Reencrypting a Secret
 
 ```sh
-Reencrypt a secret file with a new key
+Reencrypt a secrets file with a new key
 
 Usage: slowkey secrets reencrypt --input <INPUT> --output <OUTPUT>
 
 Options:
-      --input <INPUT>    Path to an existing secret file
-      --output <OUTPUT>  Path to the new secret file
+      --input <INPUT>    Path to an existing secrets file
+      --output <OUTPUT>  Path to the new secrets file
   -h, --help             Print help
 ```
 

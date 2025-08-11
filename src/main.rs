@@ -340,7 +340,7 @@ enum SecretsCommands {
         #[arg(short, long, help = "Output directory for the secrets")]
         output_dir: PathBuf,
 
-        #[arg(short, long, help = "Prefix for the secret files")]
+        #[arg(short, long, help = "Prefix for the secrets files")]
         prefix: String,
 
         #[arg(short, long, help = "Generate random secrets instead of prompting for each")]
@@ -348,20 +348,20 @@ enum SecretsCommands {
     },
 
     #[command(
-        about = "Show the contents of an encrypted secret file",
+        about = "Show the contents of an encrypted secrets file",
         arg_required_else_help = true
     )]
     Show {
-        #[arg(long, help = "Path to the secret file")]
+        #[arg(long, help = "Path to the secrets file")]
         path: PathBuf,
     },
 
-    #[command(about = "Reencrypt a secret file with a new key", arg_required_else_help = true)]
+    #[command(about = "Reencrypt a secrets file with a new key", arg_required_else_help = true)]
     Reencrypt {
-        #[arg(long, help = "Path to an existing secret file")]
+        #[arg(long, help = "Path to an existing secrets file")]
         input: PathBuf,
 
-        #[arg(long, help = "Path to the new secret file")]
+        #[arg(long, help = "Path to the new secrets file")]
         output: PathBuf,
     },
 }
