@@ -1,8 +1,8 @@
+use crate::{log, warning};
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
 };
-use crossterm::style::Stylize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
@@ -2028,13 +2028,10 @@ pub fn stability_test(tasks: usize, iterations: usize) {
         panic!("Invalid number of iterations");
     }
 
-    println!(
-            "{}: If the requested number of tasks {tasks} is greater than the maximum thread count available by the OS it can result in some of tasks being stalled. If the requested number of tasks {tasks} requires more than the available memory, it may result in the application crashing\n",
-            "Warning".dark_yellow(),
-        );
+    warning!("If the requested number of tasks {tasks} is greater than the maximum thread count available by the OS it can result in some of tasks being stalled. If the requested number of tasks {tasks} requires more than the available memory, it may result in the application crashing");
 
-    println!("Setting up a stability test task pool with {tasks} tasks, each running {iterations} iterations");
-    println!();
+    log!("Setting up a stability test task pool with {tasks} tasks, each running {iterations} iterations");
+    log!();
 
     let mb = MultiProgress::new();
     let mut pbs = Vec::new();
@@ -2080,7 +2077,7 @@ pub fn stability_test(tasks: usize, iterations: usize) {
                 if current_data != &hex::decode(expected).unwrap() {
                     failed.store(true, Ordering::Release);
 
-                    println!(
+                    log!(
                         "\n\nTasks #{} failed on iteration #{}\n\nExpected: 0x{}\nActual: 0x{}",
                         i + 1,
                         current_iteration + 1,
@@ -2098,5 +2095,5 @@ pub fn stability_test(tasks: usize, iterations: usize) {
         pb.finish();
     });
 
-    println!("\n\nAll tasks have completed successfully without errors")
+    log!("\n\nAll tasks have completed successfully without errors")
 }

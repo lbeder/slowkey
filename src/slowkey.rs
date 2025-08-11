@@ -1,3 +1,4 @@
+use crate::log;
 use crate::utils::algorithms::{
     argon2id::{Argon2id, Argon2idOptions},
     balloon_hash::{BalloonHash, BalloonHashOptions},
@@ -67,7 +68,7 @@ impl SlowKeyOptions {
     }
 
     pub fn print(&self) {
-        println!(
+        log!(
             "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),

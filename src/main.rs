@@ -382,7 +382,7 @@ fn main() {
     // Initialize libsodium
     initialize();
 
-    println!("SlowKey v{VERSION}\n");
+    log!("SlowKey v{VERSION}\n");
 
     let cli = Cli::parse();
 
@@ -528,7 +528,7 @@ fn main() {
 
             SlowKey::benchmark(&output_path);
 
-            println!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
+            log!("Saved benchmark reports to: \"{}\"", output_path.to_string_lossy());
         },
 
         Commands::StabilityTest { tasks, iterations } => {

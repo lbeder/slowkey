@@ -1,4 +1,5 @@
 use super::version::Version;
+use crate::log;
 use crate::utils::chacha20poly1305::{ChaCha20Poly1305, Nonce};
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
@@ -39,7 +40,7 @@ impl SecretData {
             self.data.password.as_str().black().on_black()
         );
 
-        println!("{}\n", output);
+        log!("{}\n", output);
     }
 }
 

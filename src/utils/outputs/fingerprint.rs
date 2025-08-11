@@ -1,4 +1,5 @@
 use crate::color_hash;
+use crate::log;
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -25,7 +26,7 @@ impl Fingerprint {
     }
 
     pub fn print(&self) {
-        println!(
+        log!(
             "Fingerprint: {}\n",
             hex::encode(&self.hash[0..8])
                 .to_uppercase()

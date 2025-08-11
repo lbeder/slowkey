@@ -4,5 +4,6 @@ pub mod checkpoints;
 pub mod color_hash;
 pub mod file_lock;
 pub mod inputs;
+pub mod log;
 pub mod outputs;
 pub mod sodium_init;

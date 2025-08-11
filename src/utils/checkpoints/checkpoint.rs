@@ -13,6 +13,7 @@ use crate::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
+use crate::log;
 use glob::{glob_with, MatchOptions};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -165,7 +166,7 @@ impl CheckpointData {
             );
         }
 
-        println!("{}\n", output);
+        log!("{}\n", output);
     }
 }
 

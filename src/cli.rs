@@ -32,7 +32,9 @@ use std::{
     time::{Instant, SystemTime},
 };
 
+use crate::log;
 use crate::slowkey::{SlowKey, SlowKeyOptions};
+use crate::warning;
 
 pub const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
@@ -63,18 +65,16 @@ pub fn get_salt() -> String {
     let salt_len = salt_bytes.len();
     let salt = match salt_len {
         0 => {
-            println!(
-                "\n{}: Salt is empty; using default zero-filled salt of {} bytes",
-                "Warning".dark_yellow(),
+            warning!(
+                "Salt is empty; using default zero-filled salt of {} bytes",
                 SlowKey::SALT_SIZE
             );
             format!("0x{}", hex::encode(SlowKey::DEFAULT_SALT))
         },
         _ => match salt_len.cmp(&SlowKey::SALT_SIZE) {
             Ordering::Less => {
-                println!(
-                    "\n{}: Salt's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
-                    "Warning".dark_yellow(),
+                warning!(
+                    "Salt's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
@@ -90,9 +90,8 @@ pub fn get_salt() -> String {
                 format!("0x{}", hex::encode(salt_bytes))
             },
             Ordering::Greater => {
-                println!(
-                    "\n{}: Salt's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
-                    "Warning".dark_yellow(),
+                warning!(
+                    "Salt's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
                     salt_len,
                     SlowKey::SALT_SIZE,
                     SlowKey::SALT_SIZE
@@ -111,7 +110,7 @@ pub fn get_salt() -> String {
         },
     };
 
-    println!();
+    log!();
 
     salt
 }
@@ -125,7 +124,7 @@ pub fn get_password() -> String {
 
     show_hint(&input_password, "Password");
 
-    println!();
+    log!();
 
     input_password
 }
@@ -140,7 +139,7 @@ pub fn get_entropy() -> Vec<u8> {
 
     show_hint(&input_entropy, "Entropy");
 
-    println!();
+    log!();
 
     entropy
 }
@@ -166,9 +165,8 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
     let capitalized = name.chars().next().unwrap().to_uppercase().collect::<String>() + &name[1..];
     match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
         Ordering::Less => {
-            println!(
-                "\n{}: {} encryption key's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
-                "Warning".dark_yellow(),
+            warning!(
+                "{} encryption key's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
                 capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
@@ -182,9 +180,8 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
             key.truncate(ChaCha20Poly1305::KEY_SIZE);
         },
         Ordering::Greater => {
-            println!(
-                "\n{}: {} encryption key's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
-                "Warning".dark_yellow(),
+            warning!(
+                "{} encryption key's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
                 capitalized,
                 key_len,
                 ChaCha20Poly1305::KEY_SIZE,
@@ -201,7 +198,7 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
     }
 
     // Stretch and harden the encryption key with a single SlowKey iteration using fixed parameters
-    println!(
+    log!(
         "\nHardening the {} encryption key using SlowKey with fixed parameters:\n",
         capitalized
     );
@@ -215,7 +212,7 @@ pub fn get_encryption_key(name: &str) -> Vec<u8> {
 }
 
 pub fn get_checkpoint_data() -> CheckpointData {
-    println!("Please enter the checkpoint data manually:\n");
+    log!("Please enter the checkpoint data manually:\n");
 
     let version: u8 = Input::new()
         .with_prompt("Version")
@@ -263,7 +260,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         None
     };
 
-    println!();
+    log!();
 
     let length: usize = Input::new()
         .with_prompt("Length")
@@ -284,7 +281,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         );
     }
 
-    println!();
+    log!();
 
     let scrypt_n: u64 = Input::new()
         .with_prompt("Scrypt n")
@@ -303,7 +300,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         .unwrap();
     let scrypt = ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p);
 
-    println!();
+    log!();
 
     let argon2id_m_cost: u32 = Input::new()
         .with_prompt("Argon2id m_cost")
@@ -317,7 +314,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         .unwrap();
     let argon2id = Argon2idOptions::new(argon2id_m_cost, argon2id_t_cost);
 
-    println!();
+    log!();
 
     let balloon_s_cost: u32 = Input::new()
         .with_prompt("Balloon Hash s_cost")
@@ -331,7 +328,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         .unwrap();
     let balloon_hash = BalloonHashOptions::new(balloon_s_cost, balloon_t_cost);
 
-    println!();
+    log!();
 
     CheckpointData {
         version,
@@ -363,16 +360,13 @@ fn show_hint(data: &str, description: &str) {
     let len = data.len();
 
     if len < MIN_SECRET_LENGTH_TO_REVEAL {
-        println!(
-            "\n{}: {} is too short, therefore password hint won't be shown",
-            "Warning".dark_yellow(),
-            description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..],
-        );
+        let capitalized = description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..];
+        warning!("{} is too short, therefore password hint won't be shown", capitalized);
     } else {
         let is_hex = data.starts_with(HEX_PREFIX);
         let prefix_len = if is_hex { 3 } else { 1 };
 
-        println!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
+        log!("\n{} is: {}...{}", description, &data[..prefix_len], &data[len - 1..]);
     }
 }
 
@@ -413,7 +407,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
     }
 
     // Ask for an encryption key
-    println!("Please provide an encryption key for the secrets files:\n");
+    log!("Please provide an encryption key for the secrets files:\n");
 
     let encryption_key = get_encryption_key("secrets");
 
@@ -431,11 +425,11 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         }
 
         let (salt, password) = if random {
-            println!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
+            log!("Please provide some extra entropy for secret number {i} (this will be mixed into the random number generator):\n");
 
             generate_random_secret()
         } else {
-            println!("Please provide the salt and the password for secret number {i}:\n");
+            log!("Please provide the salt and the password for secret number {i}:\n");
 
             (get_salt(), get_password())
         };
@@ -456,22 +450,22 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         secret.save(&secret_data);
 
         // Display the secret differently based on whether it has 0x prefix
-        println!(
+        log!(
             "Salt for secret number {i} is (please highlight to see): {}",
             salt.black().on_black()
         );
 
-        println!(
+        log!(
             "Password for secret number {i} is (please highlight to see): {}",
             password.black().on_black()
         );
 
-        println!("Stored encrypted secret number {i} at: {}\n", filepath.display());
+        log!("Stored encrypted secret number {i} at: {}\n", filepath.display());
     }
 }
 
 pub fn print_input_instructions() {
-    println!(
+    log!(
         "Please input all data either in raw or hex format starting with the {} prefix\n",
         HEX_PREFIX
     );
@@ -508,13 +502,13 @@ pub fn handle_checkpoint_show(opts: CheckpointShowOptions) {
         let salt = input_to_bytes(&salt_str);
         let password = input_to_bytes(&password_str);
 
-        println!("Verifying the checkpoint...\n");
+        log!("Verifying the checkpoint...\n");
 
         if !checkpoint_data.verify(&salt, &password) {
             panic!("The password, salt, or internal data is incorrect!");
         }
 
-        println!("The password, salt and internal data are correct\n");
+        log!("The password, salt and internal data are correct\n");
     }
 }
 
@@ -593,13 +587,13 @@ pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
 
     let key = get_encryption_key_with_confirm("checkpoint", false);
 
-    println!("Please provide the new file encryption key:\n");
+    log!("Please provide the new file encryption key:\n");
 
     let new_key = get_encryption_key("checkpoint");
 
     Checkpoint::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    println!("Saved new checkpoint at \"{}\"", opts.output.to_string_lossy());
+    log!("Saved new checkpoint at \"{}\"", opts.output.to_string_lossy());
 }
 
 pub struct OutputShowOptions {
@@ -631,13 +625,13 @@ pub fn handle_output_show(opts: OutputShowOptions) {
         let salt = input_to_bytes(&salt_str);
         let password = input_to_bytes(&password_str);
 
-        println!("Verifying the output...\n");
+        log!("Verifying the output...\n");
 
         if !output_data.verify(&salt, &password) {
             panic!("The password, salt, or internal data is incorrect!");
         }
 
-        println!("The password, salt and internal data are correct\n");
+        log!("The password, salt and internal data are correct\n");
     }
 }
 
@@ -651,13 +645,13 @@ pub fn handle_output_reencrypt(opts: OutputReencryptOptions) {
 
     let key = get_encryption_key_with_confirm("output", false);
 
-    println!("Please provide the new file encryption key:\n");
+    log!("Please provide the new file encryption key:\n");
 
     let new_key = get_encryption_key("output");
 
     Output::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    println!("Saved new output at \"{}\"", opts.output.to_string_lossy());
+    log!("Saved new output at \"{}\"", opts.output.to_string_lossy());
 }
 
 pub struct SecretsGenerateOptions {
@@ -678,7 +672,7 @@ pub struct SecretsShowOptions {
 pub fn handle_secrets_show(opts: SecretsShowOptions) {
     print_input_instructions();
 
-    println!("Please provide the encryption key for the secret file:\n");
+    log!("Please provide the encryption key for the secret file:\n");
 
     let key = get_encryption_key_with_confirm("secret", false);
 
@@ -700,15 +694,15 @@ pub struct SecretsReencryptOptions {
 pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
     print_input_instructions();
 
-    println!("Please provide the current encryption key:\n");
+    log!("Please provide the current encryption key:\n");
     let key = get_encryption_key_with_confirm("secret", false);
 
-    println!("Please provide the new encryption key:\n");
+    log!("Please provide the new encryption key:\n");
     let new_key = get_encryption_key("secret");
 
     Secret::reencrypt(&opts.input, key, &opts.output, new_key);
 
-    println!("Saved reencrypted secret at \"{}\"", opts.output.to_string_lossy());
+    log!("Saved reencrypted secret at \"{}\"", opts.output.to_string_lossy());
 }
 
 pub struct DeriveOptions {
@@ -767,7 +761,7 @@ pub fn derive(derive_options: DeriveOptions) {
     options.print();
 
     let (salt_str, password_str) = if let Some(secret_path) = &derive_options.secret_path {
-        println!(
+        log!(
             "Loading password and salt from a secret file: {}\n",
             secret_path.display()
         );
@@ -795,13 +789,13 @@ pub fn derive(derive_options: DeriveOptions) {
     let mut prev_data = Vec::new();
 
     if let Some(checkpoint_data) = &derive_options.checkpoint_data {
-        println!("Verifying the checkpoint...\n");
+        log!("Verifying the checkpoint...\n");
 
         if !checkpoint_data.verify(&salt, &password) {
             panic!("The password, salt, or internal data is incorrect!");
         }
 
-        println!("The password, salt and internal data are correct\n");
+        log!("The password, salt and internal data are correct\n");
 
         offset = checkpoint_data.data.iteration + 1;
         offset_data.clone_from(&checkpoint_data.data.data);
@@ -829,7 +823,7 @@ pub fn derive(derive_options: DeriveOptions) {
             },
         ));
 
-        println!(
+        log!(
             "Checkpoint will be created every {} iterations and saved to the \"{}\" checkpoints directory\n",
             derive_options.checkpoint_interval.to_string().cyan(),
             &dir.to_string_lossy().cyan()
@@ -948,26 +942,26 @@ pub fn derive(derive_options: DeriveOptions) {
 
     let key = handle.join().unwrap();
 
-    println!(
+    log!(
         "\n\nOutput is (please highlight to see): {}",
         format!("0x{}", hex::encode(&key)).black().on_black()
     );
 
     if derive_options.base64 {
-        println!(
+        log!(
             "\nOutput (base64) is (please highlight to see): {}",
             general_purpose::STANDARD.encode(&key).black().on_black()
         );
     }
 
     if derive_options.base58 {
-        println!(
+        log!(
             "\nOutput (base58) is (please highlight to see): {}",
             bs58::encode(&key).into_string().black().on_black()
         );
     }
 
-    println!();
+    log!();
 
     if let Some(out) = out {
         let prev_data_guard = prev_data_mutex.lock().unwrap();
@@ -979,30 +973,30 @@ pub fn derive(derive_options: DeriveOptions) {
 
         out.save(&key, prev_data_option, &fingerprint);
 
-        println!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
+        log!("Saved encrypted output to \"{}\"\n", &out.path.to_str().unwrap().cyan(),);
     }
 
-    println!(
+    log!(
         "Start time: {}",
         DateTime::<Local>::from(start_time)
             .format("%Y-%m-%d %H:%M:%S")
             .to_string()
             .cyan()
     );
-    println!(
+    log!(
         "End time: {}",
         DateTime::<Local>::from(SystemTime::now())
             .format("%Y-%m-%d %H:%M:%S")
             .to_string()
             .cyan()
     );
-    println!(
+    log!(
         "Total running time: {}",
         format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
             .to_string()
             .cyan()
     );
-    println!(
+    log!(
         "Average iteration time: {}",
         format_duration(std::time::Duration::from_millis(
             (running_time.elapsed().as_millis() as f64 / options.iterations as f64).round() as u64

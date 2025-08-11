@@ -6,6 +6,7 @@ use crate::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
+use crate::log;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -95,7 +96,7 @@ impl OutputData {
             );
         }
 
-        println!("{}\n", output);
+        log!("{}\n", output);
 
         if display.options {
             self.data.slowkey.print();
