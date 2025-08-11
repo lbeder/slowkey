@@ -372,7 +372,7 @@ fn show_hint(data: &str, description: &str) {
             description,
             &data[..prefix_len + 1],
             &data[len - 1..],
-            len - prefix_len
+            len
         );
     }
 }
