@@ -380,8 +380,8 @@ fn show_hint(data: &str, description: &str) {
         log!(
             "\n{} is: {}...{} (length: {})",
             description,
-            format!("\"{}", &data[..prefix_len + 1]).black().on_black(),
-            format!("{}\"", &data[len - 1..]).black().on_black(),
+            format!("\"{}", &data[..prefix_len + 1]),
+            format!("{}\"", &data[len - 1..]),
             len
         );
     }
