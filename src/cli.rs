@@ -378,7 +378,7 @@ fn show_hint(data: &str, description: &str) {
         let prefix_len = if is_hex { 2 } else { 0 };
 
         log!(
-            "\n{} is: {}{} (length: {})",
+            "\n{} is: {}...{} (length: {})",
             description,
             format!("\"{}", &data[..prefix_len + 1]).black().on_black(),
             format!("{}\"", &data[len - 1..]).black().on_black(),
