@@ -50,7 +50,7 @@ const ENCRYPTION_KEY_HARDENING_OPTIONS: SlowKeyOptions = SlowKeyOptions {
     balloon_hash: BalloonHashOptions::HARDENING_DEFAULT,
 };
 
-pub fn get_salt() -> String {
+pub fn get_salt_normalized(normalize: bool) -> String {
     let input_salt = Password::with_theme(&ColorfulTheme::default())
         .with_prompt("Enter your salt")
         .with_confirmation("Enter your salt again", "Error: salts don't match")
@@ -58,9 +58,15 @@ pub fn get_salt() -> String {
         .interact()
         .unwrap();
 
-    let salt_bytes = input_to_bytes(&input_salt);
-
     show_hint(&input_salt, "Salt");
+
+    if !normalize {
+        log!();
+
+        return input_salt;
+    }
+
+    let salt_bytes = input_to_bytes(&input_salt);
 
     let salt_len = salt_bytes.len();
     let salt = match salt_len {
@@ -113,6 +119,10 @@ pub fn get_salt() -> String {
     log!();
 
     salt
+}
+
+pub fn get_salt() -> String {
+    get_salt_normalized(true)
 }
 
 pub fn get_password() -> String {
@@ -438,7 +448,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         } else {
             log!("Please provide the salt and the password for secrets number {i}:\n");
 
-            (get_salt(), get_password())
+            (get_salt_normalized(false), get_password())
         };
 
         let secret = Secret::new(&SecretOptions {
