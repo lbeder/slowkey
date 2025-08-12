@@ -448,11 +448,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Fingerprint: E5E61F417790448A
 
@@ -466,11 +466,11 @@ Final result:
 ```sh
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
@@ -495,7 +495,7 @@ Despite the text being invisible, it's important to note that the text remains p
 ```sh
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 Warning: Salt's length 4 is shorter than 16; hashing with SHA512 and truncating to 16 bytes
 ```
@@ -503,7 +503,7 @@ Warning: Salt's length 4 is shorter than 16; hashing with SHA512 and truncating 
 ```sh
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 Warning: Salt's length 20 is longer than 16; hashing with SHA512 and truncating to 16 byte
 ```
@@ -547,11 +547,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 ✔ Enter your checkpoint encryption key · ********
 
@@ -608,11 +608,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Verifying the checkpoint...
 
@@ -643,11 +643,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Verifying the checkpoint...
 
@@ -699,11 +699,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Verifying the checkpoint...
 
@@ -772,11 +772,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Verifying the checkpoint...
 
@@ -814,11 +814,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Fingerprint: E5E61F417790448A
 
@@ -854,11 +854,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Fingerprint: E5E61F417790448A
 
@@ -921,11 +921,11 @@ Fingerprint: E5E61F417790448A
 
 ✔ Enter your salt · ********
 
-Salt is: s...t
+Salt hint is: s...t
 
 ✔ Enter your password · ********
 
-Password is: p...d
+Password hint is: p...d
 
 Verifying the output...
 
