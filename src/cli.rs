@@ -1,10 +1,12 @@
+use crate::log;
+use crate::slowkey::{SlowKey, SlowKeyOptions};
 use crate::utils::{
     algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
     chacha20poly1305::ChaCha20Poly1305,
-    checkpoints::checkpoint::{
-        Checkpoint, CheckpointData, CheckpointSlowKeyOptions, OpenCheckpointOptions, SlowKeyData,
+    checkpoints::{
+        checkpoint::{Checkpoint, CheckpointData, CheckpointSlowKeyOptions, OpenCheckpointOptions, SlowKeyData},
+        version::Version,
     },
-    checkpoints::version::Version,
     file_lock::FileLock,
     inputs::{
         secret::{Secret, SecretData, SecretInnerData, SecretOptions},
@@ -15,6 +17,8 @@ use crate::utils::{
         output::{OpenOutputOptions, Output},
     },
 };
+use crate::warning;
+
 use base64::{engine::general_purpose, Engine};
 use chrono::{DateTime, Local};
 use crossterm::style::Stylize;
@@ -31,10 +35,6 @@ use std::{
     thread,
     time::{Instant, SystemTime},
 };
-
-use crate::log;
-use crate::slowkey::{SlowKey, SlowKeyOptions};
-use crate::warning;
 
 pub const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
@@ -808,6 +808,8 @@ pub fn derive(derive_options: DeriveOptions) {
     if let Some(checkpoint_data) = &derive_options.checkpoint_data {
         checkpoint_data.print(crate::DisplayOptions::default());
     }
+
+    log!("Deriving with the following parameters:\n");
 
     options.print();
 

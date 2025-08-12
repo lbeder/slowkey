@@ -12,6 +12,7 @@ use crate::{
     },
     DisplayOptions,
 };
+
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
 use glob::{glob_with, MatchOptions};
