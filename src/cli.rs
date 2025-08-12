@@ -58,7 +58,7 @@ pub fn get_salt_normalized(normalize: bool) -> String {
         .interact()
         .unwrap();
 
-    show_hint(&input_salt, "Salt");
+    show_hint(&input_salt, "salt");
 
     if !normalize {
         log!();
@@ -132,7 +132,7 @@ pub fn get_password() -> String {
         .interact()
         .unwrap();
 
-    show_hint(&input_password, "Password");
+    show_hint(&input_password, "password");
 
     log!();
 
@@ -369,9 +369,9 @@ pub fn input_to_bytes(input: &str) -> Vec<u8> {
 fn show_hint(data: &str, description: &str) {
     let len = data.len();
 
-    if len < MIN_SECRET_LENGTH_TO_REVEAL {
-        let capitalized = description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..];
+    let capitalized = description.chars().next().unwrap().to_uppercase().collect::<String>() + &description[1..];
 
+    if len < MIN_SECRET_LENGTH_TO_REVEAL {
         warning!("{} is too short, therefore password hint won't be shown", capitalized);
     } else {
         let is_hex = data.starts_with(HEX_PREFIX);
@@ -379,7 +379,7 @@ fn show_hint(data: &str, description: &str) {
 
         log!(
             "\n{} hint is: {}...{} (length: {})",
-            description,
+            capitalized,
             format!("\"{}", &data[..prefix_len + 1]),
             format!("{}\"", &data[len - 1..]),
             len
