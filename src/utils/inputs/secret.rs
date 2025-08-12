@@ -35,9 +35,9 @@ impl SecretData {
             "Version".green(),
             u8::from(self.version.clone()),
             "Salt".green(),
-            self.data.salt.as_str().black().on_black(),
+            format!("\"{}\"", self.data.salt.as_str()).black().on_black(),
             "Password".green(),
-            self.data.password.as_str().black().on_black()
+            format!("\"{}\"", self.data.password.as_str()).black().on_black()
         );
 
         log!("{}\n", output);

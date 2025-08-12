@@ -1,4 +1,5 @@
 use super::{fingerprint::Fingerprint, version::Version};
+use crate::log;
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::chacha20poly1305::{ChaCha20Poly1305, Nonce},
@@ -6,7 +7,6 @@ use crate::{
 };
 use base64::{engine::general_purpose, Engine as _};
 use crossterm::style::Stylize;
-use crate::log;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,

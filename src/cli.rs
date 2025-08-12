@@ -137,7 +137,7 @@ pub fn get_entropy() -> Vec<u8> {
 
     log!(
         "\nEntropy (please highlight to see): {}\nLength: {}\n",
-        &input_entropy.to_string().black().on_black(),
+        format!("\"{}\"", &input_entropy).black().on_black(),
         &input_entropy.len()
     );
 
@@ -368,10 +368,10 @@ fn show_hint(data: &str, description: &str) {
         let prefix_len = if is_hex { 2 } else { 0 };
 
         log!(
-            "\n{} is: {}...{} (length: {})",
+            "\n{} is: {}{} (length: {})",
             description,
-            &data[..prefix_len + 1],
-            &data[len - 1..],
+            format!("\"{}", &data[..prefix_len + 1]).black().on_black(),
+            format!("{}\"", &data[len - 1..]).black().on_black(),
             len
         );
     }
@@ -459,12 +459,12 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
         // Display the secret differently based on whether it has 0x prefix
         log!(
             "Salt for secrets file number {i} is (please highlight to see): {}",
-            salt.black().on_black()
+            format!("\"{}\"", salt).black().on_black()
         );
 
         log!(
             "Password for secrets file number {i} is (please highlight to see): {}",
-            password.black().on_black()
+            format!("\"{}\"", password).black().on_black()
         );
 
         log!("Stored encrypted secrets file number {i} at: {}\n", filepath.display());
