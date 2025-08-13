@@ -207,13 +207,9 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
         Ordering::Equal => {},
     }
 
-    // Stretch and harden the encryption key with a single SlowKey iteration using fixed parameters
-    log!(
-        "\nHardening the {} encryption key using SlowKey with fixed parameters:\n",
-        capitalized
-    );
-    ENCRYPTION_KEY_HARDENING_OPTIONS.print();
+    log!("\nHardening the {name} encryption key using SlowKey\n");
 
+    // Stretch and harden the encryption key with a single SlowKey iteration
     SlowKey::new(&ENCRYPTION_KEY_HARDENING_OPTIONS).derive_key(&SlowKey::DEFAULT_SALT, &key, &[], 0)
 }
 
@@ -822,8 +818,6 @@ pub fn derive(derive_options: DeriveOptions) {
     if let Some(checkpoint_data) = &derive_options.checkpoint_data {
         checkpoint_data.print(crate::DisplayOptions::default());
     }
-
-    log!("Deriving with the following parameters:\n");
 
     options.print();
 
