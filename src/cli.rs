@@ -392,15 +392,14 @@ pub fn generate_random_secret() -> (String, String) {
 
     // Generate truly random data using the system's secure random number generator
     let mut rng = rand::thread_rng();
-    let random_data: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
+    let mut random_data: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
 
     // Append the user-provided entropy to the randomly generated data
-    let mut combined_data = random_data;
-    combined_data.extend_from_slice(&entropy);
+    random_data.extend_from_slice(&entropy);
 
     // Hash the combined data
     let mut hasher = Sha512::new();
-    hasher.update(&combined_data);
+    hasher.update(&random_data);
     let final_hash = hasher.finalize();
 
     // Use the first 32 bytes for password and next 16 bytes for salt
