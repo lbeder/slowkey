@@ -562,12 +562,12 @@ pub struct CheckpointRestoreOptions {
 pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
     print_input_instructions();
 
-    let mut file_key: Option<Vec<u8>> = None;
+    let mut checkpoint_key: Option<Vec<u8>> = None;
 
     let checkpoint_data = match opts.path {
         Some(path) => {
             let key = get_encryption_key_with_confirm("checkpoint", false);
-            file_key = Some(key.clone());
+            checkpoint_key = Some(key.clone());
 
             Checkpoint::open(&OpenCheckpointOptions { key: key.clone(), path })
         },
@@ -596,7 +596,8 @@ pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
     derive(DeriveOptions {
         options,
         checkpoint_data: Some(checkpoint_data),
-        file_key,
+        output_key: None,
+        checkpoint_key,
         checkpoint_dir: opts.checkpoint_dir,
         checkpoint_interval: opts.checkpoint_interval,
         max_checkpoints_to_keep: opts.max_checkpoints_to_keep,
@@ -758,7 +759,8 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
 pub struct DeriveOptions {
     pub options: SlowKeyOptions,
     pub checkpoint_data: Option<CheckpointData>,
-    pub file_key: Option<Vec<u8>>,
+    pub output_key: Option<Vec<u8>>,
+    pub checkpoint_key: Option<Vec<u8>>,
     pub checkpoint_dir: Option<PathBuf>,
     pub checkpoint_interval: usize,
     pub max_checkpoints_to_keep: usize,
@@ -778,7 +780,8 @@ pub fn handle_derive(options: DeriveOptions) {
 
 pub fn derive(derive_options: DeriveOptions) {
     let options = derive_options.options;
-    let mut file_key = derive_options.file_key;
+    let mut output_key = derive_options.output_key;
+    let mut checkpoint_key = derive_options.checkpoint_key;
     let mut checkpoint: Option<Checkpoint> = None;
 
     let mut _output_lock: Option<FileLock> = None;
@@ -788,18 +791,30 @@ pub fn derive(derive_options: DeriveOptions) {
             panic!("Output file \"{}\" already exists", output_path.display());
         }
 
+        // Check if the output directory exists
+        if let Some(parent) = output_path.parent() {
+            if !parent.exists() {
+                panic!("Output directory \"{}\" does not exist", parent.display());
+            }
+        } else {
+            panic!(
+                "Could not determine the parent directory for output file \"{}\"",
+                output_path.display()
+            );
+        }
+
         _output_lock = match FileLock::try_lock(&output_path) {
             Ok(lock) => Some(lock),
             Err(_) => panic!("Unable to lock {}", output_path.display()),
         };
 
-        if file_key.is_none() {
-            file_key = Some(get_encryption_key("output"));
+        if output_key.is_none() {
+            output_key = Some(get_encryption_key("output"));
         }
 
         out = Some(Output::new(&crate::utils::outputs::output::OutputOptions {
             path: output_path,
-            key: file_key.clone().unwrap(),
+            key: output_key.clone().unwrap(),
             slowkey: options.clone(),
         }))
     }
@@ -861,15 +876,15 @@ pub fn derive(derive_options: DeriveOptions) {
     fingerprint.print();
 
     if let Some(dir) = derive_options.checkpoint_dir {
-        if file_key.is_none() {
-            file_key = Some(get_encryption_key("checkpoint"));
+        if checkpoint_key.is_none() {
+            checkpoint_key = Some(get_encryption_key("checkpoint"));
         }
 
         checkpoint = Some(Checkpoint::new(
             &crate::utils::checkpoints::checkpoint::CheckpointOptions {
                 iterations: options.iterations,
                 dir: dir.to_owned(),
-                key: file_key.clone().unwrap(),
+                key: checkpoint_key.clone().unwrap(),
                 max_checkpoints_to_keep: derive_options.max_checkpoints_to_keep,
                 slowkey: options.clone(),
             },
