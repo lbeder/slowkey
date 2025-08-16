@@ -388,7 +388,7 @@ pub fn generate_random_secret() -> (String, String) {
 
     // Generate truly random data using the system's secure random number generator
     let mut rng = rand::thread_rng();
-    let mut random_data: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
+    let mut random_data: Vec<u8> = (0..64).map(|_| rng.gen::<u8>()).collect();
 
     // Append the user-provided entropy to the randomly generated data
     random_data.extend_from_slice(&entropy);
