@@ -147,13 +147,13 @@ impl CheckpointData {
             let opts = &self.data.slowkey;
 
             output = format!(
-                "{}\n\n{}:\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})",
+                "{}\n\n{}:\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})",
                 output,
                 "SlowKey Parameters".yellow(),
                 "Length".green(),
                 &opts.length.to_string().cyan(),
                 "Scrypt".green(),
-                &opts.scrypt.n().to_string().cyan(),
+                &opts.scrypt.log_n().to_string().cyan(),
                 &opts.scrypt.r().to_string().cyan(),
                 &opts.scrypt.p().to_string().cyan(),
                 "Argon2id".green(),

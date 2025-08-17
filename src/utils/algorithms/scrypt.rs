@@ -9,8 +9,8 @@ pub struct ScryptOptions {
 }
 
 impl ScryptOptions {
-    pub const MAX_N: u64 = u64::MAX;
-    pub const DEFAULT_N: u64 = 1 << 20;
+    pub const MAX_LOG_N: u8 = 63;
+    pub const DEFAULT_LOG_N: u8 = 20;
 
     pub const MIN_R: u32 = 0;
     pub const MAX_R: u32 = u32::MAX;
@@ -20,19 +20,23 @@ impl ScryptOptions {
     pub const MAX_P: u32 = u32::MAX;
     pub const DEFAULT_P: u32 = 1;
 
-    pub fn new(n: u64, r: u32, p: u32) -> Self {
-        if n == 0 || (n & (n - 1)) != 0 {
-            panic!("Invalid n");
+    pub fn new(log_n: u8, r: u32, p: u32) -> Self {
+        if log_n == 0 || log_n > Self::MAX_LOG_N {
+            panic!("Invalid log_n");
         }
 
         // Note that there is no need to check if either r or p are in bounds, since both are bound by the maximum
         // and the minimum values for this type
 
-        Self { n, r, p }
+        Self { n: 1u64 << log_n, r, p }
     }
 
     pub fn n(&self) -> u64 {
         self.n
+    }
+
+    pub fn log_n(&self) -> u8 {
+        self.n.trailing_zeros() as u8
     }
 
     pub fn r(&self) -> u32 {
@@ -50,7 +54,7 @@ impl ScryptOptions {
 impl Default for ScryptOptions {
     fn default() -> Self {
         Self {
-            n: Self::DEFAULT_N,
+            n: 1u64 << Self::DEFAULT_LOG_N,
             r: Self::DEFAULT_R,
             p: Self::DEFAULT_P,
         }
@@ -104,12 +108,12 @@ mod tests {
     #[case(b"salt", b"test", 64, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775b64ff03b82391a33b655047a632391b6216b98b2595cd82e89eaa1d9c8c2ccf5")]
     #[case(b"salt", b"test", 32, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775")]
     #[case(b"salt", b"test", 16, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7f")]
-    #[case(b"salt", b"test", 64, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425693b2d5cbd463c3521c8132056fb801997b915a9f8d051948a430142c7aa5855")]
-    #[case(b"salt", b"test", 32, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425")]
-    #[case(b"salt", b"test", 16, &ScryptOptions::new(1 << 12,8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e")]
-    #[case(b"salt", b"test", 64, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354a0d56eaad6340f2c1e92dd25a6883b51f9806b6c7980c60c1b290b96dbceec45")]
-    #[case(b"salt", b"test", 32, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354")]
-    #[case(b"salt", b"test", 16, &ScryptOptions::new(1 << 12,16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe")]
+    #[case(b"salt", b"test", 64, &ScryptOptions::new(12, 8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425693b2d5cbd463c3521c8132056fb801997b915a9f8d051948a430142c7aa5855")]
+    #[case(b"salt", b"test", 32, &ScryptOptions::new(12, 8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e47ff22c66d3acab5f0488cda26297425")]
+    #[case(b"salt", b"test", 16, &ScryptOptions::new(12, 8, 2 ), "3ed57e6edeae5e46f2932b6d22e0a73e")]
+    #[case(b"salt", b"test", 64, &ScryptOptions::new(12, 16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354a0d56eaad6340f2c1e92dd25a6883b51f9806b6c7980c60c1b290b96dbceec45")]
+    #[case(b"salt", b"test", 32, &ScryptOptions::new(12, 16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe3a485fb9509e1b839d9cb98d63649354")]
+    #[case(b"salt", b"test", 16, &ScryptOptions::new(12, 16, 1), "107a4e74f205207f82c8fd0f8a4a5fbe")]
 
     fn scrypt_test(
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &ScryptOptions,

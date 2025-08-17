@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Argon2idOptions {
     m_cost: u32,
     t_cost: u32,
+    p_cost: u32,
 }
 
 impl Argon2idOptions {
@@ -15,6 +16,8 @@ impl Argon2idOptions {
     pub const MIN_T_COST: u32 = 2;
     pub const MAX_T_COST: u32 = u32::MAX;
     pub const DEFAULT_T_COST: u32 = 2;
+
+    pub const DEFAULT_P_COST: u32 = 1;
 
     pub fn new(m_cost: u32, t_cost: u32) -> Self {
         if m_cost < Self::MIN_M_COST {
@@ -39,7 +42,11 @@ impl Argon2idOptions {
         // Note that there is no need to check if t_cost > Self::MAX_T_COST because Self::MAX_T_COST is the maximum
         // value for this type
 
-        Self { m_cost, t_cost }
+        Self {
+            m_cost,
+            t_cost,
+            p_cost: Self::DEFAULT_P_COST,
+        }
     }
 
     pub fn m_cost(&self) -> u32 {
@@ -54,6 +61,7 @@ impl Argon2idOptions {
     pub const HARDENING_DEFAULT: Argon2idOptions = Argon2idOptions {
         m_cost: 1 << 21,
         t_cost: 2,
+        p_cost: 1,
     };
 }
 
@@ -62,6 +70,7 @@ impl Default for Argon2idOptions {
         Self {
             m_cost: Self::DEFAULT_M_COST,
             t_cost: Self::DEFAULT_T_COST,
+            p_cost: Self::DEFAULT_P_COST,
         }
     }
 }

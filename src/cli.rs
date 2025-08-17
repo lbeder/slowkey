@@ -289,9 +289,9 @@ pub fn get_checkpoint_data() -> CheckpointData {
 
     log!();
 
-    let scrypt_n: u64 = Input::new()
-        .with_prompt("Scrypt n")
-        .default(ScryptOptions::DEFAULT_N)
+    let scrypt_log_n: u8 = Input::new()
+        .with_prompt("Scrypt log_n")
+        .default(ScryptOptions::DEFAULT_LOG_N)
         .interact_text()
         .unwrap();
     let scrypt_r: u32 = Input::new()
@@ -304,7 +304,7 @@ pub fn get_checkpoint_data() -> CheckpointData {
         .default(ScryptOptions::DEFAULT_P)
         .interact_text()
         .unwrap();
-    let scrypt = ScryptOptions::new(scrypt_n, scrypt_r, scrypt_p);
+    let scrypt = ScryptOptions::new(scrypt_log_n, scrypt_r, scrypt_p);
 
     log!();
 

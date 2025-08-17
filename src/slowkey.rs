@@ -69,14 +69,14 @@ impl SlowKeyOptions {
 
     pub fn print(&self) {
         log!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
             "Length".green(),
             &self.length.to_string().cyan(),
             "Scrypt".green(),
-            &self.scrypt.n().to_string().cyan(),
+            &self.scrypt.log_n().to_string().cyan(),
             &self.scrypt.r().to_string().cyan(),
             &self.scrypt.p().to_string().cyan(),
             "Argon2id".green(),
@@ -374,9 +374,9 @@ impl SlowKey<'_> {
             BenchmarkId::new(
                 "SlowKey (Default)",
                 format!(
-                    "iterations: {}, Scrypt: (n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
+                    "iterations: {}, Scrypt: (log_n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
                     options.iterations,
-                    options.scrypt.n(),
+                    options.scrypt.log_n(),
                     options.scrypt.r(),
                     options.scrypt.p(),
                     options.argon2id.m_cost(),
@@ -417,7 +417,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions::new(1 << 12, 8, 1),
+        scrypt: ScryptOptions::new(12, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
@@ -433,7 +433,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 20, 8, 1),
+        scrypt: ScryptOptions::new(20, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
@@ -441,7 +441,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 4,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        scrypt: ScryptOptions::new(15, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"", &Vec::new(), 0,
@@ -449,7 +449,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        scrypt: ScryptOptions::new(15, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 0,
@@ -457,7 +457,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        scrypt: ScryptOptions::new(15, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsal2", b"test", &Vec::new(), 0,
@@ -465,7 +465,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        scrypt: ScryptOptions::new(15, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test2", &Vec::new(), 0,
@@ -473,7 +473,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: 32,
-        scrypt: ScryptOptions::new(1 << 12, 8, 1),
+        scrypt: ScryptOptions::new(12, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 1,
@@ -481,7 +481,7 @@ mod tests {
     #[case(&SlowKeyOptions {
         iterations: 10,
         length: SlowKeyOptions::MAX_KEY_SIZE,
-        scrypt: ScryptOptions::new(1 << 15, 8, 1),
+        scrypt: ScryptOptions::new(15, 8, 1),
         argon2id: Argon2idOptions::default(),
         balloon_hash: BalloonHashOptions::default(),
     }, b"saltsaltsaltsalt", b"test", &Vec::new(), 5,

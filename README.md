@@ -140,8 +140,8 @@ Options:
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
   -l, --length <LENGTH>
           Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
-      --scrypt-n <SCRYPT_N>
-          Scrypt CPU/memory cost parameter (must be lesser than or equal 18446744073709551615) [default: 1048576]
+      --scrypt-log-n <SCRYPT_LOG_N>
+          Scrypt CPU/memory cost parameter (must be lesser than or equal 63) [default: 20]
       --scrypt-r <SCRYPT_R>
           Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>
@@ -442,7 +442,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -541,7 +541,7 @@ Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" c
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -580,7 +580,7 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 ```
@@ -602,7 +602,7 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -637,7 +637,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -693,7 +693,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 20
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -747,7 +747,7 @@ Previous data: 0xf131df94fd3c0294685d19097f9c331bd41abafdcc972695cce89d0d21707ec
 
 Length: 32
 
-Scrypt n: 1048576
+Scrypt log_n: 20
 Scrypt r: 8
 Scrypt p: 1
 
@@ -766,7 +766,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -808,7 +808,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -848,7 +848,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -889,7 +889,7 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -913,7 +913,7 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (n: 1048576, r: 8, p: 1)
+  Scrypt: (log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -984,11 +984,11 @@ Algorithms/Balloon Hash (Default)/s_cost: 131072, t_cost: 1
                         time:   [2.1706 s 2.1747 s 2.1788 s]
                         change: [-1.0131% -0.4052% +0.1218%] (p = 0.21 > 0.05)
                         No change in performance detected.
-Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
-Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Warming up for 3.0000 s
-Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Collecting 10 samples in estimated 51.109 s (20 iterations)
-Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...: Analyzing
-Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (n: 1048576, r: 8, p: 1), Argon2id: (m_cost: 209...
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (m_cost: 209...
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (m_cost: 209...: Warming up for 3.0000 s
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (m_cost: 209...: Collecting 10 samples in estimated 51.109 s (20 iterations)
+Benchmarking Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (m_cost: 209...: Analyzing
+Algorithms/SlowKey (Default)/iterations: 1, Scrypt: (log_n: 20, r: 8, p: 1), Argon2id: (m_cost: 209...
                         time:   [2.5249 s 2.5369 s 2.5501 s]
                         change: [-1.1563% +0.0329% +1.1232%] (p = 0.95 > 0.05)
                         No change in performance detected.
