@@ -448,13 +448,13 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        3/10       30%    (19s)
 
@@ -466,11 +466,11 @@ Final result:
 ```sh
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
@@ -495,7 +495,7 @@ Despite the text being invisible, it's important to note that the text remains p
 ```sh
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 Warning: Salt's length 4 is shorter than 16; hashing with SHA512 and truncating to 16 bytes
 ```
@@ -503,7 +503,7 @@ Warning: Salt's length 4 is shorter than 16; hashing with SHA512 and truncating 
 ```sh
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 Warning: Salt's length 20 is longer than 16; hashing with SHA512 and truncating to 16 byte
 ```
@@ -547,11 +547,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 ✔ Enter your checkpoint encryption key · ********
 
@@ -608,11 +608,11 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 Verifying the checkpoint...
 
@@ -643,17 +643,17 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        5/10        0%    (4s)
 
@@ -699,17 +699,17 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
-Fingerprint: 2BF6533527D88603
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        5/20        0%    (56s)
 ```
@@ -772,17 +772,17 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 Verifying the checkpoint...
 
 The password, salt and internal data are correct
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████████████████████████████████████████████       10/10       100%    (0s)
 
@@ -814,13 +814,13 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
@@ -854,13 +854,13 @@ SlowKey Parameters:
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 
@@ -893,7 +893,7 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 ```
 
 The output file checkpoint, except for the one that coincides with the first iteration, also includes the output of the previous iteration. This allows the system to verify that the password and salt match the output by attempting to derive the output's data from the previous iteration's data. This verification is optional and requires the `--verify` flag:
@@ -917,15 +917,15 @@ SlowKey Parameters:
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
-Fingerprint: E5E61F417790448A
+Fingerprint: 438AD0BD7EF347F5
 
 ✔ Enter your salt · ********
 
-Salt hint is: s...t
+Salt hint is: "s...t" (length: 16)
 
 ✔ Enter your password · ********
 
-Password hint is: p...d
+Password hint is: "p...d" (length: 8)
 
 Verifying the output...
 
