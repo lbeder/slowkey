@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ScryptOptions {
-    n: u64,
+    log_n: u8,
     r: u32,
     p: u32,
 }
@@ -28,15 +28,15 @@ impl ScryptOptions {
         // Note that there is no need to check if either r or p are in bounds, since both are bound by the maximum
         // and the minimum values for this type
 
-        Self { n: 1u64 << log_n, r, p }
+        Self { log_n, r, p }
     }
 
     pub fn n(&self) -> u64 {
-        self.n
+        1u64 << self.log_n
     }
 
     pub fn log_n(&self) -> u8 {
-        self.n.trailing_zeros() as u8
+        self.log_n
     }
 
     pub fn r(&self) -> u32 {
@@ -48,13 +48,13 @@ impl ScryptOptions {
     }
 
     // Fixed parameters matching current defaults used for file key hardening
-    pub const HARDENING_DEFAULT: ScryptOptions = ScryptOptions { n: 1 << 20, r: 8, p: 1 };
+    pub const HARDENING_DEFAULT: ScryptOptions = ScryptOptions { log_n: 20, r: 8, p: 1 };
 }
 
 impl Default for ScryptOptions {
     fn default() -> Self {
         Self {
-            n: 1u64 << Self::DEFAULT_LOG_N,
+            log_n: Self::DEFAULT_LOG_N,
             r: Self::DEFAULT_R,
             p: Self::DEFAULT_P,
         }
@@ -80,7 +80,7 @@ impl Scrypt {
                 password.len(),
                 salt.as_ptr(),
                 salt.len(),
-                self.opts.n,
+                self.opts.n(),
                 self.opts.r,
                 self.opts.p,
                 dk.as_mut_ptr(),
@@ -104,7 +104,7 @@ mod tests {
 
     #[rstest]
     #[case(&Vec::new(), &Vec::new(), 64, &ScryptOptions::default(), "d436cba148427322d47a09a84b9bbb64d5ff086545170518711f3ec6936124e0383b3f47409e0329776231b295df5038ab07b096b8717718fd6f092195bfb03a")]
-    #[case(b"salt", b"", 64, &ScryptOptions { n: 1 << 15, r: 8, p: 1 }, "6e6d0720a5766a2f99679af8dbf78794d8cfe4c2b658ec82a1d005c0d54582846583ccf105fa66271ad7907868b4e3f5bb61f12b427fe0dd2c75df55afce74c1")]
+    #[case(b"salt", b"", 64, &ScryptOptions { log_n: 15, r: 8, p: 1 }, "6e6d0720a5766a2f99679af8dbf78794d8cfe4c2b658ec82a1d005c0d54582846583ccf105fa66271ad7907868b4e3f5bb61f12b427fe0dd2c75df55afce74c1")]
     #[case(b"salt", b"test", 64, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775b64ff03b82391a33b655047a632391b6216b98b2595cd82e89eaa1d9c8c2ccf5")]
     #[case(b"salt", b"test", 32, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7ff03caf4eab382e3b9e1a335fb487c775")]
     #[case(b"salt", b"test", 16, &ScryptOptions::default(), "c91328bf58e9904c6c3aa15b26178b7f")]

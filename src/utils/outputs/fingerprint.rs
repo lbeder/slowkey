@@ -14,8 +14,7 @@ pub struct Fingerprint {
 impl Fingerprint {
     pub fn from_data(options: &SlowKeyOptions, salt: &[u8], password: &[u8]) -> Self {
         let mut data = serde_json::to_string(&options).unwrap().as_bytes().to_vec();
-        log!("SlowKeyOptions: {}", serde_json::to_string(&options).unwrap());
-        log!("SlowKeyOptions: {}", serde_json::to_string(&options).unwrap());
+
         data.extend_from_slice(salt);
         data.extend_from_slice(password);
 
