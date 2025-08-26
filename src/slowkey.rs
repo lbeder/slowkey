@@ -325,7 +325,7 @@ impl SlowKey<'_> {
         group.bench_with_input(
             BenchmarkId::new(
                 "Scrypt (Default)",
-                format!("n: {}, r: {}, p: {}", options.n(), options.r(), options.p()),
+                format!("log_n: {}, r: {}, p: {}", options.log_n(), options.r(), options.p()),
             ),
             &input,
             |b, data| {
