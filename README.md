@@ -110,6 +110,8 @@ function deriveKey(password, salt, iterations):
 
 ## Usage
 
+For tips on maximizing performance and efficiency—including OS/hardware tuning, recommended CLI parameters for Scrypt, Argon2id, and Balloon Hash, and best practices for long runs—see the [Performance & Efficiency Guide for Running Slowkey](OPTIMIZATION.md).
+
 ### General
 
 ```sh
