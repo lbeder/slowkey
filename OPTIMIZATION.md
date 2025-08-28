@@ -92,6 +92,18 @@ Stability note
 
 Pushing clocks/voltages for long stretches can reduce stability. If speed/latency isn’t critical, prefer conservative, stock settings. Use the slowkey stability-test command to test concurrent task (instance) limitations and stability.
 
+## Parallel Creation with Serial Enforcement (Daisy-Chaining)
+
+To speed up creation while preserving serial time for decryption:
+
+1. Run multiple instances across multiple machines (in a secure environment).
+
+2. Take the output of instance A and encrypt the next set of starting parameters (password+salt) with it (either using an external encryption app or using the slowkey 'secrets' command).
+
+3. Repeat the chaining for A→B→C→… so the final key depends on the whole chain.
+
+Ten instances created in parallel over 1 week can force ~10 weeks of serial effort to re-derive, because the decryptor must process the chain sequentially.
+
 ## Monitoring & Useful Tools
 
 These help you observe frequency, temps, throttling, and stability (some may already be pre-installed in your distro):
@@ -130,7 +142,7 @@ sudo cpupower frequency-set -g performance
 
 On some systems, you may need to ensure the cpupower service or the relevant driver is active. If the command errors, verify the package and kernel headers match your running kernel. On some systems may also be controllable through the stock power management panel / power profiles daemon.
 
-### Live monitoring
+### Live Monitoring
 
 Top-down system view:
 
@@ -188,13 +200,15 @@ RAM overheating was a common culprit; CPU instability can also corrupt results.
 
 Aggressive, long-duration runs can hasten CPU degradation (notably seen on some recent Intel Core i9 13th/14th gen parts).
 
-### Best practices
+### Best Practices
 
 Keep clocks/voltages modest unless you absolutely need speed.
 
 Prefer lower temps (better fan curves, adequate cooling, clean intake filters).
 
 Verify every stretch: run at least twice with identical inputs and confirm the derived keys match byte-for-byte before trusting the output.
+
+Consider daisy-chaining (Section 5) to avoid pushing a single box to its limits during creation.
 
 ## Quick Checklist (TL;DR)
 
