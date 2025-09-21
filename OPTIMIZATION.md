@@ -82,9 +82,9 @@ Diminishing returns kick in when you hit CPU or memory bandwidth limits.
 
 Practical caps (with default parameters)
 
-16 GB RAM → around 4 instances with a decent multi-core CPU.
+16 GB RAM → 4 instances with a decent multi-core CPU.
 
-32 GB RAM → around 10 instances on a strong multi-core CPU.
+32 GB RAM → 8-9 instances on a strong multi-core CPU.
 
 Beyond 32 GB, the CPU usually becomes the bottleneck; extra RAM alone won’t help.
 
@@ -184,13 +184,15 @@ For modest needs or single-instance runs, any decent laptop will do the job.
 
 ## What Actually Drives Performance
 
-CPU core frequency (sustained, not just peak or boost)
+- CPU core frequency (sustained, not just peak or boost)
 
-Core count & topology (but remember, each added instance slows per-instance latency)
+- Core count & topology (but remember, each added instance slows per-instance latency)
 
-Memory bandwidth and, critically, memory latency
+- Memory bandwidth and, critically, memory latency
 
-Thermal headroom and power limits (higher PL1 = stronger multithreaded performance)
+- Power, CPU and memory BIOS settings can have meaningful effects on performance (Hyperthreading/Turboboost/SpeedStep/etc...)
+
+- Thermal headroom and power limits (higher PL1 = stronger multithreaded performance)
 
 ## Stability, Integrity & Verification
 
