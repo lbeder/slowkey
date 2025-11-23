@@ -13,6 +13,7 @@
 - [Usage](#usage)
   - [General](#general)
   - [Deriving](#deriving)
+  - [Daisy-Chain Derivation](#daisy-chain-derivation)
   - [Checkpoints](#checkpoints)
     - [Showing a Checkpoint](#showing-a-checkpoint)
     - [Restoring from a Checkpoint](#restoring-from-a-checkpoint)
@@ -119,6 +120,7 @@ Usage: slowkey [COMMAND]
 
 Commands:
   derive          Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
+  daisy-derive    Daisy-chain derivation through multiple secrets files
   checkpoint      Checkpoint operations
   output          Output operations
   secrets         Secrets operations
@@ -177,6 +179,79 @@ Options:
   -h, --help
           Print help
 ```
+
+### Daisy-Chain Derivation
+
+The `daisy-derive` command enables daisy-chaining key derivation through multiple encrypted secrets files. This feature allows you to create a chain of derivations where each derived key becomes the decryption key for the next secrets file in the sequence. This is useful for scenarios where you want to create a layered security approach, where each secrets file is protected by the key derived from the previous one.
+
+The workflow is as follows:
+
+1. You provide an initial encryption key to decrypt the first secrets file
+2. The tool derives a key using the password and salt from the first secrets file
+3. The derived key is used to decrypt the second secrets file
+4. The tool derives a new key using the password and salt from the second secrets file
+5. This process continues for each subsequent secrets file in the chain
+6. The final derived key is the output
+
+Note that when using a derived key as a decryption key for the next secrets file, the key is automatically normalized to 32 bytes (ChaCha20Poly1305::KEY_SIZE) using SHA512 hashing if the derived key length differs from 32 bytes, and then hardened using SlowKey with fixed parameters (same process as used for encrypting secrets files). This ensures that the derived key is properly formatted and hardened before being used to decrypt the next secrets file in the chain.
+
+```sh
+Daisy-chain derivation through multiple secrets files
+
+Usage: slowkey daisy-derive [OPTIONS] --secrets <SECRETS>...
+
+Options:
+  -i, --iterations <ITERATIONS>
+          Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
+  -l, --length <LENGTH>
+          Length of the derived result (must be greater than 9 and lesser than or equal to 64) [default: 32]
+      --scrypt-log-n <SCRYPT_LOG_N>
+          Scrypt CPU/memory cost parameter (must be lesser than or equal 63) [default: 20]
+      --scrypt-r <SCRYPT_R>
+          Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
+      --scrypt-p <SCRYPT_P>
+          Scrypt parallelization parameter (must be greater than 0 and lesser than or equal 4294967295) [default: 1]
+      --argon2-m-cost <ARGON2_M_COST>
+          Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than or equal 4294967295) [default: 2097152]
+      --argon2-t-cost <ARGON2_T_COST>
+          Argon2 number of iterations (must be greater than 2 and lesser than or equal 4294967295) [default: 2]
+      --balloon-s-cost <BALLOON_S_COST>
+          Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than 1 and lesser than or equal 4294967295) [default: 131072]
+      --balloon-t-cost <BALLOON_T_COST>
+          Balloon Hash number of iterations (must be greater than 1 and lesser than or equal 4294967295) [default: 1]
+      --output <OUTPUT>
+          Optional path for storing the encrypted output
+      --base64
+          Show the result in Base64 (in addition to hex)
+      --base58
+          Show the result in Base58 (in addition to hex)
+      --iteration-moving-window <ITERATION_MOVING_WINDOW>
+          Iteration time sampling moving window size [default: 10]
+      --sanity
+          Perform an optional sanity check by computing the algorithm twice and verifying the results
+      --secrets <SECRETS>...
+          List of secrets files to daisy-chain (mandatory)
+  -h, --help
+          Print help
+```
+
+Example usage:
+
+```sh
+slowkey daisy-derive -i 1000 --secrets secret1.dat --secrets secret2.dat --secrets secret3.dat --output final_output.dat
+```
+
+The command will:
+
+1. Prompt for the encryption key to decrypt `secret1.dat`
+2. Derive a key using the password and salt from `secret1.dat`
+3. Normalize and harden the derived key, then use it to decrypt `secret2.dat`
+4. Derive a key using the password and salt from `secret2.dat`
+5. Normalize and harden the derived key, then use it to decrypt `secret3.dat`
+6. Derive the final key using the password and salt from `secret3.dat`
+7. Save the final key to `final_output.dat` if specified
+
+Each step shows progress bars and timing information, and the derived key from each step is displayed (in hex format by default, with optional Base64 and Base58 formats).
 
 ### Checkpoints
 
@@ -473,6 +548,42 @@ Salt hint is: "s...t" (length: 16)
 ✔ Enter your password · ********
 
 Password hint is: "p...d" (length: 8)
+
+████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
+
+Iteration time moving average (10): 2s 526ms, last iteration time: 2s 529ms
+
+Output is (please highlight to see): 0xda158bedf00e5abba900e0c027c249912e3ad5ce54304fdb54f1939ddb14232a
+
+Start time: 2024-12-13 19:20:53
+End time: 2024-12-13 19:21:18
+Total running time: 25s
+Average iteration time: 2s 526ms
+```
+
+You can also use a secrets file instead of entering the password and salt interactively:
+
+> slowkey derive -i 10 --secrets ~/my_secrets.dat
+
+```sh
+Please input all data either in raw or hex format starting with the 0x prefix
+
+Loading password and salt from a secrets file: ~/my_secrets.dat
+
+✔ Enter your secrets encryption key · ********
+
+Hardening the secrets encryption key using SlowKey
+
+Loaded password and salt from secrets file
+
+SlowKey Parameters:
+  Iterations: 10
+  Length: 32
+  Scrypt: (log_n: 20, r: 8, p: 1)
+  Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
+  Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
+
+Fingerprint: 438AD0BD7EF347F5
 
 ████████████████████████████████████████████████████████████████████████████████       10/10      100%    (0s)
 

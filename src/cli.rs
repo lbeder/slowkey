@@ -40,6 +40,56 @@ pub const HEX_PREFIX: &str = "0x";
 const MIN_SECRET_LENGTH_TO_REVEAL: usize = 8;
 const RANDOM_PASSWORD_SIZE: usize = 32;
 
+fn normalize_and_harden_key(key: Vec<u8>, key_description: Option<&str>, key_name: Option<&str>) -> Vec<u8> {
+    // First normalize the key to 32 bytes
+    let normalized_key = normalize_key_to_size(key, key_description);
+
+    // Then harden it using SlowKey
+    let name = key_name.unwrap_or("key");
+    log!("\nHardening the {name} using SlowKey\n");
+
+    SlowKey::new(&ENCRYPTION_KEY_HARDENING_OPTIONS).derive_key(&SlowKey::DEFAULT_SALT, &normalized_key, &[], 0)
+}
+
+fn normalize_key_to_size(key: Vec<u8>, key_description: Option<&str>) -> Vec<u8> {
+    let key_len = key.len();
+    let description = key_description.unwrap_or("Key");
+
+    match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
+        Ordering::Less => {
+            warning!(
+                "{}'s length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
+                description,
+                key_len,
+                ChaCha20Poly1305::KEY_SIZE,
+                ChaCha20Poly1305::KEY_SIZE
+            );
+
+            let mut sha512 = Sha512::new();
+            sha512.update(&key);
+            let mut normalized = sha512.finalize().to_vec();
+            normalized.truncate(ChaCha20Poly1305::KEY_SIZE);
+            normalized
+        },
+        Ordering::Greater => {
+            warning!(
+                "{}'s length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
+                description,
+                key_len,
+                ChaCha20Poly1305::KEY_SIZE,
+                ChaCha20Poly1305::KEY_SIZE
+            );
+
+            let mut sha512 = Sha512::new();
+            sha512.update(&key);
+            let mut normalized = sha512.finalize().to_vec();
+            normalized.truncate(ChaCha20Poly1305::KEY_SIZE);
+            normalized
+        },
+        Ordering::Equal => key,
+    }
+}
+
 // Fixed SlowKey parameters for encryption key hardening. Intentionally hard-coded so future default changes do not
 // affect this behavior.
 const ENCRYPTION_KEY_HARDENING_OPTIONS: SlowKeyOptions = SlowKeyOptions {
@@ -167,50 +217,16 @@ pub fn get_encryption_key_with_confirm(name: &str, confirm: bool) -> Vec<u8> {
 
     let input = prompt.interact().unwrap();
 
-    let mut key = input_to_bytes(&input);
+    let key = input_to_bytes(&input);
 
     show_hint(&input, &format!("{} encryption key", name));
 
-    let key_len = key.len();
     let capitalized = name.chars().next().unwrap().to_uppercase().collect::<String>() + &name[1..];
-    match key_len.cmp(&ChaCha20Poly1305::KEY_SIZE) {
-        Ordering::Less => {
-            warning!(
-                "{} encryption key's length {} is shorter than {}; hashing with SHA512 and truncating to {} bytes",
-                capitalized,
-                key_len,
-                ChaCha20Poly1305::KEY_SIZE,
-                ChaCha20Poly1305::KEY_SIZE
-            );
-
-            let mut sha512 = Sha512::new();
-            sha512.update(&key);
-            key = sha512.finalize().to_vec();
-
-            key.truncate(ChaCha20Poly1305::KEY_SIZE);
-        },
-        Ordering::Greater => {
-            warning!(
-                "{} encryption key's length {} is longer than {}; hashing with SHA512 and truncating to {} bytes",
-                capitalized,
-                key_len,
-                ChaCha20Poly1305::KEY_SIZE,
-                ChaCha20Poly1305::KEY_SIZE
-            );
-
-            let mut sha512 = Sha512::new();
-            sha512.update(&key);
-            key = sha512.finalize().to_vec();
-
-            key.truncate(ChaCha20Poly1305::KEY_SIZE);
-        },
-        Ordering::Equal => {},
-    }
-
-    log!("\nHardening the {name} encryption key using SlowKey\n");
-
-    // Stretch and harden the encryption key with a single SlowKey iteration
-    SlowKey::new(&ENCRYPTION_KEY_HARDENING_OPTIONS).derive_key(&SlowKey::DEFAULT_SALT, &key, &[], 0)
+    normalize_and_harden_key(
+        key,
+        Some(&format!("{} encryption key", capitalized)),
+        Some(&format!("{name} encryption key")),
+    )
 }
 
 pub fn get_encryption_key(name: &str) -> Vec<u8> {
@@ -834,6 +850,9 @@ pub fn derive(derive_options: DeriveOptions) {
         });
 
         let secret_data = secret.open();
+
+        log!("Loaded password and salt from secrets file\n");
+
         (secret_data.data.salt, secret_data.data.password)
     } else {
         (get_salt(), get_password())
@@ -1064,5 +1083,267 @@ pub fn derive(derive_options: DeriveOptions) {
         ))
         .to_string()
         .cyan()
+    );
+}
+
+pub struct DaisyDeriveOptions {
+    pub options: SlowKeyOptions,
+    pub output: Option<PathBuf>,
+    pub base64: bool,
+    pub base58: bool,
+    pub iteration_moving_window: u32,
+    pub sanity: bool,
+    pub secrets_paths: Vec<PathBuf>,
+}
+
+pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
+    print_input_instructions();
+
+    if opts.secrets_paths.is_empty() {
+        panic!("At least one secrets file must be provided");
+    }
+
+    log!(
+        "Daisy-chaining derivation through {} secrets file(s)\n",
+        opts.secrets_paths.len()
+    );
+
+    // Ask for the initial encryption key for the first secrets file
+    log!("Please provide the encryption key for the first secrets file:\n");
+    let mut current_key = get_encryption_key_with_confirm("secrets", false);
+
+    let mut final_key = Vec::new();
+    let mut last_salt = Vec::new();
+    let mut last_password = Vec::new();
+    let overall_start_time = SystemTime::now();
+
+    // Process each secrets file in sequence
+    for (i, secrets_path) in opts.secrets_paths.iter().enumerate() {
+        log!(
+            "Processing secrets file {} of {}: {}\n",
+            i + 1,
+            opts.secrets_paths.len(),
+            secrets_path.display()
+        );
+
+        // Decrypt the secrets file using the current key
+        let secret = Secret::new(&SecretOptions {
+            path: secrets_path.clone(),
+            key: current_key.clone(),
+        });
+
+        let secret_data = secret.open();
+        let (salt_str, password_str) = (secret_data.data.salt, secret_data.data.password);
+
+        log!("Loaded password and salt from secrets file\n");
+
+        // Convert salt string to bytes
+        let salt = input_to_bytes(&salt_str);
+
+        // Convert password string to bytes
+        let password = input_to_bytes(&password_str);
+
+        // Save the last salt and password for output file fingerprint
+        last_salt = salt.clone();
+        last_password = password.clone();
+
+        // Derive using the secrets file
+        let options = opts.options.clone();
+        options.print();
+
+        // Print the colored hash fingerprint of the parameters
+        let fingerprint = Fingerprint::from_data(&options, &salt, &password);
+        fingerprint.print();
+
+        let mb = MultiProgress::new();
+
+        // Create the main progress bar
+        let pb = mb
+            .add(ProgressBar::new(options.iterations as u64))
+            .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap());
+
+        pb.reset_eta();
+        pb.enable_steady_tick(std::time::Duration::from_secs(1));
+
+        pb.set_message("0");
+
+        // Create a progress bar to track iteration times
+        let ipb = mb
+            .add(ProgressBar::new(options.iterations as u64))
+            .with_style(ProgressStyle::with_template("{msg}").unwrap());
+
+        let running_time = Instant::now();
+        let mut iteration_time = Instant::now();
+        let mut samples: VecDeque<u128> = VecDeque::new();
+
+        let slowkey = SlowKey::new(&options);
+
+        let key = slowkey.derive_key_with_callback(
+            &salt,
+            &password,
+            &[],
+            0,
+            opts.sanity,
+            |current_iteration, _current_data| {
+                // Track iteration times
+                let last_iteration_time = iteration_time.elapsed().as_millis();
+                iteration_time = Instant::now();
+
+                samples.push_back(last_iteration_time);
+
+                // If we have more than the required samples, remove the oldest one
+                if samples.len() > opts.iteration_moving_window as usize {
+                    samples.pop_front();
+                }
+
+                // Calculate the moving average
+                let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
+
+                let iteration_info = format!(
+                    "\nIteration time moving average ({}): {}, last iteration time: {}",
+                    opts.iteration_moving_window.to_string().cyan(),
+                    format_duration(std::time::Duration::from_millis(moving_average as u64))
+                        .to_string()
+                        .cyan(),
+                    format_duration(std::time::Duration::from_millis(last_iteration_time as u64))
+                        .to_string()
+                        .cyan(),
+                );
+
+                pb.inc(1);
+
+                // Set the percent using a custom message
+                pb.set_message(format!(
+                    "{}",
+                    ((current_iteration + 1) * 100) as f64 / options.iterations as f64
+                ));
+
+                ipb.set_message(iteration_info);
+            },
+        );
+
+        pb.finish();
+        ipb.finish();
+
+        log!(
+            "\n\nDerived key for secrets file {} is (please highlight to see): {}",
+            i + 1,
+            format!("0x{}", hex::encode(&key)).black().on_black()
+        );
+
+        if opts.base64 {
+            log!(
+                "\nDerived key (base64) for secrets file {} is (please highlight to see): {}",
+                i + 1,
+                general_purpose::STANDARD.encode(&key).black().on_black()
+            );
+        }
+
+        if opts.base58 {
+            log!(
+                "\nDerived key (base58) for secrets file {} is (please highlight to see): {}",
+                i + 1,
+                bs58::encode(&key).into_string().black().on_black()
+            );
+        }
+
+        log!(
+            "\nSecrets file {} processing time: {}",
+            i + 1,
+            format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
+                .to_string()
+                .cyan()
+        );
+
+        // Save the final key
+        final_key = key.clone();
+
+        // If this is not the last file, normalize and harden the key for use as decryption key
+        if i < opts.secrets_paths.len() - 1 {
+            // Normalize and harden the derived key (same process as get_encryption_key_with_confirm)
+            // This is necessary because secrets files are encrypted with hardened keys
+            current_key = normalize_and_harden_key(key, Some("Derived key"), Some("derived key"));
+
+            log!("Using derived key as decryption key for next secrets file...\n",);
+        }
+    }
+
+    // Display final result
+    log!(
+        "\n\nFinal output is (please highlight to see): {}",
+        format!("0x{}", hex::encode(&final_key)).black().on_black()
+    );
+
+    if opts.base64 {
+        log!(
+            "\nFinal output (base64) is (please highlight to see): {}",
+            general_purpose::STANDARD.encode(&final_key).black().on_black()
+        );
+    }
+
+    if opts.base58 {
+        log!(
+            "\nFinal output (base58) is (please highlight to see): {}",
+            bs58::encode(&final_key).into_string().black().on_black()
+        );
+    }
+
+    log!();
+
+    // Handle output file if specified
+    if let Some(output_path) = opts.output {
+        if output_path.exists() {
+            panic!("Output file \"{}\" already exists", output_path.display());
+        }
+
+        // Check if the output directory exists
+        if let Some(parent) = output_path.parent() {
+            if !parent.exists() {
+                panic!("Output directory \"{}\" does not exist", parent.display());
+            }
+        } else {
+            panic!(
+                "Could not determine the parent directory for output file \"{}\"",
+                output_path.display()
+            );
+        }
+
+        let _output_lock = match FileLock::try_lock(&output_path) {
+            Ok(lock) => lock,
+            Err(_) => panic!("Unable to lock {}", output_path.display()),
+        };
+
+        let output_key = get_encryption_key("output");
+
+        let out = Output::new(&crate::utils::outputs::output::OutputOptions {
+            path: output_path.clone(),
+            key: output_key,
+            slowkey: opts.options.clone(),
+        });
+
+        // Use the last secrets file's salt and password for the fingerprint
+        let fingerprint = Fingerprint::from_data(&opts.options, &last_salt, &last_password);
+
+        out.save(&final_key, None, &fingerprint);
+
+        log!(
+            "Saved encrypted output to \"{}\"\n",
+            output_path.display().to_string().cyan()
+        );
+    }
+
+    log!(
+        "Start time: {}",
+        DateTime::<Local>::from(overall_start_time)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
+    );
+    log!(
+        "End time: {}",
+        DateTime::<Local>::from(SystemTime::now())
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .cyan()
     );
 }

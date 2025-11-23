@@ -2,7 +2,7 @@
 authors = ["Leonid Beder <leonid@lbeder.com>"]
 edition = "2021"
 name = "slowkey"
-version = "2.17.0"
+version = "2.18.0"
 
 [dependencies]
 balloon-hash = "0.4.0"
