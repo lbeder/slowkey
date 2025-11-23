@@ -220,7 +220,9 @@ Options:
       --balloon-t-cost <BALLOON_T_COST>
           Balloon Hash number of iterations (must be greater than 1 and lesser than or equal 4294967295) [default: 1]
       --output <OUTPUT>
-          Optional path for storing the encrypted output
+          Optional path for storing the encrypted output (final derived key)
+      --output-dir <OUTPUT_DIR>
+          Optional directory for storing encrypted outputs for each secrets file in the chain. Each output file will be named "output_" followed by the secrets file name
       --base64
           Show the result in Base64 (in addition to hex)
       --base58
@@ -238,20 +240,23 @@ Options:
 Example usage:
 
 ```sh
-slowkey daisy-derive -i 1000 --secrets secret1.dat --secrets secret2.dat --secrets secret3.dat --output final_output.dat
+slowkey daisy-derive -i 1000 --secrets secret1.dat --secrets secret2.dat --secrets secret3.dat --output-dir ~/outputs --output final_output.dat
 ```
 
 The command will:
 
 1. Prompt for the encryption key to decrypt `secret1.dat`
 2. Derive a key using the password and salt from `secret1.dat`
-3. Normalize and harden the derived key, then use it to decrypt `secret2.dat`
-4. Derive a key using the password and salt from `secret2.dat`
-5. Normalize and harden the derived key, then use it to decrypt `secret3.dat`
-6. Derive the final key using the password and salt from `secret3.dat`
-7. Save the final key to `final_output.dat` if specified
+3. If `--output-dir` is specified, save the derived key to `output_dir/output_secret1.dat`
+4. Normalize and harden the derived key, then use it to decrypt `secret2.dat`
+5. Derive a key using the password and salt from `secret2.dat`
+6. If `--output-dir` is specified, save the derived key to `output_dir/output_secret2.dat`
+7. Normalize and harden the derived key, then use it to decrypt `secret3.dat`
+8. Derive the final key using the password and salt from `secret3.dat`
+9. If `--output-dir` is specified, save the final key to `output_dir/output_secret3.dat`
+10. If `--output` is specified, save the final key to the specified output file
 
-Each step shows progress bars and timing information, and the derived key from each step is displayed (in hex format by default, with optional Base64 and Base58 formats).
+Each step shows progress bars and timing information, and the derived key from each step is displayed (in hex format by default, with optional Base64 and Base58 formats). When `--output-dir` is used, each derived key in the chain is saved to a separate encrypted output file, allowing you to track the intermediate results of the daisy-chain process.
 
 ### Checkpoints
 
@@ -406,10 +411,12 @@ Usage: slowkey secrets generate [OPTIONS] --count <COUNT> --output-dir <OUTPUT_D
 Options:
   -c, --count <COUNT>            Number of secrets to generate
   -o, --output-dir <OUTPUT_DIR>  Output directory for the secrets
-  -p, --prefix <PREFIX>          Prefix for the secrets files
+  -p, --prefix <PREFIX>          Prefix for the secrets files (generated files will end with ".dat")
   -r, --random                   Generate random secrets instead of prompting for each
   -h, --help                     Print help
 ```
+
+Note that all generated secrets files will have the ".dat" extension appended to the prefix. For example, with `--prefix "secret"` and `--count 3`, the files will be named `secret01.dat`, `secret02.dat`, and `secret03.dat`.
 
 Note about entropy input: When using the `--random` option, the tool prompts for extra entropy. Some terminals limit the maximum input line length (for example, 4095 characters). After you press Enter, SlowKey echoes the provided entropy and prints its length ("Entropy (please highlight to see): ... Length: N"). Please verify the printed entropy and its length to ensure your input was not truncated by the terminal.
 

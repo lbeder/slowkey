@@ -1089,6 +1089,7 @@ pub fn derive(derive_options: DeriveOptions) {
 pub struct DaisyDeriveOptions {
     pub options: SlowKeyOptions,
     pub output: Option<PathBuf>,
+    pub output_dir: Option<PathBuf>,
     pub base64: bool,
     pub base58: bool,
     pub iteration_moving_window: u32,
@@ -1111,6 +1112,13 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
     // Ask for the initial encryption key for the first secrets file
     log!("Please provide the encryption key for the first secrets file:\n");
     let mut current_key = get_encryption_key_with_confirm("secrets", false);
+
+    // Ask for the output encryption key if output or output_dir is specified
+    let output_key = if opts.output.is_some() || opts.output_dir.is_some() {
+        Some(get_encryption_key("output"))
+    } else {
+        None
+    };
 
     let mut final_key = Vec::new();
     let mut last_salt = Vec::new();
@@ -1248,12 +1256,55 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         }
 
         log!(
-            "\nSecrets file {} processing time: {}",
+            "\nSecrets file {} processing time: {}\n",
             i + 1,
             format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
                 .to_string()
                 .cyan()
         );
+
+        // Save the derived key to output_dir if specified
+        if let Some(ref output_dir) = opts.output_dir {
+            if !output_dir.exists() {
+                panic!("Output directory \"{}\" does not exist", output_dir.display());
+            }
+
+            // Get the filename from the secrets path and prefix it with "output_"
+            let secrets_filename = secrets_path
+                .file_name()
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Could not determine filename for secrets file: {}",
+                        secrets_path.display()
+                    )
+                })
+                .to_string_lossy();
+            let output_filename = format!("output_{}", secrets_filename);
+            let output_path = output_dir.join(output_filename);
+
+            if output_path.exists() {
+                panic!("Output file \"{}\" already exists", output_path.display());
+            }
+
+            let _output_lock = match FileLock::try_lock(&output_path) {
+                Ok(lock) => lock,
+                Err(_) => panic!("Unable to lock {}", output_path.display()),
+            };
+
+            let out = Output::new(&crate::utils::outputs::output::OutputOptions {
+                path: output_path.clone(),
+                key: output_key.clone().unwrap(),
+                slowkey: opts.options.clone(),
+            });
+
+            out.save(&key, None, &fingerprint);
+
+            log!(
+                "Saved encrypted output for secrets file {} to \"{}\"",
+                i + 1,
+                output_path.display().to_string().cyan()
+            );
+        }
 
         // Save the final key
         final_key = key.clone();
@@ -1270,7 +1321,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
     // Display final result
     log!(
-        "\n\nFinal output is (please highlight to see): {}",
+        "\nFinal output is (please highlight to see): {}",
         format!("0x{}", hex::encode(&final_key)).black().on_black()
     );
 
@@ -1313,11 +1364,9 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
             Err(_) => panic!("Unable to lock {}", output_path.display()),
         };
 
-        let output_key = get_encryption_key("output");
-
         let out = Output::new(&crate::utils::outputs::output::OutputOptions {
             path: output_path.clone(),
-            key: output_key,
+            key: output_key.clone().unwrap(),
             slowkey: opts.options.clone(),
         });
 

@@ -248,6 +248,12 @@ enum Commands {
 
         #[arg(
             long,
+            help = "Optional directory for storing encrypted outputs for each secrets file in the chain. Each output file will be named \"output_\" followed by the secrets file name"
+        )]
+        output_dir: Option<PathBuf>,
+
+        #[arg(
+            long,
             action = clap::ArgAction::SetTrue,
             help = "Show the result in Base64 (in addition to hex)"
         )]
@@ -439,7 +445,11 @@ enum SecretsCommands {
         #[arg(short, long, help = "Output directory for the secrets files")]
         output_dir: PathBuf,
 
-        #[arg(short, long, help = "Prefix for the secrets files")]
+        #[arg(
+            short,
+            long,
+            help = "Prefix for the secrets files (generated files will end with \".dat\")"
+        )]
         prefix: String,
 
         #[arg(short, long, help = "Generate random secrets instead of prompting for each")]
@@ -650,6 +660,7 @@ fn main() {
             balloon_s_cost,
             balloon_t_cost,
             output,
+            output_dir,
             base64,
             base58,
             iteration_moving_window,
@@ -665,6 +676,7 @@ fn main() {
                     &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
                 ),
                 output,
+                output_dir,
                 base64,
                 base58,
                 iteration_moving_window,
