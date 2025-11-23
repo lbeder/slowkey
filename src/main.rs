@@ -463,6 +463,12 @@ enum SecretsCommands {
     Show {
         #[arg(long, help = "Path to the secrets file")]
         path: PathBuf,
+
+        #[arg(
+            long,
+            help = "Optional path to an output file. If provided, the output's derived key will be used as the decryption key for the secrets file"
+        )]
+        with_output: Option<PathBuf>,
     },
 
     #[command(about = "Reencrypt a secrets file with a new key", arg_required_else_help = true)]
@@ -472,6 +478,12 @@ enum SecretsCommands {
 
         #[arg(long, help = "Path to the new secrets file")]
         output: PathBuf,
+
+        #[arg(
+            long,
+            help = "Optional path to an output file. If provided, the output's derived key will be used as the new encryption key for the secrets file"
+        )]
+        with_output: Option<PathBuf>,
     },
 }
 
@@ -628,12 +640,20 @@ fn main() {
                 });
             },
 
-            SecretsCommands::Show { path } => {
-                cli::handle_secrets_show(cli::SecretsShowOptions { path });
+            SecretsCommands::Show { path, with_output } => {
+                cli::handle_secrets_show(cli::SecretsShowOptions { path, with_output });
             },
 
-            SecretsCommands::Reencrypt { input, output } => {
-                cli::handle_secrets_reencrypt(cli::SecretsReencryptOptions { input, output });
+            SecretsCommands::Reencrypt {
+                input,
+                output,
+                with_output,
+            } => {
+                cli::handle_secrets_reencrypt(cli::SecretsReencryptOptions {
+                    input,
+                    output,
+                    with_output,
+                });
             },
         },
 

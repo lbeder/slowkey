@@ -425,25 +425,45 @@ Note about entropy input: When using the `--random` option, the tool prompts for
 ```sh
 Show the contents of an encrypted secrets file
 
-Usage: slowkey secrets show --path <PATH>
+Usage: slowkey secrets show --path <PATH> [OPTIONS]
 
 Options:
-      --path <PATH>  Path to the secrets   file
-  -h, --help         Print help
+      --path <PATH>        Path to the secrets file
+      --with-output <OUTPUT>  Optional path to an output file. If provided, the output's derived key will be used as the decryption key for the secrets file
+  -h, --help               Print help
 ```
+
+When using `--with-output`, the tool will:
+
+1. Ask for the encryption key to decrypt the output file
+2. Extract the derived key from the output file
+3. Normalize and harden the derived key (same process as used for encrypting secrets files)
+4. Use this key to decrypt and display the secrets file
+
+This allows you to decrypt a secrets file using a derived key from a previous derivation, creating a connection between the derivation result and the secrets file decryption.
 
 #### Reencrypting a Secret
 
 ```sh
 Reencrypt a secrets file with a new key
 
-Usage: slowkey secrets reencrypt --input <INPUT> --output <OUTPUT>
+Usage: slowkey secrets reencrypt --input <INPUT> --output <OUTPUT> [OPTIONS]
 
 Options:
-      --input <INPUT>    Path to an existing secrets file
-      --output <OUTPUT>  Path to the new secrets file
-  -h, --help             Print help
+      --input <INPUT>        Path to an existing secrets file
+      --output <OUTPUT>      Path to the new secrets file
+      --with-output <OUTPUT> Optional path to an output file. If provided, the output's derived key will be used as the new encryption key for the secrets file
+  -h, --help                 Print help
 ```
+
+When using `--with-output`, the tool will:
+
+1. Ask for the encryption key to decrypt the output file
+2. Extract the derived key from the output file
+3. Normalize and harden the derived key (same process as used for encrypting secrets files)
+4. Use this key to reencrypt the secrets file
+
+This allows you to use a derived key from a previous derivation as the encryption key for a secrets file, creating a connection between the derivation result and the secrets file encryption.
 
 ### Running Benchmarks
 

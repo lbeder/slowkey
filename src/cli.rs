@@ -728,14 +728,38 @@ pub fn handle_secrets_generate(opts: SecretsGenerateOptions) {
 
 pub struct SecretsShowOptions {
     pub path: PathBuf,
+    pub with_output: Option<PathBuf>,
 }
 
 pub fn handle_secrets_show(opts: SecretsShowOptions) {
     print_input_instructions();
 
-    log!("Please provide the encryption key for the secrets file:\n");
+    let key = if let Some(output_path) = opts.with_output {
+        log!("Loading decryption key from output file: {}\n", output_path.display());
 
-    let key = get_encryption_key_with_confirm("secrets", false);
+        log!("Please provide the encryption key for the output file:\n");
+
+        let output_key = get_encryption_key_with_confirm("output", false);
+
+        let output_data = Output::open(&OpenOutputOptions {
+            key: output_key,
+            path: output_path,
+        });
+
+        log!("Loaded derived key from output file");
+
+        // Use the output's derived key as the decryption key
+        // Normalize and harden it since it will be used as a decryption key
+        normalize_and_harden_key(
+            output_data.data.data,
+            Some("Output derived key"),
+            Some("output derived key"),
+        )
+    } else {
+        log!("Please provide the encryption key for the secrets file:\n");
+
+        get_encryption_key_with_confirm("secrets", false)
+    };
 
     let secret = Secret::new(&SecretOptions {
         path: opts.path.clone(),
@@ -750,6 +774,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
 pub struct SecretsReencryptOptions {
     pub input: PathBuf,
     pub output: PathBuf,
+    pub with_output: Option<PathBuf>,
 }
 
 pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
@@ -759,9 +784,32 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
 
     let key = get_encryption_key_with_confirm("secrets", false);
 
-    log!("Please provide the new encryption key for the secrets file:\n");
+    let new_key = if let Some(output_path) = opts.with_output {
+        log!("Loading encryption key from output file: {}\n", output_path.display());
 
-    let new_key = get_encryption_key("secrets");
+        log!("Please provide the encryption key for the output file:\n");
+
+        let output_key = get_encryption_key_with_confirm("output", false);
+
+        let output_data = Output::open(&OpenOutputOptions {
+            key: output_key,
+            path: output_path,
+        });
+
+        log!("Loaded derived key from output file");
+
+        // Use the output's derived key as the new encryption key
+        // Normalize and harden it since it will be used as an encryption key
+        normalize_and_harden_key(
+            output_data.data.data,
+            Some("Output derived key"),
+            Some("output derived key"),
+        )
+    } else {
+        log!("Please provide the new encryption key for the secrets file:\n");
+
+        get_encryption_key("secrets")
+    };
 
     Secret::reencrypt(&opts.input, key, &opts.output, new_key);
 
