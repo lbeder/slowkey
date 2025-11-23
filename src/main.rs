@@ -286,7 +286,7 @@ enum CheckpointCommands {
     #[command(about = "Print a checkpoint", arg_required_else_help = true)]
     Show {
         #[arg(long, help = "Path to an existing checkpoint")]
-        path: PathBuf,
+        input: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the checkpoint")]
         verify: bool,
@@ -350,7 +350,7 @@ enum CheckpointCommands {
             long,
             help = "Path to an existing checkpoint from which to resume the derivation process"
         )]
-        path: Option<PathBuf>,
+        input: Option<PathBuf>,
 
         #[arg(
             long,
@@ -402,7 +402,7 @@ enum OutputCommands {
     #[command(about = "Print an output file", arg_required_else_help = true)]
     Show {
         #[arg(long, help = "Path to an existing output")]
-        path: PathBuf,
+        input: PathBuf,
 
         #[arg(long, help = "Verify that the password and salt match the output")]
         verify: bool,
@@ -461,8 +461,8 @@ enum SecretsCommands {
         arg_required_else_help = true
     )]
     Show {
-        #[arg(long, help = "Path to the secrets file")]
-        path: PathBuf,
+        #[arg(long, help = "Path to an existing secrets file")]
+        input: PathBuf,
 
         #[arg(
             long,
@@ -553,14 +553,14 @@ fn main() {
 
         Commands::Checkpoint(cmd) => match cmd {
             CheckpointCommands::Show {
-                path,
+                input,
                 verify,
                 secrets,
                 base64,
                 base58,
             } => {
                 cli::handle_checkpoint_show(cli::CheckpointShowOptions {
-                    path,
+                    input,
                     verify,
                     secrets,
                     base64,
@@ -574,7 +574,7 @@ fn main() {
                 checkpoint_dir,
                 checkpoint_interval,
                 max_checkpoints_to_keep,
-                path,
+                input,
                 interactive,
                 base64,
                 base58,
@@ -588,7 +588,7 @@ fn main() {
                     checkpoint_dir,
                     checkpoint_interval,
                     max_checkpoints_to_keep,
-                    path,
+                    input,
                     interactive,
                     base64,
                     base58,
@@ -605,14 +605,14 @@ fn main() {
 
         Commands::Output(cmd) => match cmd {
             OutputCommands::Show {
-                path,
+                input,
                 verify,
                 secrets,
                 base64,
                 base58,
             } => {
                 cli::handle_output_show(cli::OutputShowOptions {
-                    path,
+                    input,
                     verify,
                     secrets,
                     base64,
@@ -640,8 +640,8 @@ fn main() {
                 });
             },
 
-            SecretsCommands::Show { path, with_output } => {
-                cli::handle_secrets_show(cli::SecretsShowOptions { path, with_output });
+            SecretsCommands::Show { input, with_output } => {
+                cli::handle_secrets_show(cli::SecretsShowOptions { input, with_output });
             },
 
             SecretsCommands::Reencrypt {

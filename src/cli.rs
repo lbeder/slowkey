@@ -501,7 +501,7 @@ pub fn print_input_instructions() {
 
 // Handlers options for other commands
 pub struct CheckpointShowOptions {
-    pub path: PathBuf,
+    pub input: PathBuf,
     pub verify: bool,
     pub secrets: Option<PathBuf>,
     pub base64: bool,
@@ -514,7 +514,7 @@ pub fn handle_checkpoint_show(opts: CheckpointShowOptions) {
     let file_key = get_encryption_key_with_confirm("checkpoint", false);
     let checkpoint_data = Checkpoint::open(&OpenCheckpointOptions {
         key: file_key,
-        path: opts.path,
+        path: opts.input,
     });
 
     checkpoint_data.print(crate::DisplayOptions {
@@ -562,7 +562,7 @@ pub struct CheckpointRestoreOptions {
     pub checkpoint_dir: Option<PathBuf>,
     pub checkpoint_interval: usize,
     pub max_checkpoints_to_keep: usize,
-    pub path: Option<PathBuf>,
+    pub input: Option<PathBuf>,
     pub interactive: bool,
     pub base64: bool,
     pub base58: bool,
@@ -576,7 +576,7 @@ pub fn handle_checkpoint_restore(opts: CheckpointRestoreOptions) {
 
     let mut checkpoint_key: Option<Vec<u8>> = None;
 
-    let checkpoint_data = match opts.path {
+    let checkpoint_data = match opts.input {
         Some(path) => {
             let key = get_encryption_key_with_confirm("checkpoint", false);
             checkpoint_key = Some(key.clone());
@@ -642,7 +642,7 @@ pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
 }
 
 pub struct OutputShowOptions {
-    pub path: PathBuf,
+    pub input: PathBuf,
     pub verify: bool,
     pub secrets: Option<PathBuf>,
     pub base64: bool,
@@ -655,7 +655,7 @@ pub fn handle_output_show(opts: OutputShowOptions) {
     let file_key = get_encryption_key_with_confirm("output", false);
     let output_data = Output::open(&OpenOutputOptions {
         key: file_key,
-        path: opts.path,
+        path: opts.input,
     });
 
     output_data.print(crate::DisplayOptions {
@@ -727,7 +727,7 @@ pub fn handle_secrets_generate(opts: SecretsGenerateOptions) {
 }
 
 pub struct SecretsShowOptions {
-    pub path: PathBuf,
+    pub input: PathBuf,
     pub with_output: Option<PathBuf>,
 }
 
@@ -762,7 +762,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
     };
 
     let secret = Secret::new(&SecretOptions {
-        path: opts.path.clone(),
+        path: opts.input.clone(),
         key,
     });
 
