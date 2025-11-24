@@ -231,6 +231,8 @@ Options:
           Iteration time sampling moving window size [default: 10]
       --sanity
           Perform an optional sanity check by computing the algorithm twice and verifying the results
+      --fast-forward
+          Fast-forward mode: skip derivation for secrets files that have existing outputs in the output directory. Requires --output-dir to be specified. When enabled, the tool will check for existing output files (using the same naming convention) and attempt to decrypt them using the provided output encryption key. If decryption succeeds, derivation is skipped and the tool continues to the next secrets file
       --secrets <SECRETS>...
           List of secrets files to daisy-chain (mandatory)
   -h, --help
@@ -257,6 +259,31 @@ The command will:
 10. If `--output` is specified, save the final key to the specified output file
 
 Each step shows progress bars and timing information, and the derived key from each step is displayed (in hex format by default, with optional Base64 and Base58 formats). When `--output-dir` is used, each derived key in the chain is saved to a separate encrypted output file, allowing you to track the intermediate results of the daisy-chain process.
+
+### Fast-Forward Mode
+
+When using `--fast-forward`, the tool will attempt to skip derivation for secrets files that have existing outputs in the output directory. This is useful when you need to re-run a daisy-chain derivation but want to skip already-completed derivations.
+
+Fast-forward mode works as follows:
+
+1. For each secrets file N, the tool checks if an output file exists with the name `output_<secret_filename>` in the output directory
+2. If the file exists, the tool attempts to decrypt it using the output encryption key provided at the beginning
+3. If decryption succeeds, the tool uses the derived key from the output file and skips the derivation for that secrets file
+4. If the file doesn't exist or decryption fails, the tool performs the derivation as normal
+
+Example with fast-forward:
+
+```sh
+slowkey daisy-derive -i 1000 --secrets secret1.dat --secrets secret2.dat --secrets secret3.dat --output-dir ~/outputs --fast-forward
+```
+
+If `output_secret1.dat` and `output_secret2.dat` already exist in `~/outputs` and can be decrypted with the provided key, the tool will:
+
+- Fast-forward past `secret1.dat` and `secret2.dat` derivations
+- Only perform derivation for `secret3.dat`
+- Continue the daisy-chain process normally
+
+**Note:** Fast-forward mode requires `--output-dir` to be specified. If decryption of an existing output file fails (e.g., wrong key), the tool will panic with an error message.
 
 ### Checkpoints
 

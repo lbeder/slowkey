@@ -19,6 +19,8 @@ use crate::utils::{
 };
 use crate::warning;
 
+const DAISY_OUTPUT_PREFIX: &str = "output_";
+
 use base64::{engine::general_purpose, Engine};
 use chrono::{DateTime, Local};
 use crossterm::style::Stylize;
@@ -1142,6 +1144,7 @@ pub struct DaisyDeriveOptions {
     pub base58: bool,
     pub iteration_moving_window: u32,
     pub sanity: bool,
+    pub fast_forward: bool,
     pub secrets_paths: Vec<PathBuf>,
 }
 
@@ -1152,10 +1155,19 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         panic!("At least one secrets file must be provided");
     }
 
+    // Fast-forward mode requires output_dir
+    if opts.fast_forward && opts.output_dir.is_none() {
+        panic!("Fast-forward mode requires --output-dir to be specified");
+    }
+
     log!(
         "Daisy-chaining derivation through {} secrets file(s)\n",
         opts.secrets_paths.len()
     );
+
+    if opts.fast_forward {
+        log!("Fast-forward mode enabled: will skip derivation for secrets files with existing outputs\n");
+    }
 
     // Ask for the initial encryption key for the first secrets file
     log!("Please provide the encryption key for the first secrets file:\n");
@@ -1182,7 +1194,50 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
             secrets_path.display()
         );
 
-        // Decrypt the secrets file using the current key
+        let running_time = Instant::now();
+
+        // Fast-forward: check if output exists and try to decrypt it
+        let fast_forward_result: Option<(Vec<u8>, Fingerprint)> = if opts.fast_forward {
+            if let Some(ref output_dir) = opts.output_dir {
+                // Get the filename from the secrets path and prefix it with DAISY_OUTPUT_PREFIX
+                let secrets_filename = secrets_path
+                    .file_name()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Could not determine filename for secrets file: {}",
+                            secrets_path.display()
+                        )
+                    })
+                    .to_string_lossy();
+                let output_filename = format!("{}{}", DAISY_OUTPUT_PREFIX, secrets_filename);
+                let output_path = output_dir.join(output_filename);
+
+                if output_path.exists() {
+                    log!("Found existing output file: {}\n", output_path.display());
+                    log!("Attempting to decrypt output file using provided key...\n");
+
+                    let output_data = Output::open(&OpenOutputOptions {
+                        key: output_key.clone().unwrap(),
+                        path: output_path.clone(),
+                    });
+
+                    log!("Successfully decrypted output file - fast-forwarding past derivation\n");
+                    Some((output_data.data.data, output_data.data.fingerprint))
+                } else {
+                    log!("No existing output file found - will perform derivation\n");
+                    // Perform derivation below
+                    None
+                }
+            } else {
+                // Perform derivation below
+                None
+            }
+        } else {
+            // Perform derivation below
+            None
+        };
+
+        // Decrypt the secrets file to get salt/password (needed for next iteration's key and final output fingerprint)
         let secret = Secret::new(&SecretOptions {
             path: secrets_path.clone(),
             key: current_key.clone(),
@@ -1203,105 +1258,96 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         last_salt = salt.clone();
         last_password = password.clone();
 
-        // Derive using the secrets file
-        let options = opts.options.clone();
-        options.print();
+        // If fast-forward didn't find a file, perform the derivation
+        let was_fast_forwarded = fast_forward_result.is_some();
+        let (key, fingerprint) = if let Some((k, f)) = fast_forward_result {
+            (k, f)
+        } else {
+            // Derive using the secrets file
+            let options = opts.options.clone();
+            options.print();
 
-        // Print the colored hash fingerprint of the parameters
-        let fingerprint = Fingerprint::from_data(&options, &salt, &password);
-        fingerprint.print();
+            // Print the colored hash fingerprint of the parameters
+            let fingerprint = Fingerprint::from_data(&options, &salt, &password);
+            fingerprint.print();
 
-        let mb = MultiProgress::new();
+            let mb = MultiProgress::new();
 
-        // Create the main progress bar
-        let pb = mb
-            .add(ProgressBar::new(options.iterations as u64))
-            .with_style(ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap());
+            // Create the main progress bar
+            let pb = mb.add(ProgressBar::new(options.iterations as u64)).with_style(
+                ProgressStyle::with_template("{bar:80.cyan/blue} {pos:>8}/{len:8} {msg}%    ({eta})").unwrap(),
+            );
 
-        pb.reset_eta();
-        pb.enable_steady_tick(std::time::Duration::from_secs(1));
+            pb.reset_eta();
+            pb.enable_steady_tick(std::time::Duration::from_secs(1));
 
-        pb.set_message("0");
+            pb.set_message("0");
 
-        // Create a progress bar to track iteration times
-        let ipb = mb
-            .add(ProgressBar::new(options.iterations as u64))
-            .with_style(ProgressStyle::with_template("{msg}").unwrap());
+            // Create a progress bar to track iteration times
+            let ipb = mb
+                .add(ProgressBar::new(options.iterations as u64))
+                .with_style(ProgressStyle::with_template("{msg}").unwrap());
 
-        let running_time = Instant::now();
-        let mut iteration_time = Instant::now();
-        let mut samples: VecDeque<u128> = VecDeque::new();
+            let mut iteration_time = Instant::now();
+            let mut samples: VecDeque<u128> = VecDeque::new();
 
-        let slowkey = SlowKey::new(&options);
+            let slowkey = SlowKey::new(&options);
 
-        let key = slowkey.derive_key_with_callback(
-            &salt,
-            &password,
-            &[],
-            0,
-            opts.sanity,
-            |current_iteration, _current_data| {
-                // Track iteration times
-                let last_iteration_time = iteration_time.elapsed().as_millis();
-                iteration_time = Instant::now();
+            let key = slowkey.derive_key_with_callback(
+                &salt,
+                &password,
+                &[],
+                0,
+                opts.sanity,
+                |current_iteration, _current_data| {
+                    // Track iteration times
+                    let last_iteration_time = iteration_time.elapsed().as_millis();
+                    iteration_time = Instant::now();
 
-                samples.push_back(last_iteration_time);
+                    samples.push_back(last_iteration_time);
 
-                // If we have more than the required samples, remove the oldest one
-                if samples.len() > opts.iteration_moving_window as usize {
-                    samples.pop_front();
-                }
+                    // If we have more than the required samples, remove the oldest one
+                    if samples.len() > opts.iteration_moving_window as usize {
+                        samples.pop_front();
+                    }
 
-                // Calculate the moving average
-                let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
+                    // Calculate the moving average
+                    let moving_average = samples.iter().sum::<u128>() as f64 / samples.len() as f64;
 
-                let iteration_info = format!(
-                    "\nIteration time moving average ({}): {}, last iteration time: {}",
-                    opts.iteration_moving_window.to_string().cyan(),
-                    format_duration(std::time::Duration::from_millis(moving_average as u64))
-                        .to_string()
-                        .cyan(),
-                    format_duration(std::time::Duration::from_millis(last_iteration_time as u64))
-                        .to_string()
-                        .cyan(),
-                );
+                    let iteration_info = format!(
+                        "\nIteration time moving average ({}): {}, last iteration time: {}",
+                        opts.iteration_moving_window.to_string().cyan(),
+                        format_duration(std::time::Duration::from_millis(moving_average as u64))
+                            .to_string()
+                            .cyan(),
+                        format_duration(std::time::Duration::from_millis(last_iteration_time as u64))
+                            .to_string()
+                            .cyan(),
+                    );
 
-                pb.inc(1);
+                    pb.inc(1);
 
-                // Set the percent using a custom message
-                pb.set_message(format!(
-                    "{}",
-                    ((current_iteration + 1) * 100) as f64 / options.iterations as f64
-                ));
+                    // Set the percent using a custom message
+                    pb.set_message(format!(
+                        "{}",
+                        ((current_iteration + 1) * 100) as f64 / options.iterations as f64
+                    ));
 
-                ipb.set_message(iteration_info);
-            },
-        );
+                    ipb.set_message(iteration_info);
+                },
+            );
 
-        pb.finish();
-        ipb.finish();
+            pb.finish();
+            ipb.finish();
+
+            (key, fingerprint)
+        };
 
         log!(
-            "\n\nDerived key for secrets file {} is (please highlight to see): {}",
+            "Derived key for secrets file {} is (please highlight to see): {}",
             i + 1,
             format!("0x{}", hex::encode(&key)).black().on_black()
         );
-
-        if opts.base64 {
-            log!(
-                "\nDerived key (base64) for secrets file {} is (please highlight to see): {}",
-                i + 1,
-                general_purpose::STANDARD.encode(&key).black().on_black()
-            );
-        }
-
-        if opts.base58 {
-            log!(
-                "\nDerived key (base58) for secrets file {} is (please highlight to see): {}",
-                i + 1,
-                bs58::encode(&key).into_string().black().on_black()
-            );
-        }
 
         log!(
             "\nSecrets file {} processing time: {}\n",
@@ -1311,13 +1357,13 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                 .cyan()
         );
 
-        // Save the derived key to output_dir if specified
+        // Save the derived key to output_dir if specified (skip if fast-forwarded and file already exists)
         if let Some(ref output_dir) = opts.output_dir {
             if !output_dir.exists() {
                 panic!("Output directory \"{}\" does not exist", output_dir.display());
             }
 
-            // Get the filename from the secrets path and prefix it with "output_"
+            // Get the filename from the secrets path and prefix it with DAISY_OUTPUT_PREFIX
             let secrets_filename = secrets_path
                 .file_name()
                 .unwrap_or_else(|| {
@@ -1327,31 +1373,39 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                     )
                 })
                 .to_string_lossy();
-            let output_filename = format!("output_{}", secrets_filename);
+            let output_filename = format!("{}{}", DAISY_OUTPUT_PREFIX, secrets_filename);
             let output_path = output_dir.join(output_filename);
 
+            // Skip saving if file already exists (fast-forward case)
             if output_path.exists() {
-                panic!("Output file \"{}\" already exists", output_path.display());
+                if was_fast_forwarded {
+                    log!(
+                        "Output file already exists (fast-forwarded) - skipping save: \"{}\"",
+                        output_path.display().to_string().cyan()
+                    );
+                } else {
+                    panic!("Output file \"{}\" already exists", output_path.display());
+                }
+            } else {
+                let _output_lock = match FileLock::try_lock(&output_path) {
+                    Ok(lock) => lock,
+                    Err(_) => panic!("Unable to lock {}", output_path.display()),
+                };
+
+                let out = Output::new(&crate::utils::outputs::output::OutputOptions {
+                    path: output_path.clone(),
+                    key: output_key.clone().unwrap(),
+                    slowkey: opts.options.clone(),
+                });
+
+                out.save(&key, None, &fingerprint);
+
+                log!(
+                    "Saved encrypted output for secrets file {} to \"{}\"",
+                    i + 1,
+                    output_path.display().to_string().cyan()
+                );
             }
-
-            let _output_lock = match FileLock::try_lock(&output_path) {
-                Ok(lock) => lock,
-                Err(_) => panic!("Unable to lock {}", output_path.display()),
-            };
-
-            let out = Output::new(&crate::utils::outputs::output::OutputOptions {
-                path: output_path.clone(),
-                key: output_key.clone().unwrap(),
-                slowkey: opts.options.clone(),
-            });
-
-            out.save(&key, None, &fingerprint);
-
-            log!(
-                "Saved encrypted output for secrets file {} to \"{}\"",
-                i + 1,
-                output_path.display().to_string().cyan()
-            );
         }
 
         // Save the final key

@@ -276,6 +276,13 @@ enum Commands {
         )]
         sanity: bool,
 
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Fast-forward mode: skip derivation for secrets files that have existing outputs in the output directory. Requires --output-dir to be specified"
+        )]
+        fast_forward: bool,
+
         #[arg(long, help = "List of secrets files to daisy-chain (mandatory)", required = true)]
         secrets: Vec<PathBuf>,
     },
@@ -685,6 +692,7 @@ fn main() {
             base58,
             iteration_moving_window,
             sanity,
+            fast_forward,
             secrets,
         } => {
             cli::handle_daisy_derive(cli::DaisyDeriveOptions {
@@ -701,6 +709,7 @@ fn main() {
                 base58,
                 iteration_moving_window,
                 sanity,
+                fast_forward,
                 secrets_paths: secrets,
             });
         },
