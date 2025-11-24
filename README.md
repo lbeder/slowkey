@@ -134,6 +134,8 @@ Options:
 
 ### Deriving
 
+The `derive` command performs key derivation using the SlowKey algorithm with your specified parameters. This is the core functionality of SlowKey.
+
 ```sh
 Derive a key using using Scrypt, Argon2, Balloon Hash, SHA2, and SHA3
 
@@ -180,9 +182,25 @@ Options:
           Print help
 ```
 
+**Tips for using the `derive` command:**
+
+- Use `--secrets` to avoid typing passwords and salts directly in the terminal, which can be more secure
+- The `--output` option saves the derived key in encrypted form, which is useful for long-term storage or sharing
+- Use `--checkpoint-dir` and `--checkpoint-interval` for long-running derivations to enable recovery from interruptions
+- The `--sanity` flag performs double computation to verify hardware stability, recommended for critical derivations
+- Combine `--base64` and `--base58` flags if you need the key in multiple formats
+- The iteration count directly affects security and computation time - choose based on your threat model and time constraints
+
 ### Daisy-Chain Derivation
 
 The `daisy-derive` command enables daisy-chaining key derivation through multiple encrypted secrets files. This feature allows you to create a chain of derivations where each derived key becomes the decryption key for the next secrets file in the sequence. This is useful for scenarios where you want to create a layered security approach, where each secrets file is protected by the key derived from the previous one.
+
+**Security benefits:**
+
+- Each secrets file in the chain is protected by a key that requires all previous derivations to be completed
+- Breaking one link in the chain requires re-deriving all previous keys
+- Provides defense-in-depth: even if one secrets file is compromised, the others remain protected by their derived keys
+- The initial encryption key is the only long-term secret needed to start the chain
 
 The workflow is as follows:
 
@@ -260,6 +278,14 @@ The command will:
 
 Each step shows progress bars and timing information, and the derived key from each step is displayed (in hex format by default, with optional Base64 and Base58 formats). When `--output-dir` is used, each derived key in the chain is saved to a separate encrypted output file, allowing you to track the intermediate results of the daisy-chain process.
 
+**Tips for using `--output-dir`:**
+
+- Use `--output-dir` when you want to preserve intermediate derivation results for later use or verification
+- The output files use the naming convention `output_<secret_filename>`, making it easy to identify which secrets file each output corresponds to
+- Output files are encrypted with the same encryption key you provide at the beginning, so keep this key secure
+- You can use these output files with the `--with-output` option in `secrets show` and `secrets reencrypt` commands
+- If you plan to use fast-forward mode later, always use `--output-dir` during the initial run
+
 ### Fast-Forward Mode
 
 When using `--fast-forward`, the tool will attempt to skip derivation for secrets files that have existing outputs in the output directory. This is useful when you need to re-run a daisy-chain derivation but want to skip already-completed derivations.
@@ -283,7 +309,21 @@ If `output_secret1.dat` and `output_secret2.dat` already exist in `~/outputs` an
 - Only perform derivation for `secret3.dat`
 - Continue the daisy-chain process normally
 
-**Note:** Fast-forward mode requires `--output-dir` to be specified. If decryption of an existing output file fails (e.g., wrong key), the tool will panic with an error message.
+**Tips for using fast-forward mode:**
+
+- Always use the same output encryption key that was used when creating the output files
+- Fast-forward mode is most useful when you need to re-run a daisy-chain with modified parameters (e.g., different iteration count) but want to skip already-completed derivations
+- If you change the derivation parameters (iterations, length, algorithm parameters), fast-forward will still work, but the derived keys from fast-forwarded steps will have been computed with the old parameters
+- Fast-forward mode checks each output file sequentially - if one file is missing or fails to decrypt, derivation will proceed normally for that and all subsequent secrets files
+- To force a fresh derivation, simply delete the output files you want to re-derive before running with `--fast-forward`
+- The tool will display messages indicating when it finds existing output files and when it successfully fast-forwards past a derivation
+
+**Important notes:**
+
+- Fast-forward mode requires `--output-dir` to be specified
+- If decryption of an existing output file fails (e.g., wrong key), the tool will panic with an error message
+- The secrets file must still be decrypted even when fast-forwarding (to get salt/password for the next iteration's key), but the actual derivation step is skipped
+- Fast-forwarded steps still require the correct decryption key for the secrets file (the key derived from the previous step)
 
 ### Checkpoints
 
@@ -469,6 +509,12 @@ When using `--with-output`, the tool will:
 
 This allows you to decrypt a secrets file using a derived key from a previous derivation, creating a connection between the derivation result and the secrets file decryption.
 
+**Use cases:**
+
+- Verify that a secrets file was encrypted with a specific derived key
+- Decrypt a secrets file when you only have access to the output file from a previous derivation
+- Create a workflow where secrets files are encrypted using derived keys from a daisy-chain process
+
 #### Reencrypting a Secret
 
 ```sh
@@ -491,6 +537,12 @@ When using `--with-output`, the tool will:
 4. Use this key to reencrypt the secrets file
 
 This allows you to use a derived key from a previous derivation as the encryption key for a secrets file, creating a connection between the derivation result and the secrets file encryption.
+
+**Use cases:**
+
+- Reencrypt a secrets file using a derived key from a daisy-chain derivation
+- Update the encryption key of a secrets file to match a newly derived key
+- Create a workflow where secrets files are periodically reencrypted with updated derived keys
 
 ### Running Benchmarks
 
