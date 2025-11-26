@@ -44,7 +44,7 @@
 
 SlowKey is a cutting-edge [Key Derivation Function](https://en.wikipedia.org/wiki/Key_derivation_function) (KDF) tool designed to enhance cryptographic security in various applications, from securing sensitive data to protecting user passwords. At its core, SlowKey leverages the power of five renowned cryptographic algorithms: [Scrypt](https://en.wikipedia.org/wiki/Scrypt), [Argon2](https://en.wikipedia.org/wiki/Argon2), [Balloon Hash](https://en.wikipedia.org/wiki/Balloon_hashing), [SHA2](https://en.wikipedia.org/wiki/SHA-2), and [SHA3](https://en.wikipedia.org/wiki/SHA-3), each selected for its unique strengths in ensuring data integrity and security.
 
-SlowKey incorporates Scrypt, a memory-hard KDF that is specifically engineered to make brute-force attacks prohibitively expensive. By requiring significant amounts of memory and processing power to compute the hash functions, Scrypt ensures that the cost and time to perform large-scale custom hardware attacks are beyond the reach of most attackers, offering robust protection against rainbow table and brute-force attacks.
+SlowKey incorporates Scrypt, a memory-hard KDF that is specifically engineered to make brute-force attacks prohibitively expensive. By requiring significant amounts of memory and processing power to compute the hash functions, Scrypt ensures that the cost and time to perform large-scale custom hardware attacks are beyond the reach of most attackers, offering robust protection against rainbow table and brute-force attacks. By default, SlowKey uses libsodium's Scrypt implementation, but you can use the `--scrypt-rc` flag to use rust-crypto's Scrypt implementation instead.
 
 SlowKey integrates Argon2, an advanced, memory-hard Key Derivation Function (KDF) designed to effectively thwart brute-force and side-channel attacks. As the winner of the Password Hashing Competition, Argon2 is tailored to ensure that the computation of hash functions demands substantial memory and processing resources, making it exceedingly difficult for attackers to mount large-scale custom hardware attacks. This requirement for significant computational effort not only increases the security against brute-force and rainbow table attacks but also provides a customizable framework that can be tuned for specific defense needs, ensuring an adaptable and formidable barrier against unauthorized access attempts.
 
@@ -229,6 +229,8 @@ Options:
           Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>
           Scrypt parallelization parameter (must be greater than 0 and lesser than or equal 4294967295) [default: 1]
+      --scrypt-rc
+          Use rust-crypto's Scrypt implementation instead of libsodium (default)
       --argon2-m-cost <ARGON2_M_COST>
           Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than or equal 4294967295) [default: 2097152]
       --argon2-t-cost <ARGON2_T_COST>
@@ -625,7 +627,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -685,7 +687,7 @@ Loaded password and salt from secrets file
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -760,7 +762,7 @@ Checkpoint will be created every 5 iterations and saved to the "~/checkpoints" c
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -799,7 +801,7 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 ```
@@ -821,7 +823,7 @@ Checkpoint:
 
 SlowKey Parameters:
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -856,7 +858,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -912,7 +914,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 20
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -985,7 +987,7 @@ Checkpoint:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -1027,7 +1029,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -1067,7 +1069,7 @@ Please input all data either in raw or hex format starting with the 0x prefix
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -1108,7 +1110,7 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 
@@ -1132,7 +1134,7 @@ Output:
 SlowKey Parameters:
   Iterations: 10
   Length: 32
-  Scrypt: (log_n: 20, r: 8, p: 1)
+  Scrypt: (implementation: libsodium, log_n: 20, r: 8, p: 1)
   Argon2id: (version: 19, m_cost: 2097152, t_cost: 2)
   Balloon Hash: (hash: SHA512, s_cost: 131072, t_cost: 1)
 

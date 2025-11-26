@@ -1640,7 +1640,7 @@ checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 
 [[package]]
 name = "slowkey"
-version = "2.20.0"
+version = "2.21.0"
 dependencies = [
  "balloon-hash",
  "base64 0.21.7",

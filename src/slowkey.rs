@@ -68,14 +68,19 @@ impl SlowKeyOptions {
     }
 
     pub fn print(&self) {
+        let scrypt_implementation = match self.scrypt.implementation() {
+            crate::utils::algorithms::scrypt::ScryptImplementation::Libsodium => "libsodium",
+            crate::utils::algorithms::scrypt::ScryptImplementation::RustCrypto => "rust-crypto",
+        };
         log!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (implementation: {}, log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
             "Length".green(),
             &self.length.to_string().cyan(),
             "Scrypt".green(),
+            scrypt_implementation.cyan(),
             &self.scrypt.log_n().to_string().cyan(),
             &self.scrypt.r().to_string().cyan(),
             &self.scrypt.p().to_string().cyan(),
