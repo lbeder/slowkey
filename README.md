@@ -161,7 +161,7 @@ Options:
       --balloon-t-cost <BALLOON_T_COST>
           Balloon Hash number of iterations (must be greater than 1 and lesser than or equal 4294967295) [default: 1]
       --output <OUTPUT>
-          Optional path for storing the encrypted output
+          Optional file path for storing the encrypted output
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>
@@ -243,7 +243,7 @@ Options:
       --balloon-t-cost <BALLOON_T_COST>
           Balloon Hash number of iterations (must be greater than 1 and lesser than or equal 4294967295) [default: 1]
       --output <OUTPUT>
-          Optional path for storing the encrypted output (final derived key)
+          Optional file path for storing the encrypted output (final derived key)
       --output-dir <OUTPUT_DIR>
           Optional directory for storing encrypted outputs for each secrets file in the chain. Each output file will be named "output_" followed by the secrets file name
       --base64
@@ -257,7 +257,7 @@ Options:
       --fast-forward
           Fast-forward mode: skip derivation for secrets files that have existing outputs in the output directory. Requires --output-dir to be specified. When enabled, the tool will check for existing output files (using the same naming convention) and attempt to decrypt them using the provided output encryption key. If decryption succeeds, derivation is skipped and the tool continues to the next secrets file
       --secrets <SECRETS>...
-          List of secrets files to daisy-chain (mandatory)
+          List of secrets files to daisy chain in sequential order (mandatory). Use --secrets <file1> --secrets <file2> ... to specify multiple files
   -h, --help
           Print help
 ```
@@ -373,7 +373,7 @@ Options:
   -i, --iterations <ITERATIONS>
           Number of iterations (must be greater than 1 and lesser than or equal to 4294967295)
       --output <OUTPUT>
-          Optional path for storing the encrypted output
+          Optional file path for storing the encrypted output
       --checkpoint-dir <CHECKPOINT_DIR>
           Optional directory for storing encrypted checkpoints, each appended with an iteration-specific suffix. For each iteration i, the corresponding checkpoint file is named "checkpoint.i", indicating the iteration number at which the checkpoint was created
       --checkpoint-interval <CHECKPOINT_INTERVAL>

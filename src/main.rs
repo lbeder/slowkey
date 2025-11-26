@@ -121,7 +121,7 @@ enum Commands {
             help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than or equal {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
 
-        #[arg(long, help = "Optional path for storing the encrypted output")]
+        #[arg(long, help = "Optional file path for storing the encrypted output")]
         output: Option<PathBuf>,
 
         #[arg(
@@ -268,7 +268,7 @@ enum Commands {
             help = format!("Balloon Hash number of iterations (must be greater than {} and lesser than or equal {})", BalloonHashOptions::MIN_T_COST, BalloonHashOptions::MAX_T_COST))]
         balloon_t_cost: u32,
 
-        #[arg(long, help = "Optional path for storing the encrypted output")]
+        #[arg(long, help = "Optional file path for storing the encrypted output")]
         output: Option<PathBuf>,
 
         #[arg(
@@ -308,7 +308,11 @@ enum Commands {
         )]
         fast_forward: bool,
 
-        #[arg(long, help = "List of secrets files to daisy-chain (mandatory)", required = true)]
+        #[arg(
+            long,
+            help = "List of secrets files to daisy chain in sequential order (mandatory). Use --secrets <file1> --secrets <file2> ... to specify multiple files",
+            required = true
+        )]
         secrets: Vec<PathBuf>,
 
         #[arg(
@@ -360,7 +364,7 @@ enum CheckpointCommands {
         )]
         iterations: usize,
 
-        #[arg(long, help = "Optional path for storing the encrypted output")]
+        #[arg(long, help = "Optional file path for storing the encrypted output")]
         output: Option<PathBuf>,
 
         #[arg(
