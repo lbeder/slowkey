@@ -1234,6 +1234,9 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
     // Process each secrets file in sequence
     for (i, secrets_path) in opts.secrets_paths.iter().enumerate() {
+        // Add separator between secrets files
+        log!("{}\n", "═".repeat(80).cyan());
+
         log!(
             "Processing secrets file {} of {}: {}\n",
             i + 1,
@@ -1466,8 +1469,6 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
             // Normalize and harden the derived key (same process as get_encryption_key_with_confirm)
             // This is necessary because secrets files are encrypted with hardened keys
             current_key = normalize_and_harden_key(key, Some("Derived key"), Some("derived key"));
-
-            log!("Using derived key as decryption key for next secrets file...\n",);
         }
     }
 
