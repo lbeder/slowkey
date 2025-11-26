@@ -437,7 +437,7 @@ pub fn generate_secrets(count: usize, output_dir: PathBuf, prefix: String, rando
     }
 
     // Ask for an encryption key
-    log!("Please provide an encryption key for the secrets files:\n");
+    log!("Please provide an encryption key for the secrets files (will be hardened):\n");
 
     let encryption_key = get_encryption_key("secrets");
 
@@ -634,7 +634,7 @@ pub fn handle_checkpoint_reencrypt(opts: CheckpointReencryptOptions) {
 
     let key = get_encryption_key_with_confirm("checkpoint", false);
 
-    log!("Please provide the new file encryption key:\n");
+    log!("Please provide the new file encryption key (will be hardened):\n");
 
     let new_key = get_encryption_key("checkpoint");
 
@@ -708,7 +708,7 @@ pub fn handle_output_reencrypt(opts: OutputReencryptOptions) {
 
     let key = get_encryption_key_with_confirm("output", false);
 
-    log!("Please provide the new file encryption key:\n");
+    log!("Please provide the new file encryption key (will be hardened):\n");
 
     let new_key = get_encryption_key("output");
 
@@ -737,9 +737,12 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
     print_input_instructions();
 
     let key = if let Some(output_path) = opts.with_output {
-        log!("Loading decryption key from output file: {}\n", output_path.display());
+        log!(
+            "Loading decryption key from output file (will be hardened): {}\n",
+            output_path.display()
+        );
 
-        log!("Please provide the encryption key for the output file:\n");
+        log!("Please provide the encryption key for the output file (will be hardened):\n");
 
         let output_key = get_encryption_key_with_confirm("output", false);
 
@@ -748,7 +751,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
             path: output_path,
         });
 
-        log!("Loaded derived key from output file");
+        log!("Loaded derived key from output file (will be hardened)");
 
         // Use the output's derived key as the decryption key
         // Normalize and harden it since it will be used as a decryption key
@@ -758,7 +761,7 @@ pub fn handle_secrets_show(opts: SecretsShowOptions) {
             Some("output derived key"),
         )
     } else {
-        log!("Please provide the encryption key for the secrets file:\n");
+        log!("Please provide the encryption key for the secrets file (will be hardened):\n");
 
         get_encryption_key_with_confirm("secrets", false)
     };
@@ -782,14 +785,17 @@ pub struct SecretsReencryptOptions {
 pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
     print_input_instructions();
 
-    log!("Please provide the current encryption key for the secrets file:\n");
+    log!("Please provide the current encryption key for the secrets file (will be hardened):\n");
 
     let key = get_encryption_key_with_confirm("secrets", false);
 
     let new_key = if let Some(output_path) = opts.with_output {
-        log!("Loading encryption key from output file: {}\n", output_path.display());
+        log!(
+            "Loading encryption key from output file (will be hardened): {}\n",
+            output_path.display()
+        );
 
-        log!("Please provide the encryption key for the output file:\n");
+        log!("Please provide the encryption key for the output file (will be hardened):\n");
 
         let output_key = get_encryption_key_with_confirm("output", false);
 
@@ -798,7 +804,7 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
             path: output_path,
         });
 
-        log!("Loaded derived key from output file");
+        log!("Loaded derived key from output file (will be hardened)");
 
         // Use the output's derived key as the new encryption key
         // Normalize and harden it since it will be used as an encryption key
@@ -808,7 +814,7 @@ pub fn handle_secrets_reencrypt(opts: SecretsReencryptOptions) {
             Some("output derived key"),
         )
     } else {
-        log!("Please provide the new encryption key for the secrets file:\n");
+        log!("Please provide the new encryption key for the secrets file (will be hardened):\n");
 
         get_encryption_key("secrets")
     };
@@ -1217,7 +1223,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
     }
 
     // Ask for the initial encryption key for the first secrets file
-    log!("Please provide the encryption key for the first secrets file:\n");
+    log!("Please provide the encryption key for the first secrets file (will be hardened):\n");
     let mut current_key = get_encryption_key_with_confirm("secrets", false);
 
     // Ask for the output encryption key if output or output_dir is specified
@@ -1275,7 +1281,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
                 if output_path.exists() {
                     log!("Found existing output file: {}\n", output_path.display());
-                    log!("Attempting to decrypt output file using provided key...\n");
+                    log!("Attempting to decrypt output file using provided hardened key...\n");
 
                     let output_data = Output::open(&OpenOutputOptions {
                         key: output_key.clone().unwrap(),
