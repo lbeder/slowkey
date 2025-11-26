@@ -1405,13 +1405,16 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
             format!("0x{}", hex::encode(&key)).black().on_black()
         );
 
-        log!(
-            "\nSecrets file {} processing time: {}\n",
-            i + 1,
-            format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
-                .to_string()
-                .cyan()
-        );
+        // Only show processing time if not fast-forwarded
+        if !was_fast_forwarded {
+            log!(
+                "\nSecrets file {} processing time: {}\n",
+                i + 1,
+                format_duration(std::time::Duration::from_secs(running_time.elapsed().as_secs()))
+                    .to_string()
+                    .cyan()
+            );
+        }
 
         // Save the derived key to output_dir if specified (skip if fast-forwarded and file already exists)
         // Note: output_dir existence was already checked at the beginning
