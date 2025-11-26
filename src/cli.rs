@@ -1160,6 +1160,53 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         panic!("Fast-forward mode requires --output-dir to be specified");
     }
 
+    // Check for output file existence at the beginning
+    if let Some(ref output_path) = opts.output {
+        if output_path.exists() {
+            panic!("Output file \"{}\" already exists", output_path.display());
+        }
+
+        // Check if the output directory exists
+        if let Some(parent) = output_path.parent() {
+            if !parent.exists() {
+                panic!("Output directory \"{}\" does not exist", parent.display());
+            }
+        } else {
+            panic!(
+                "Could not determine the parent directory for output file \"{}\"",
+                output_path.display()
+            );
+        }
+    }
+
+    // Check for output_dir files that would be created (if not in fast-forward mode)
+    if let Some(ref output_dir) = opts.output_dir {
+        if !output_dir.exists() {
+            panic!("Output directory \"{}\" does not exist", output_dir.display());
+        }
+
+        // Check all output files that would be created from secrets files
+        if !opts.fast_forward {
+            for secrets_path in &opts.secrets_paths {
+                let secrets_filename = secrets_path
+                    .file_name()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Could not determine filename for secrets file: {}",
+                            secrets_path.display()
+                        )
+                    })
+                    .to_string_lossy();
+                let output_filename = format!("{}{}", DAISY_OUTPUT_PREFIX, secrets_filename);
+                let output_path = output_dir.join(output_filename);
+
+                if output_path.exists() {
+                    panic!("Output file \"{}\" already exists", output_path.display());
+                }
+            }
+        }
+    }
+
     log!(
         "Daisy-chaining derivation through {} secrets file(s)\n",
         opts.secrets_paths.len()
@@ -1364,11 +1411,8 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         );
 
         // Save the derived key to output_dir if specified (skip if fast-forwarded and file already exists)
+        // Note: output_dir existence was already checked at the beginning
         if let Some(ref output_dir) = opts.output_dir {
-            if !output_dir.exists() {
-                panic!("Output directory \"{}\" does not exist", output_dir.display());
-            }
-
             // Get the filename from the secrets path and prefix it with DAISY_OUTPUT_PREFIX
             let secrets_filename = secrets_path
                 .file_name()
@@ -1451,22 +1495,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
     // Handle output file if specified
     if let Some(output_path) = opts.output {
-        if output_path.exists() {
-            panic!("Output file \"{}\" already exists", output_path.display());
-        }
-
-        // Check if the output directory exists
-        if let Some(parent) = output_path.parent() {
-            if !parent.exists() {
-                panic!("Output directory \"{}\" does not exist", parent.display());
-            }
-        } else {
-            panic!(
-                "Could not determine the parent directory for output file \"{}\"",
-                output_path.display()
-            );
-        }
-
+        // File existence and directory checks were already done at the beginning
         let _output_lock = match FileLock::try_lock(&output_path) {
             Ok(lock) => lock,
             Err(_) => panic!("Unable to lock {}", output_path.display()),
