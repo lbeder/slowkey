@@ -1196,6 +1196,23 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
         let running_time = Instant::now();
 
+        // Decrypt the secrets file to get salt/password (needed for next iteration's key and final output fingerprint)
+        log!(
+            "Decrypting secrets file {} of {}: {}\n",
+            i + 1,
+            opts.secrets_paths.len(),
+            secrets_path.display()
+        );
+        let secret = Secret::new(&SecretOptions {
+            path: secrets_path.clone(),
+            key: current_key.clone(),
+        });
+
+        let secret_data = secret.open();
+        let (salt_str, password_str) = (secret_data.data.salt, secret_data.data.password);
+
+        log!("Loaded password and salt from secrets file\n");
+
         // Fast-forward: check if output exists and try to decrypt it
         let fast_forward_result: Option<(Vec<u8>, Fingerprint)> = if opts.fast_forward {
             if let Some(ref output_dir) = opts.output_dir {
@@ -1236,17 +1253,6 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
             // Perform derivation below
             None
         };
-
-        // Decrypt the secrets file to get salt/password (needed for next iteration's key and final output fingerprint)
-        let secret = Secret::new(&SecretOptions {
-            path: secrets_path.clone(),
-            key: current_key.clone(),
-        });
-
-        let secret_data = secret.open();
-        let (salt_str, password_str) = (secret_data.data.salt, secret_data.data.password);
-
-        log!("Loaded password and salt from secrets file\n");
 
         // Convert salt string to bytes
         let salt = input_to_bytes(&salt_str);

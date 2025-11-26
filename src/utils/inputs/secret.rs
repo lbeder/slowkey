@@ -80,7 +80,28 @@ impl Secret {
                 let mut encrypted_data = Vec::new();
                 reader.read_to_end(&mut encrypted_data).unwrap();
 
-                let data = self.cipher.decrypt(&hex::decode(encrypted_data).unwrap());
+                let encrypted_bytes = match hex::decode(encrypted_data) {
+                    Ok(bytes) => bytes,
+                    Err(e) => {
+                        panic!(
+                            "Failed to decode encrypted data from secrets file \"{}\": {}\nThe file may be corrupted.",
+                            self.path.display(),
+                            e
+                        );
+                    },
+                };
+
+                let data = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    self.cipher.decrypt(&encrypted_bytes)
+                })) {
+                    Ok(d) => d,
+                    Err(_) => {
+                        panic!(
+                            "Failed to decrypt secrets file \"{}\".\nThis usually means the encryption key is incorrect.",
+                            self.path.display()
+                        );
+                    },
+                };
 
                 SecretData { version, data }
             },
