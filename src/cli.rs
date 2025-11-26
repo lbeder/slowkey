@@ -1237,13 +1237,6 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         // Add separator between secrets files
         log!("{}\n", "═".repeat(80).cyan());
 
-        log!(
-            "Processing secrets file {} of {}: {}\n",
-            i + 1,
-            opts.secrets_paths.len(),
-            secrets_path.display()
-        );
-
         let running_time = Instant::now();
 
         // Decrypt the secrets file to get salt/password (needed for next iteration's key and final output fingerprint)
@@ -1259,6 +1252,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
         });
 
         let secret_data = secret.open();
+        secret_data.print();
         let (salt_str, password_str) = (secret_data.data.salt, secret_data.data.password);
 
         log!("Loaded password and salt from secrets file\n");
@@ -1286,6 +1280,12 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                     let output_data = Output::open(&OpenOutputOptions {
                         key: output_key.clone().unwrap(),
                         path: output_path.clone(),
+                    });
+
+                    output_data.print(crate::DisplayOptions {
+                        base64: false,
+                        base58: false,
+                        options: true,
                     });
 
                     log!("Successfully decrypted output file - fast-forwarding past derivation\n");
