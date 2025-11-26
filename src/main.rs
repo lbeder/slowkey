@@ -17,7 +17,7 @@ use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
     utils::{
         algorithms::{
-            argon2id::Argon2idOptions,
+            argon2id::{Argon2idImplementation, Argon2idOptions},
             balloon_hash::BalloonHashOptions,
             scrypt::{ScryptImplementation, ScryptOptions},
         },
@@ -101,6 +101,13 @@ enum Commands {
             default_value = Argon2idOptions::DEFAULT_T_COST.to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than or equal {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Argon2id implementation instead of libsodium (default)"
+        )]
+        argon2_rc: bool,
 
         #[arg(
             long,
@@ -241,6 +248,13 @@ enum Commands {
             default_value = Argon2idOptions::DEFAULT_T_COST.to_string(),
             help = format!("Argon2 number of iterations (must be greater than {} and lesser than or equal {})", Argon2idOptions::MIN_T_COST, Argon2idOptions::MAX_T_COST))]
         argon2_t_cost: u32,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Argon2id implementation instead of libsodium (default)"
+        )]
+        argon2_rc: bool,
 
         #[arg(
             long,
@@ -553,18 +567,24 @@ fn main() {
             sanity,
             secrets,
             scrypt_rc,
+            argon2_rc,
         } => {
             let scrypt_implementation = if scrypt_rc {
                 ScryptImplementation::RustCrypto
             } else {
                 ScryptImplementation::Libsodium
             };
+            let argon2_implementation = if argon2_rc {
+                Argon2idImplementation::RustCrypto
+            } else {
+                Argon2idImplementation::Libsodium
+            };
             cli::handle_derive(DeriveOptions {
                 options: SlowKeyOptions::new(
                     iterations,
                     length,
                     &ScryptOptions::new_with_implementation(scrypt_log_n, scrypt_r, scrypt_p, scrypt_implementation),
-                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
+                    &Argon2idOptions::new_with_implementation(argon2_m_cost, argon2_t_cost, argon2_implementation),
                     &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
                 ),
                 checkpoint_data: None,
@@ -719,18 +739,24 @@ fn main() {
             fast_forward,
             secrets,
             scrypt_rc,
+            argon2_rc,
         } => {
             let scrypt_implementation = if scrypt_rc {
                 ScryptImplementation::RustCrypto
             } else {
                 ScryptImplementation::Libsodium
             };
+            let argon2_implementation = if argon2_rc {
+                Argon2idImplementation::RustCrypto
+            } else {
+                Argon2idImplementation::Libsodium
+            };
             cli::handle_daisy_derive(cli::DaisyDeriveOptions {
                 options: SlowKeyOptions::new(
                     iterations,
                     length,
                     &ScryptOptions::new_with_implementation(scrypt_log_n, scrypt_r, scrypt_p, scrypt_implementation),
-                    &Argon2idOptions::new(argon2_m_cost, argon2_t_cost),
+                    &Argon2idOptions::new_with_implementation(argon2_m_cost, argon2_t_cost, argon2_implementation),
                     &BalloonHashOptions::new(balloon_s_cost, balloon_t_cost),
                 ),
                 output,

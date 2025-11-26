@@ -72,8 +72,12 @@ impl SlowKeyOptions {
             crate::utils::algorithms::scrypt::ScryptImplementation::Libsodium => "libsodium",
             crate::utils::algorithms::scrypt::ScryptImplementation::RustCrypto => "rust-crypto",
         };
+        let argon2_implementation = match self.argon2id.implementation() {
+            crate::utils::algorithms::argon2id::Argon2idImplementation::Libsodium => "libsodium",
+            crate::utils::algorithms::argon2id::Argon2idImplementation::RustCrypto => "rust-crypto",
+        };
         log!(
-            "{}:\n  {}: {}\n  {}: {}\n  {}: (implementation: {}, log_n: {}, r: {}, p: {})\n  {}: (version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
+            "{}:\n  {}: {}\n  {}: {}\n  {}: (implementation: {}, log_n: {}, r: {}, p: {})\n  {}: (implementation: {}, version: {}, m_cost: {}, t_cost: {})\n  {}: (hash: {}, s_cost: {}, t_cost: {})\n",
             "SlowKey Parameters".yellow(),
             "Iterations".green(),
             &self.iterations.to_string().cyan(),
@@ -85,6 +89,7 @@ impl SlowKeyOptions {
             &self.scrypt.r().to_string().cyan(),
             &self.scrypt.p().to_string().cyan(),
             "Argon2id".green(),
+            argon2_implementation.cyan(),
             Argon2id::VERSION.to_string().cyan(),
             &self.argon2id.m_cost().to_string().cyan(),
             &self.argon2id.t_cost().to_string().cyan(),

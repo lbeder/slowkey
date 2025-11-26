@@ -26,7 +26,7 @@ impl Fingerprint {
     }
 
     /// Build JSON representation of SlowKeyOptions in struct field order,
-    /// excluding the scrypt implementation field to ensure fingerprint consistency.
+    /// excluding the scrypt and argon2id implementation fields to ensure fingerprint consistency.
     fn build_options_json(options: &SlowKeyOptions) -> String {
         // Build scrypt JSON without the implementation field
         let scrypt_json = format!(
@@ -36,8 +36,15 @@ impl Fingerprint {
             options.scrypt.p(),
         );
 
+        // Build argon2id JSON without the implementation field
+        let argon2id_json = format!(
+            r#"{{"m_cost":{},"t_cost":{},"p_cost":{}}}"#,
+            options.argon2id.m_cost(),
+            options.argon2id.t_cost(),
+            options.argon2id.p_cost(),
+        );
+
         // Serialize nested structs
-        let argon2id_json = serde_json::to_string(&options.argon2id).unwrap();
         let balloon_hash_json = serde_json::to_string(&options.balloon_hash).unwrap();
 
         // Construct JSON in struct field order: iterations, length, scrypt, argon2id, balloon_hash
@@ -199,9 +206,11 @@ mod tests {
 
     #[test]
     fn fingerprint_implementation_independent() {
-        // Verify that the scrypt implementation field doesn't affect the fingerprint
+        // Verify that the scrypt and argon2id implementation fields don't affect the fingerprint
         let salt = b"saltsaltsaltsalt";
         let password = b"password";
+
+        use crate::utils::algorithms::argon2id::Argon2idImplementation;
 
         let options_libsodium = SlowKeyOptions::new(
             10,
@@ -212,7 +221,11 @@ mod tests {
                 ScryptOptions::DEFAULT_P,
                 ScryptImplementation::Libsodium,
             ),
-            &Argon2idOptions::default(),
+            &Argon2idOptions::new_with_implementation(
+                Argon2idOptions::DEFAULT_M_COST,
+                Argon2idOptions::DEFAULT_T_COST,
+                Argon2idImplementation::Libsodium,
+            ),
             &BalloonHashOptions::default(),
         );
 
@@ -225,7 +238,11 @@ mod tests {
                 ScryptOptions::DEFAULT_P,
                 ScryptImplementation::RustCrypto,
             ),
-            &Argon2idOptions::default(),
+            &Argon2idOptions::new_with_implementation(
+                Argon2idOptions::DEFAULT_M_COST,
+                Argon2idOptions::DEFAULT_T_COST,
+                Argon2idImplementation::RustCrypto,
+            ),
             &BalloonHashOptions::default(),
         );
 
@@ -235,7 +252,7 @@ mod tests {
         // Both should produce the same fingerprint since implementation is excluded
         assert_eq!(
             fingerprint_libsodium.hash, fingerprint_rust_crypto.hash,
-            "Fingerprint should be the same regardless of scrypt implementation"
+            "Fingerprint should be the same regardless of scrypt and argon2id implementation"
         );
     }
 }

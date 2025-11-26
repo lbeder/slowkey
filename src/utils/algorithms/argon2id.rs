@@ -1,11 +1,26 @@
+use argon2::{Argon2, ParamsBuilder, Version};
 use libsodium_sys::{crypto_pwhash_ALG_ARGON2ID13, crypto_pwhash_argon2id};
 use serde::{Deserialize, Serialize};
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Argon2idImplementation {
+    #[serde(rename = "libsodium")]
+    Libsodium,
+    #[serde(rename = "rust-crypto")]
+    RustCrypto,
+}
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Argon2idOptions {
     m_cost: u32,
     t_cost: u32,
     p_cost: u32,
+    #[serde(default = "default_argon2id_implementation")]
+    implementation: Argon2idImplementation,
+}
+
+fn default_argon2id_implementation() -> Argon2idImplementation {
+    Argon2idImplementation::Libsodium
 }
 
 impl Argon2idOptions {
@@ -20,6 +35,10 @@ impl Argon2idOptions {
     pub const DEFAULT_P_COST: u32 = 1;
 
     pub fn new(m_cost: u32, t_cost: u32) -> Self {
+        Self::new_with_implementation(m_cost, t_cost, Argon2idImplementation::Libsodium)
+    }
+
+    pub fn new_with_implementation(m_cost: u32, t_cost: u32, implementation: Argon2idImplementation) -> Self {
         if m_cost < Self::MIN_M_COST {
             panic!(
                 "m_cost {} is shorter than the min length of {}",
@@ -46,6 +65,7 @@ impl Argon2idOptions {
             m_cost,
             t_cost,
             p_cost: Self::DEFAULT_P_COST,
+            implementation,
         }
     }
 
@@ -57,11 +77,20 @@ impl Argon2idOptions {
         self.t_cost
     }
 
+    pub fn p_cost(&self) -> u32 {
+        self.p_cost
+    }
+
+    pub fn implementation(&self) -> Argon2idImplementation {
+        self.implementation
+    }
+
     // Fixed parameters matching current defaults used for file key hardening
     pub const HARDENING_DEFAULT: Argon2idOptions = Argon2idOptions {
         m_cost: 1 << 21,
         t_cost: 2,
         p_cost: 1,
+        implementation: Argon2idImplementation::Libsodium,
     };
 }
 
@@ -71,6 +100,7 @@ impl Default for Argon2idOptions {
             m_cost: Self::DEFAULT_M_COST,
             t_cost: Self::DEFAULT_T_COST,
             p_cost: Self::DEFAULT_P_COST,
+            implementation: Argon2idImplementation::Libsodium,
         }
     }
 }
@@ -89,6 +119,13 @@ impl Argon2id {
     }
 
     pub fn hash(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {
+        match self.opts.implementation {
+            Argon2idImplementation::Libsodium => self.hash_libsodium(salt, password),
+            Argon2idImplementation::RustCrypto => self.hash_rust_crypto(salt, password),
+        }
+    }
+
+    fn hash_libsodium(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {
         let mut dk = vec![0; self.length];
 
         unsafe {
@@ -110,6 +147,25 @@ impl Argon2id {
 
         dk.to_vec()
     }
+
+    fn hash_rust_crypto(&self, salt: &[u8], password: &[u8]) -> Vec<u8> {
+        let mut dk = vec![0; self.length];
+
+        let params = ParamsBuilder::new()
+            .m_cost(self.opts.m_cost)
+            .t_cost(self.opts.t_cost)
+            .p_cost(self.opts.p_cost)
+            .output_len(self.length)
+            .build()
+            .expect("Invalid argon2 parameters");
+
+        let argon2 = Argon2::new(argon2::Algorithm::Argon2id, Version::V0x13, params);
+        argon2
+            .hash_password_into(password, salt, &mut dk)
+            .expect("argon2 derivation failed");
+
+        dk.to_vec()
+    }
 }
 
 #[cfg(test)]
@@ -119,16 +175,28 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(b"saltsaltsaltsalt", b"", 64, &Argon2idOptions::default(), "a43c6186cdd281634715d061841de2781c2c12fa968bd94de8c2cc0e1aeb6b31472681caeca9ea5a4c355350949258bb3877918efcbf9de9be10c8169a364793")]
-    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::default(), "b545c20926e06955c505deb14c01ca8126fb9e167470393797bc3627e46a232f9e16186a26e197eb58f6c4ec2e3897f366b32846040eb5715be6427a8f04233c")]
-    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::default(), "a9db18ddae667012b832af543436a77de985cd51de591e2b3916a73198ce5940")]
-    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::default(), "2b5ccde09d4c345912874cb0a4b15b54")]
-    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "3aab062d5ba93d7da6573746f19d85c6abaa735aeac5c13c12358f1a9d16d9e87e984e245b41613079e76096062aefbccc5bc36fe6d9626b08ccbe545c7fa357")]
-    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "9224d42695a83bb30ef48faf18751c5e53f5f97a084d0fe7409b19a954ccedbe")]
-    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST), "844320f4c7cfce471b902a3d4848b79c")]
-    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "57033d89807061a02b859b28fa7428ef4547db408ce4c73e7bc31a4bab3359f6413a87d861eb9a43015e141d9a88866d225035e04ea1fb771c64505b5fe8660c")]
-    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "3e0d26c8b6f9c8c001e25595195d98c0e5658756dfc9c88fc5375c2295fb03bd")]
-    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2), "c2f48dba626afcbfe5283c3a3cba9c60")]
+    // RustCrypto implementation tests
+    #[case(b"saltsaltsaltsalt", b"", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "a43c6186cdd281634715d061841de2781c2c12fa968bd94de8c2cc0e1aeb6b31472681caeca9ea5a4c355350949258bb3877918efcbf9de9be10c8169a364793")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "b545c20926e06955c505deb14c01ca8126fb9e167470393797bc3627e46a232f9e16186a26e197eb58f6c4ec2e3897f366b32846040eb5715be6427a8f04233c")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "a9db18ddae667012b832af543436a77de985cd51de591e2b3916a73198ce5940")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "2b5ccde09d4c345912874cb0a4b15b54")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "3aab062d5ba93d7da6573746f19d85c6abaa735aeac5c13c12358f1a9d16d9e87e984e245b41613079e76096062aefbccc5bc36fe6d9626b08ccbe545c7fa357")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "9224d42695a83bb30ef48faf18751c5e53f5f97a084d0fe7409b19a954ccedbe")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::RustCrypto), "844320f4c7cfce471b902a3d4848b79c")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::RustCrypto), "57033d89807061a02b859b28fa7428ef4547db408ce4c73e7bc31a4bab3359f6413a87d861eb9a43015e141d9a88866d225035e04ea1fb771c64505b5fe8660c")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::RustCrypto), "3e0d26c8b6f9c8c001e25595195d98c0e5658756dfc9c88fc5375c2295fb03bd")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::RustCrypto), "c2f48dba626afcbfe5283c3a3cba9c60")]
+    // Libsodium implementation tests (duplicated with same expected results)
+    #[case(b"saltsaltsaltsalt", b"", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "a43c6186cdd281634715d061841de2781c2c12fa968bd94de8c2cc0e1aeb6b31472681caeca9ea5a4c355350949258bb3877918efcbf9de9be10c8169a364793")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "b545c20926e06955c505deb14c01ca8126fb9e167470393797bc3627e46a232f9e16186a26e197eb58f6c4ec2e3897f366b32846040eb5715be6427a8f04233c")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "a9db18ddae667012b832af543436a77de985cd51de591e2b3916a73198ce5940")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "2b5ccde09d4c345912874cb0a4b15b54")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "3aab062d5ba93d7da6573746f19d85c6abaa735aeac5c13c12358f1a9d16d9e87e984e245b41613079e76096062aefbccc5bc36fe6d9626b08ccbe545c7fa357")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "9224d42695a83bb30ef48faf18751c5e53f5f97a084d0fe7409b19a954ccedbe")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST, Argon2idImplementation::Libsodium), "844320f4c7cfce471b902a3d4848b79c")]
+    #[case(b"saltsaltsaltsalt", b"test", 64, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::Libsodium), "57033d89807061a02b859b28fa7428ef4547db408ce4c73e7bc31a4bab3359f6413a87d861eb9a43015e141d9a88866d225035e04ea1fb771c64505b5fe8660c")]
+    #[case(b"saltsaltsaltsalt", b"test", 32, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::Libsodium), "3e0d26c8b6f9c8c001e25595195d98c0e5658756dfc9c88fc5375c2295fb03bd")]
+    #[case(b"saltsaltsaltsalt", b"test", 16, &Argon2idOptions::new_with_implementation(Argon2idOptions::DEFAULT_M_COST / 2, Argon2idOptions::DEFAULT_T_COST * 2, Argon2idImplementation::Libsodium), "c2f48dba626afcbfe5283c3a3cba9c60")]
 
     fn argon2_test(
         #[case] salt: &[u8], #[case] password: &[u8], #[case] length: usize, #[case] opts: &Argon2idOptions,
