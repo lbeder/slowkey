@@ -152,6 +152,8 @@ Options:
           Scrypt block size parameter, which fine-tunes sequential memory read size and performance (must be greater than 0 and lesser than or equal to 4294967295) [default: 8]
       --scrypt-p <SCRYPT_P>
           Scrypt parallelization parameter (must be greater than 0 and lesser than or equal 4294967295) [default: 1]
+      --scrypt-rc
+          Use rust-crypto's Scrypt implementation instead of libsodium (default)
       --argon2-m-cost <ARGON2_M_COST>
           Argon2 number of 1 KiB memory block (must be greater than 8 and lesser than or equal 4294967295) [default: 2097152]
       --argon2-t-cost <ARGON2_T_COST>
@@ -237,7 +239,6 @@ Options:
           Argon2 number of iterations (must be greater than 2 and lesser than or equal 4294967295) [default: 2]
       --argon2-rc
           Use rust-crypto's Argon2id implementation instead of libsodium (default)
-          Argon2 number of iterations (must be greater than 2 and lesser than or equal 4294967295) [default: 2]
       --balloon-s-cost <BALLOON_S_COST>
           Balloon Hash space (memory) cost number of 1 KiB memory block (must be greater than 1 and lesser than or equal 4294967295) [default: 131072]
       --balloon-t-cost <BALLOON_T_COST>

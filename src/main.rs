@@ -239,6 +239,13 @@ enum Commands {
 
         #[arg(
             long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Scrypt implementation instead of libsodium (default)"
+        )]
+        scrypt_rc: bool,
+
+        #[arg(
+            long,
             default_value = Argon2idOptions::DEFAULT_M_COST.to_string(),
             help = format!("Argon2 number of 1 KiB memory block (must be greater than {} and lesser than or equal {})", Argon2idOptions::MIN_M_COST, Argon2idOptions::MAX_M_COST))]
         argon2_m_cost: u32,
@@ -314,13 +321,6 @@ enum Commands {
             required = true
         )]
         secrets: Vec<PathBuf>,
-
-        #[arg(
-            long,
-            action = clap::ArgAction::SetTrue,
-            help = "Use rust-crypto's Scrypt implementation instead of libsodium (default)"
-        )]
-        scrypt_rc: bool,
     },
 }
 
