@@ -331,6 +331,13 @@ enum Commands {
 
         #[arg(
             long,
+            action = clap::ArgAction::SetTrue,
+            help = "Verify output files during fast-forward mode using the password and salt from the secrets file"
+        )]
+        verify: bool,
+
+        #[arg(
+            long,
             help = "List of secrets files to daisy chain in sequential order (mandatory). Use --secrets <file1> --secrets <file2> ... to specify multiple files",
             required = true
         )]
@@ -767,6 +774,7 @@ fn main() {
             iteration_moving_window,
             sanity,
             fast_forward,
+            verify,
             secrets,
             scrypt_rc,
             argon2_rc,
@@ -796,6 +804,7 @@ fn main() {
                 iteration_moving_window,
                 sanity,
                 fast_forward,
+                verify,
                 secrets_paths: secrets,
             });
         },

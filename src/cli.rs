@@ -1151,6 +1151,7 @@ pub struct DaisyDeriveOptions {
     pub iteration_moving_window: u32,
     pub sanity: bool,
     pub fast_forward: bool,
+    pub verify: bool,
     pub secrets_paths: Vec<PathBuf>,
 }
 
@@ -1293,6 +1294,18 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                         base58: false,
                         options: true,
                     });
+
+                    // Verify the output if requested
+                    if opts.verify {
+                        log!("Verifying output file using password and salt from secrets file...\n");
+
+                        let salt = input_to_bytes(&salt_str);
+                        let password = input_to_bytes(&password_str);
+                        if !output_data.verify(&salt, &password) {
+                            panic!("Verification failed: The password, salt, or internal data in the output file does not match the secrets file");
+                        }
+                        log!("Output file verification successful\n");
+                    }
 
                     log!("Successfully decrypted output file - fast-forwarding past derivation\n");
                     Some((output_data.data.data, output_data.data.fingerprint))

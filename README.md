@@ -257,6 +257,8 @@ Options:
           Perform an optional sanity check by computing the algorithm twice and verifying the results
       --fast-forward
           Fast-forward mode: skip derivation for secrets files that have existing outputs in the output directory. Requires --output-dir to be specified. When enabled, the tool will check for existing output files (using the same naming convention) and attempt to decrypt them using the provided output encryption key. If decryption succeeds, derivation is skipped and the tool continues to the next secrets file
+      --verify
+          Verify output files during fast-forward mode using the password and salt from the secrets file. When enabled with --fast-forward, the tool will verify that the decrypted output file matches the password and salt from the corresponding secrets file before fast-forwarding past the derivation
       --secrets <SECRETS>...
           List of secrets files to daisy chain in sequential order (mandatory). Use --secrets <file1> --secrets <file2> ... to specify multiple files
   -h, --help
@@ -324,12 +326,23 @@ If `output_secret1.dat` and `output_secret2.dat` already exist in `~/outputs` an
 - To force a fresh derivation, simply delete the output files you want to re-derive before running with `--fast-forward`
 - The tool will display messages indicating when it finds existing output files and when it successfully fast-forwards past a derivation
 
+**Verification with `--verify`:**
+
+When using `--verify` with `--fast-forward`, the tool will verify that each decrypted output file matches the password and salt from the corresponding secrets file. This provides an additional integrity check to ensure that the output file was correctly derived from the secrets file. If verification fails, the tool will panic with an error message indicating that the password, salt, or internal data in the output file does not match the secrets file.
+
+Example with verification:
+
+```sh
+slowkey daisy-derive -i 1000 --secrets secret1.dat --secrets secret2.dat --secrets secret3.dat --output-dir ~/outputs --fast-forward --verify
+```
+
 **Important notes:**
 
 - Fast-forward mode requires `--output-dir` to be specified
 - If decryption of an existing output file fails (e.g., wrong key), the tool will panic with an error message
 - The secrets file must still be decrypted even when fast-forwarding (to get salt/password for the next iteration's key), but the actual derivation step is skipped
 - Fast-forwarded steps still require the correct decryption key for the secrets file (the key derived from the previous step)
+- When using `--verify`, verification happens automatically for each output file that is fast-forwarded, and the tool will display a message indicating that verification is in progress
 
 ### Checkpoints
 
