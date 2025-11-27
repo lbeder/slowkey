@@ -579,8 +579,10 @@ fn main() {
             scrypt_log_n,
             scrypt_r,
             scrypt_p,
+            scrypt_rc,
             argon2_m_cost,
             argon2_t_cost,
+            argon2_rc,
             balloon_s_cost,
             balloon_t_cost,
             checkpoint_dir,
@@ -591,8 +593,6 @@ fn main() {
             iteration_moving_window,
             sanity,
             secrets,
-            scrypt_rc,
-            argon2_rc,
         } => {
             let scrypt_implementation = if scrypt_rc {
                 ScryptImplementation::RustCrypto
@@ -763,8 +763,10 @@ fn main() {
             scrypt_log_n,
             scrypt_r,
             scrypt_p,
+            scrypt_rc,
             argon2_m_cost,
             argon2_t_cost,
+            argon2_rc,
             balloon_s_cost,
             balloon_t_cost,
             output,
@@ -776,8 +778,6 @@ fn main() {
             fast_forward,
             verify,
             secrets,
-            scrypt_rc,
-            argon2_rc,
         } => {
             let scrypt_implementation = if scrypt_rc {
                 ScryptImplementation::RustCrypto
