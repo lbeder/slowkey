@@ -184,7 +184,21 @@ enum Commands {
     Secrets(SecretsCommands),
 
     #[command(about = "Run benchmarks")]
-    Bench {},
+    Bench {
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Scrypt implementation instead of libsodium (default)"
+        )]
+        scrypt_rc: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Argon2id implementation instead of libsodium (default)"
+        )]
+        argon2_rc: bool,
+    },
 
     #[command(about = "Run stability tests", arg_required_else_help = true)]
     StabilityTest {
@@ -712,10 +726,22 @@ fn main() {
             },
         },
 
-        Commands::Bench {} => {
+        Commands::Bench { scrypt_rc, argon2_rc } => {
             let output_path = env::current_dir().unwrap().join(BENCHMARKS_DIRECTORY);
 
-            SlowKey::benchmark(&output_path);
+            let scrypt_implementation = if scrypt_rc {
+                ScryptImplementation::RustCrypto
+            } else {
+                ScryptImplementation::Libsodium
+            };
+
+            let argon2_implementation = if argon2_rc {
+                Argon2idImplementation::RustCrypto
+            } else {
+                Argon2idImplementation::Libsodium
+            };
+
+            SlowKey::benchmark(&output_path, scrypt_implementation, argon2_implementation);
 
             log!("Saved benchmark reports to: \"{}\"", output_path.display());
         },

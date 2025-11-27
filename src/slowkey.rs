@@ -1,8 +1,8 @@
 use crate::log;
 use crate::utils::algorithms::{
-    argon2id::{Argon2id, Argon2idOptions},
+    argon2id::{Argon2id, Argon2idImplementation, Argon2idOptions},
     balloon_hash::{BalloonHash, BalloonHashOptions},
-    scrypt::{Scrypt, ScryptOptions},
+    scrypt::{Scrypt, ScryptImplementation, ScryptOptions},
 };
 use balloon_hash::password_hash::SaltString;
 use criterion::{black_box, BenchmarkId, Criterion, SamplingMode};
@@ -297,7 +297,9 @@ impl SlowKey<'_> {
         self.balloon_hash.hash(salt_string, &res)
     }
 
-    pub fn benchmark(output_path: &Path) {
+    pub fn benchmark(
+        output_path: &Path, scrypt_implementation: ScryptImplementation, argon2_implementation: Argon2idImplementation,
+    ) {
         let mut c = Criterion::default().output_directory(output_path);
 
         // Just some random data
@@ -331,11 +333,26 @@ impl SlowKey<'_> {
             .measurement_time(Duration::from_secs(30))
             .sampling_mode(SamplingMode::Flat);
 
-        let options = ScryptOptions::default();
+        let options = ScryptOptions::new_with_implementation(
+            ScryptOptions::DEFAULT_LOG_N,
+            ScryptOptions::DEFAULT_R,
+            ScryptOptions::DEFAULT_P,
+            scrypt_implementation,
+        );
+        let implementation_str = match scrypt_implementation {
+            ScryptImplementation::Libsodium => "libsodium",
+            ScryptImplementation::RustCrypto => "rust-crypto",
+        };
         group.bench_with_input(
             BenchmarkId::new(
                 "Scrypt (Default)",
-                format!("log_n: {}, r: {}, p: {}", options.log_n(), options.r(), options.p()),
+                format!(
+                    "implementation: {}, log_n: {}, r: {}, p: {}",
+                    implementation_str,
+                    options.log_n(),
+                    options.r(),
+                    options.p()
+                ),
             ),
             &input,
             |b, data| {
@@ -345,11 +362,24 @@ impl SlowKey<'_> {
             },
         );
 
-        let options = Argon2idOptions::default();
+        let options = Argon2idOptions::new_with_implementation(
+            Argon2idOptions::DEFAULT_M_COST,
+            Argon2idOptions::DEFAULT_T_COST,
+            argon2_implementation,
+        );
+        let implementation_str = match argon2_implementation {
+            Argon2idImplementation::Libsodium => "libsodium",
+            Argon2idImplementation::RustCrypto => "rust-crypto",
+        };
         group.bench_with_input(
             BenchmarkId::new(
                 "Argon2id (Default)",
-                format!("m_cost: {}, t_cost: {}", options.m_cost(), options.t_cost()),
+                format!(
+                    "implementation: {}, m_cost: {}, t_cost: {}",
+                    implementation_str,
+                    options.m_cost(),
+                    options.t_cost()
+                ),
             ),
             &input,
             |b, data| {
@@ -373,22 +403,41 @@ impl SlowKey<'_> {
             },
         );
 
+        let scrypt_options = ScryptOptions::new_with_implementation(
+            ScryptOptions::DEFAULT_LOG_N,
+            ScryptOptions::DEFAULT_R,
+            ScryptOptions::DEFAULT_P,
+            scrypt_implementation,
+        );
+        let argon2id_options = Argon2idOptions::new_with_implementation(
+            Argon2idOptions::DEFAULT_M_COST,
+            Argon2idOptions::DEFAULT_T_COST,
+            argon2_implementation,
+        );
         let options = SlowKeyOptions {
             iterations: 1,
             length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
-            scrypt: ScryptOptions::default(),
-            argon2id: Argon2idOptions::default(),
+            scrypt: scrypt_options,
+            argon2id: argon2id_options,
             balloon_hash: BalloonHashOptions::default(),
         };
         group.bench_with_input(
             BenchmarkId::new(
                 "SlowKey (Default)",
                 format!(
-                    "iterations: {}, Scrypt: (log_n: {}, r: {}, p: {}), Argon2id: (m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
+                    "iterations: {}, Scrypt: (implementation: {}, log_n: {}, r: {}, p: {}), Argon2id: (implementation: {}, m_cost: {}, t_cost: {}), BalloonHash: (s_cost: {}, t_cost: {})",
                     options.iterations,
+                    match options.scrypt.implementation() {
+                        ScryptImplementation::Libsodium => "libsodium",
+                        ScryptImplementation::RustCrypto => "rust-crypto",
+                    },
                     options.scrypt.log_n(),
                     options.scrypt.r(),
                     options.scrypt.p(),
+                    match options.argon2id.implementation() {
+                        Argon2idImplementation::Libsodium => "libsodium",
+                        Argon2idImplementation::RustCrypto => "rust-crypto",
+                    },
                     options.argon2id.m_cost(),
                     options.argon2id.t_cost(),
                     options.balloon_hash.s_cost(),

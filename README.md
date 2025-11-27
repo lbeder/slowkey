@@ -555,10 +555,12 @@ This allows you to use a derived key from a previous derivation as the encryptio
 ```sh
 Run benchmarks
 
-Usage: slowkey bench
+Usage: slowkey bench [OPTIONS]
 
 Options:
-  -h, --help  Print help
+      --scrypt-rc  Use rust-crypto's Scrypt implementation instead of libsodium (default)
+      --argon2-rc  Use rust-crypto's Argon2id implementation instead of libsodium (default)
+  -h, --help       Print help
 ```
 
 ### Running Stability Tests
@@ -1162,6 +1164,10 @@ The password, salt and internal data are correct
 In order to run the benchmark suite, you can run the `bench` command:
 
 > slowkey bench
+
+By default, benchmarks use libsodium implementations for Scrypt and Argon2id. You can use the `--scrypt-rc` and `--argon2-rc` flags to benchmark the rust-crypto implementations instead:
+
+> slowkey bench --scrypt-rc --argon2-rc
 
 ```sh
 Benchmarking SHA2/1
