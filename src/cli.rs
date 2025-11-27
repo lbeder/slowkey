@@ -1302,12 +1302,13 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                         let salt = input_to_bytes(&salt_str);
                         let password = input_to_bytes(&password_str);
                         if !output_data.verify(&salt, &password) {
-                            panic!("Verification failed: The password, salt, or internal data in the output file does not match the secrets file");
+                            panic!("The password, salt, or internal data is incorrect!");
                         }
                         log!("Output file verification successful\n");
                     }
 
                     log!("Successfully decrypted output file - fast-forwarding past derivation\n");
+
                     Some((output_data.data.data, output_data.data.fingerprint))
                 } else {
                     log!("No existing output file found - will perform derivation\n");
@@ -1335,8 +1336,8 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
         // If fast-forward didn't find a file, perform the derivation
         let was_fast_forwarded = fast_forward_result.is_some();
-        let (key, fingerprint) = if let Some((k, f)) = fast_forward_result {
-            (k, f)
+        let (key, fingerprint, prev_data_for_save) = if let Some((k, f)) = fast_forward_result {
+            (k, f, None)
         } else {
             // Derive using the secrets file
             let options = opts.options.clone();
@@ -1368,13 +1369,14 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
 
             let slowkey = SlowKey::new(&options);
 
-            let key = slowkey.derive_key_with_callback(
-                &salt,
-                &password,
-                &[],
-                0,
-                opts.sanity,
-                |current_iteration, _current_data| {
+            // Track previous iteration's data for output file verification
+            let prev_data = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+
+            let key = slowkey.derive_key_with_callback(&salt, &password, &[], 0, opts.sanity, {
+                let prev_data = prev_data.clone();
+                let pb = pb.clone();
+                let ipb = ipb.clone();
+                move |current_iteration, current_data| {
                     // Track iteration times
                     let last_iteration_time = iteration_time.elapsed().as_millis();
                     iteration_time = Instant::now();
@@ -1409,17 +1411,32 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                     ));
 
                     ipb.set_message(iteration_info);
-                },
-            );
+
+                    // Store the data from the previous iteration (iterations - 1) for verification
+                    if current_iteration + 1 == options.iterations - 1 {
+                        let mut prev = prev_data.lock().unwrap();
+                        prev.clone_from(current_data);
+                    }
+                }
+            });
+
+            let prev_data_for_save = {
+                let prev = prev_data.lock().unwrap();
+                if prev.is_empty() {
+                    None
+                } else {
+                    Some(prev.clone())
+                }
+            };
 
             pb.finish();
             ipb.finish();
 
-            (key, fingerprint)
+            (key, fingerprint, prev_data_for_save)
         };
 
         log!(
-            "Derived key for secrets file {} is (please highlight to see): {}",
+            "Derived key for secrets file {} is (please highlight to see): {}\n",
             i + 1,
             format!("0x{}", hex::encode(&key)).black().on_black()
         );
@@ -1473,7 +1490,7 @@ pub fn handle_daisy_derive(opts: DaisyDeriveOptions) {
                     slowkey: opts.options.clone(),
                 });
 
-                out.save(&key, None, &fingerprint);
+                out.save(&key, prev_data_for_save.as_deref(), &fingerprint);
 
                 log!(
                     "Saved encrypted output for secrets file {} to \"{}\"",
