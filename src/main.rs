@@ -211,6 +211,20 @@ enum Commands {
             default_value = STABILITY_TEST_ITERATIONS.to_string(),
             help = format!("Number of iterations to perform (must be greater than {} and lesser than or equal {})", 0, STABILITY_TEST_ITERATIONS))]
         iterations: usize,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Scrypt implementation instead of libsodium (default)"
+        )]
+        scrypt_rc: bool,
+
+        #[arg(
+            long,
+            action = clap::ArgAction::SetTrue,
+            help = "Use rust-crypto's Argon2id implementation instead of libsodium (default)"
+        )]
+        argon2_rc: bool,
     },
 
     #[command(about = "Daisy-chain derivation through multiple secrets files")]
@@ -753,8 +767,25 @@ fn main() {
             log!("Saved benchmark reports to: \"{}\"", output_path.display());
         },
 
-        Commands::StabilityTest { tasks, iterations } => {
-            stability_test(tasks, iterations);
+        Commands::StabilityTest {
+            tasks,
+            iterations,
+            scrypt_rc,
+            argon2_rc,
+        } => {
+            let scrypt_implementation = if scrypt_rc {
+                ScryptImplementation::RustCrypto
+            } else {
+                ScryptImplementation::Libsodium
+            };
+
+            let argon2_implementation = if argon2_rc {
+                Argon2idImplementation::RustCrypto
+            } else {
+                Argon2idImplementation::Libsodium
+            };
+
+            stability_test(tasks, iterations, scrypt_implementation, argon2_implementation);
         },
 
         Commands::DaisyDerive {

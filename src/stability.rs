@@ -1,7 +1,11 @@
 use crate::{log, warning};
 use crate::{
     slowkey::{SlowKey, SlowKeyOptions},
-    utils::algorithms::{argon2id::Argon2idOptions, balloon_hash::BalloonHashOptions, scrypt::ScryptOptions},
+    utils::algorithms::{
+        argon2id::{Argon2idImplementation, Argon2idOptions},
+        balloon_hash::BalloonHashOptions,
+        scrypt::{ScryptImplementation, ScryptOptions},
+    },
 };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -2019,7 +2023,10 @@ static EXPECTED: [&str; STABILITY_TEST_ITERATIONS] = [
     "cf47a21d7876e09751c534db476c71689ba52b7c85f0f84945e3fa5c27b736af",
 ];
 
-pub fn stability_test(tasks: usize, iterations: usize) {
+pub fn stability_test(
+    tasks: usize, iterations: usize, scrypt_implementation: ScryptImplementation,
+    argon2_implementation: Argon2idImplementation,
+) {
     if tasks == 0 {
         panic!("Invalid number of tasks");
     }
@@ -2057,8 +2064,17 @@ pub fn stability_test(tasks: usize, iterations: usize) {
         let slowkey = SlowKey::new(&SlowKeyOptions {
             iterations,
             length: SlowKeyOptions::DEFAULT_OUTPUT_SIZE,
-            scrypt: ScryptOptions::default(),
-            argon2id: Argon2idOptions::default(),
+            scrypt: ScryptOptions::new_with_implementation(
+                ScryptOptions::DEFAULT_LOG_N,
+                ScryptOptions::DEFAULT_R,
+                ScryptOptions::DEFAULT_P,
+                scrypt_implementation,
+            ),
+            argon2id: Argon2idOptions::new_with_implementation(
+                Argon2idOptions::DEFAULT_M_COST,
+                Argon2idOptions::DEFAULT_T_COST,
+                argon2_implementation,
+            ),
             balloon_hash: BalloonHashOptions::default(),
         });
 

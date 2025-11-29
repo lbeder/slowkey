@@ -586,6 +586,8 @@ Usage: slowkey stability-test [OPTIONS] --tasks <TASKS>
 Options:
   -t, --tasks <TASKS>            Number of tasks
   -i, --iterations <ITERATIONS>  Number of iterations to perform (must be greater than 0 and lesser than or equal 2000) [default: 2000]
+      --scrypt-rc                Use rust-crypto's Scrypt implementation instead of libsodium (default)
+      --argon2-rc                Use rust-crypto's Argon2id implementation instead of libsodium (default)
   -h, --help                     Print help
 ```
 
@@ -1261,6 +1263,10 @@ Please note that specifically RAM overheating can cause computational glitches d
 In order to run stability tests, you can run the `stability-test` command and specifying the number of tasks via the `-t/--tasks` argument:
 
 > slowkey stability-test -t 8
+
+By default, stability tests use libsodium implementations for Scrypt and Argon2id. You can use the `--scrypt-rc` and `--argon2-rc` flags to test the rust-crypto implementations instead:
+
+> slowkey stability-test -t 8 --scrypt-rc --argon2-rc
 
 ```sh
 Setting up a stability test task pool with 8 tasks, each running 2000 iterations
